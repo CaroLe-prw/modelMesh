@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+frontend_touched=0
+backend_touched=0
+frontend_format_files=()
+frontend_relative_files=()
+rust_format_files=()
+
+while IFS= read -r -d '' file; do
+  case "$file" in
+    frontend/*)
+      frontend_touched=1
+      ;;
+    backend/*)
+      backend_touched=1
+      ;;
+  esac
+
+  case "$file" in
+    frontend/pnpm-lock.yaml)
+      ;;
+    frontend/*.js | frontend/*.jsx | frontend/*.ts | frontend/*.tsx | frontend/*.json | frontend/*.jsonc | frontend/*.css | frontend/*.scss | frontend/*.html | frontend/*.md | frontend/*.mdx | frontend/*.yaml | frontend/*.yml)
+      frontend_format_files+=("$file")
+      frontend_relative_files+=("${file#frontend/}")
+      ;;
+    backend/*.rs)
+      rust_format_files+=("$file")
+      ;;
+  esac
+done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+
+format_files=("${frontend_format_files[@]}" "${rust_format_files[@]}")
+for file in "${format_files[@]}"; do
+  if ! git diff --quiet -- "$file"; then
+    printf 'pre-commit: %s contains both staged and unstaged changes.\n' "$file" >&2
+    printf 'Stage the complete file or temporarily stash its unstaged changes before committing.\n' >&2
+    exit 1
+  fi
+done
+
+if ((${#frontend_format_files[@]} > 0)); then
+  printf 'Formatting staged React/TypeScript files with Prettier...\n'
+  (
+    cd frontend
+    pnpm exec prettier --write -- "${frontend_relative_files[@]}"
+  )
+  git add -- "${frontend_format_files[@]}"
+fi
+
+if ((${#rust_format_files[@]} > 0)); then
+  printf 'Formatting staged Rust files with rustfmt...\n'
+  rustfmt \
+    --edition 2024 \
+    --config-path backend/rustfmt.toml \
+    --config skip_children=true \
+    "${rust_format_files[@]}"
+  git add -- "${rust_format_files[@]}"
+fi
+
+git diff --cached --check
+
+if ((frontend_touched == 1)); then
+  printf 'Checking React/TypeScript frontend...\n'
+  pnpm --dir frontend check
+fi
+
+if ((backend_touched == 1)); then
+  printf 'Checking Rust backend...\n'
+  cargo fmt --manifest-path backend/Cargo.toml --all -- --check
+  cargo clippy \
+    --manifest-path backend/Cargo.toml \
+    --all-targets \
+    --all-features \
+    --locked \
+    -- \
+    -D warnings
+  cargo test \
+    --manifest-path backend/Cargo.toml \
+    --all-targets \
+    --all-features \
+    --locked
+fi
+
+printf 'Pre-commit checks passed.\n'

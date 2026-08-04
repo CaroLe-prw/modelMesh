@@ -1,0 +1,7 @@
+# Cargo 和 Clippy 负责校验清单内容；当前 SchemaStore 的 Cargo Schema
+# 尚未完整支持任意 `[lints.clippy]` lint 名称。
+[[rule]]
+include = ["backend/Cargo.toml"]
+
+[rule.schema]
+enabled = false

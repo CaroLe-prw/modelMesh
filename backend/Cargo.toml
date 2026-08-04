@@ -2,7 +2,57 @@
 name = "backend"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.94"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+declare_interior_mutable_const = "deny"
+redundant_clone = "deny"
+type_complexity = "allow"
+too_many_arguments = "allow"
 
 [dependencies]
+argon2 = "0.5.3"
 axum = "0.8.9"
-tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "net"] }
+deadpool-redis = "0.23.0"
+dotenvy = "0.15.7"
+jiff = "0.2.24"
+password-hash = { version = "0.5.0", features = ["getrandom"] }
+serde = { version = "1.0.229", features = ["derive"] }
+sha2 = "0.11"
+sqlx = { version = "0.9.0", default-features = false, features = [
+  "migrate",
+  "postgres",
+  "runtime-tokio",
+  "tls-rustls-ring-webpki",
+] }
+tokio = { version = "1.53.1", features = [
+  "macros",
+  "rt-multi-thread",
+  "net",
+  "sync",
+] }
+tower-http = { version = "0.7", features = ["trace"] }
+tracing = "0.1.44"
+tracing-appender = "0.2.5"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+uuid = { version = "1.23.1", features = ["v4"] }
+
+[dev-dependencies]
+tower = { version = "0.5.3", features = ["util"] }
+
+[profile.dev]
+split-debuginfo = "unpacked"
+codegen-units = 16
+
+[profile.dev.build-override]
+codegen-units = 16
+
+[profile.release]
+debug = 0
+opt-level = "s"
+strip = "symbols"
+lto = "fat"
+codegen-units = 1
+panic = "abort"

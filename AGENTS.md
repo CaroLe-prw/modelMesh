@@ -11,6 +11,7 @@ ModelMesh 是一个开源的 AI 模型渠道发现、比较、路由与状态监
 - 包管理器：pnpm
 - 代码检查：Oxlint
 - 样式系统：UnoCSS
+- 国际化：i18next、react-i18next（简体中文 `zh-CN`、英文 `en`）
 - 后端目录：`backend/`
 - 后端框架：Rust 2024、Axum、Tokio
 - 前后端通过 `/api` 下的 JSON API 通信
@@ -28,47 +29,49 @@ ModelMesh 是一个开源的 AI 模型渠道发现、比较、路由与状态监
 
 ### 默认浅色主题
 
-| 语义变量 | 色值 | 用途 |
-| --- | --- | --- |
-| `--color-bg` | `#F5F6F8` | 页面背景 |
-| `--color-surface` | `#FFFFFF` | 卡片、表格、弹层 |
-| `--color-surface-raised` | `#FFFFFF` | 高层级浮层 |
-| `--color-surface-subtle` | `#F7F8FA` | 次级区域 |
-| `--color-surface-hover` | `#F1F3F6` | 悬停背景 |
-| `--color-text` | `#181A1F` | 主文字 |
-| `--color-text-muted` | `#6D727C` | 次级文字 |
-| `--color-text-faint` | `#9298A3` | 辅助信息 |
-| `--color-border` | `#E3E5E9` | 默认边框 |
-| `--color-border-strong` | `#D8DBE1` | 强调边框 |
-| `--color-primary` | `#285DE8` | 主按钮、链接、选中态 |
-| `--color-primary-foreground` | `#FFFFFF` | 主色上的文字 |
-| `--color-primary-soft` | `#EEF3FF` | 主色弱背景 |
-| `--color-success` | `#11965C` | 成功、在线、健康 |
-| `--color-warning` | `#DF8B18` | 警告、延迟、降级 |
-| `--color-danger` | `#E94E4E` | 错误、离线、危险操作 |
+| 语义变量                     | 色值      | 用途                 |
+| ---------------------------- | --------- | -------------------- |
+| `--color-bg`                 | `#F5F6F8` | 页面背景             |
+| `--color-surface`            | `#FFFFFF` | 卡片、表格、弹层     |
+| `--color-surface-raised`     | `#FFFFFF` | 高层级浮层           |
+| `--color-surface-subtle`     | `#F7F8FA` | 次级区域             |
+| `--color-surface-hover`      | `#F1F3F6` | 悬停背景             |
+| `--color-text`               | `#181A1F` | 主文字               |
+| `--color-text-muted`         | `#6D727C` | 次级文字             |
+| `--color-text-faint`         | `#9298A3` | 辅助信息             |
+| `--color-border`             | `#E3E5E9` | 默认边框             |
+| `--color-border-strong`      | `#D8DBE1` | 强调边框             |
+| `--color-primary`            | `#0F1419` | 主按钮、链接、选中态 |
+| `--color-primary-foreground` | `#FFFFFF` | 主色上的文字         |
+| `--color-primary-soft`       | `#ECEEF0` | 主色弱背景           |
+| `--color-success`            | `#11965C` | 成功、在线、健康     |
+| `--color-warning`            | `#DF8B18` | 警告、延迟、降级     |
+| `--color-danger`             | `#E94E4E` | 错误、离线、危险操作 |
 
 ### 开发者深色主题
 
-| 语义变量 | 色值 | 用途 |
-| --- | --- | --- |
-| `--color-bg` | `#090B0F` | 页面背景 |
-| `--color-surface` | `#101319` | 卡片、表格、弹层 |
-| `--color-surface-raised` | `#151920` | 高层级浮层 |
-| `--color-surface-subtle` | `#171B23` | 次级区域 |
-| `--color-surface-hover` | `#1B2029` | 悬停背景 |
-| `--color-text` | `#F2F5F7` | 主文字 |
-| `--color-text-muted` | `#969EAA` | 次级文字 |
-| `--color-text-faint` | `#697280` | 辅助信息 |
-| `--color-border` | `#252A33` | 默认边框 |
-| `--color-border-strong` | `#343B47` | 强调边框 |
-| `--color-primary` | `#75E7C1` | 主按钮、链接、选中态 |
-| `--color-primary-foreground` | `#07120E` | 主色上的文字 |
-| `--color-primary-soft` | `rgba(117, 231, 193, 0.11)` | 主色弱背景 |
-| `--color-success` | `#4BD59A` | 成功、在线、健康 |
-| `--color-warning` | `#EDB657` | 警告、延迟、降级 |
-| `--color-danger` | `#FF6B74` | 错误、离线、危险操作 |
+| 语义变量                     | 色值                        | 用途                 |
+| ---------------------------- | --------------------------- | -------------------- |
+| `--color-bg`                 | `#090B0F`                   | 页面背景             |
+| `--color-surface`            | `#101319`                   | 卡片、表格、弹层     |
+| `--color-surface-raised`     | `#151920`                   | 高层级浮层           |
+| `--color-surface-subtle`     | `#171B23`                   | 次级区域             |
+| `--color-surface-hover`      | `#1B2029`                   | 悬停背景             |
+| `--color-text`               | `#F2F5F7`                   | 主文字               |
+| `--color-text-muted`         | `#969EAA`                   | 次级文字             |
+| `--color-text-faint`         | `#697280`                   | 辅助信息             |
+| `--color-border`             | `#252A33`                   | 默认边框             |
+| `--color-border-strong`      | `#343B47`                   | 强调边框             |
+| `--color-primary`            | `#FFFFFF`                   | 主按钮、链接、选中态 |
+| `--color-primary-foreground` | `#0F1419`                   | 主色上的文字         |
+| `--color-primary-soft`       | `rgba(255, 255, 255, 0.11)` | 主色弱背景           |
+| `--color-success`            | `#4BD59A`                   | 成功、在线、健康     |
+| `--color-warning`            | `#EDB657`                   | 警告、延迟、降级     |
+| `--color-danger`             | `#FF6B74`                   | 错误、离线、危险操作 |
 
 主题变量应定义在全局样式中，深色变量由 `.theme-dark` 覆盖。业务组件只使用语义变量，不直接写十六进制颜色。主题选择应保存在本地，并在首次访问时尊重系统主题偏好。
+
+品牌交互采用黑白配色：浅色主题使用近黑色 `#0F1419` 搭配白色文字，深色主题使用白色搭配近黑色文字。主色用于主按钮、链接、品牌标识和重点文字；成功状态继续使用绿色，避免品牌交互色与健康状态混淆。除非任务明确要求重新调整视觉方案，否则不得随意替换主色。
 
 ### 视觉细节
 
@@ -78,6 +81,7 @@ ModelMesh 是一个开源的 AI 模型渠道发现、比较、路由与状态监
 - 数据列表保持紧凑，桌面端常规行高建议为 `48px` 至 `52px`。
 - 正文字体使用 `Inter` 或系统无衬线字体。
 - 模型标识、价格、延迟和代码使用等宽数字或等宽字体。
+- 品牌标识统一使用 `frontend/public/favicon.svg` 中的闪电图标，不再创建或混用字母 `M` 等其他标识。
 - 所有交互元素必须有清晰的 hover、focus、disabled 和 loading 状态。
 - 浅色与深色主题都要满足足够的文字对比度。
 
@@ -86,8 +90,20 @@ ModelMesh 是一个开源的 AI 模型渠道发现、比较、路由与状态监
 - 使用函数组件与 Hooks，不新增 class component。
 - TypeScript 保持严格类型；禁止用 `any` 绕过类型检查。
 - API DTO、领域模型和组件 Props 应使用明确的类型。
-- 页面组件负责组合功能，不承载复杂业务规则。
-- 可复用基础组件放入统一的 UI 组件目录，领域组件按功能组织。
+- 所有完整的视觉区域和交互单元都应组件化；页面组件只负责组合功能，不承载复杂业务规则或大段 JSX。
+- `App.tsx` 只负责应用入口、全局 Provider、路由或顶层布局，不直接实现具体业务页面。
+- shadcn/ui 风格的基础组件统一放在 `src/components/ui/`，不得在业务目录复制 Button、Input、Dialog、Card 等基础实现。
+- 跨业务复用的组合组件放在 `src/components/common/`，例如状态徽标、空状态、错误状态、加载状态、分页器和通用数据表格。
+- 业务组件按功能放在 `src/features/<feature>/components/`，业务 Hooks、类型和 API 也应留在对应 feature 内。
+- 页面放在 `src/pages/`，布局放在 `src/layouts/`，跨业务 Hooks 放在 `src/hooks/`，通用工具放在 `src/lib/`。
+- 相同或高度相似的 UI、状态处理和交互逻辑不得复制粘贴；应提取为公共组件、Hook、工具函数或配置数据。
+- 一个组件同时承担数据请求、复杂状态转换和大段 UI 渲染时必须拆分；容器组件负责数据，展示组件负责渲染。
+- 使用组合模式构建组件，优先使用 `children`、明确的 slot 和小型子组件，避免不断增加布尔 Props 的巨型万能组件。
+- 组件外观变体统一使用明确的 variant 配置；适合时使用 `class-variance-authority`，并通过 `cn()` 合并 class。
+- 公共组件必须通过 Props 接收数据和行为，不得隐式依赖某个页面的局部状态、固定文案或固定接口。
+- 列表项、表格行、筛选器、工具栏、表单字段和弹层内容应分别组件化，保证后续页面可以组合复用。
+- loading、error、empty 和 success 状态应优先复用统一组件，不在每个页面重复实现不同版本。
+- 只有排版用途且没有独立语义、逻辑或复用价值的简单 DOM 包装不必单独建组件，避免产生无意义的碎片文件。
 - 状态尽量靠近使用位置；只有真正跨页面共享的数据才进入全局状态。
 - 请求必须处理 loading、error、empty 和 success 四种状态。
 - 表单、按钮、弹层和表格必须支持键盘操作与可见焦点。
@@ -107,11 +123,31 @@ ModelMesh 是一个开源的 AI 模型渠道发现、比较、路由与状态监
 - 少量无法用原子类清晰表达的样式可以写普通 CSS，但仍须使用主题变量。
 - 如果采用 shadcn/ui 的设计或组件结构，应将组件适配为 UnoCSS 实现；不要直接引入其 Tailwind 配置，除非仓库明确决定更换样式方案。
 
-## 5. Rust、Axum 与 Tokio 约定
+## 5. 国际化约定
 
-- 使用 Rust 2024 edition，最低 Rust 版本以仓库配置为准，初始目标为 `1.85`。
+- 项目默认支持简体中文 `zh-CN` 与英文 `en`，使用 i18next 和 react-i18next。
+- 国际化入口统一维护在 `frontend/src/i18n/index.ts`，语言资源统一放在 `frontend/src/i18n/locales/`。
+- 所有面向用户的正文、按钮、占位符、状态文字、提示、无障碍标签和页面元信息必须通过翻译 key 读取，不得在 React 组件中直接硬编码固定语言。
+- 翻译 key 应按页面或领域分组并保持语义稳定，不使用中文或英文原文作为 key。
+- 默认语言跟随浏览器偏好；用户选择保存为 `modelmesh-language`，切换语言统一调用共享的 `changeLanguage()`。
+- 新增语言时必须同步更新支持语言类型、资源注册、页面元信息，并校验所有语言的翻译 key 完全一致。
+- 模型名、供应商名、API 字段、代码片段等技术标识保持原文，不做无意义翻译。
+- 后端返回稳定的错误码和参数，不返回需要前端直接展示的固定语言文案；前端根据错误码完成本地化。
+
+## 6. Rust、Axum 与 Tokio 约定
+
+- 使用 Rust 2024 edition，最低 Rust 版本为 `1.94`，并与 `backend/Cargo.toml` 的 `rust-version` 保持一致。
+- Rust 模块采用现代文件布局，使用 `feature.rs` 配合 `feature/` 子模块目录，不创建旧式 `feature/mod.rs`；`mod` 关键字仅用于正常的模块声明。
+- 后端 Rust 单元测试实现统一放在 `backend/tests/unit/`，生产源码只保留带 `#[cfg(test)]` 和 `#[path = "..."]` 的测试模块声明；不得在生产源码中编写大段内联测试。独立的集成测试直接放在 `backend/tests/`。
 - Axum handler 保持简短，只负责提取参数、调用服务和构造响应。
 - 业务逻辑放在 service/domain 层，不堆积在路由或 handler 中。
+- 后端按职责拆分为 route、handler、service、domain、repository/client、config 等模块，不把所有实现写入 `main.rs`。
+- `main.rs` 只负责启动流程、配置加载、依赖组装和服务监听；路由构建放入独立模块。
+- 多个接口使用的分页、筛选、排序、响应包装、错误类型和校验逻辑应提取为公共模块。
+- 多个业务模块共享的第三方访问逻辑应封装为 client，并通过 trait 或明确接口隔离具体供应商实现。
+- DTO、领域模型和持久化模型按职责分离；只有真正跨模块共享的类型才放入公共类型模块。
+- 禁止复制相同的 handler 流程或错误转换；应提取公共函数、middleware、extractor 或服务方法。
+- 公共模块应表达明确、稳定的领域能力，不创建内容混杂的 `utils.rs` 或无法说明职责的万能模块。
 - 共享依赖通过 `State<AppState>` 注入，不使用可变全局变量。
 - 跨任务共享的状态必须满足 `Send + Sync`；优先共享不可变数据。
 - 不默认使用 `Arc<Mutex<_>>` 解决所有共享问题，也不得持有锁跨越 `.await`。
@@ -121,22 +157,30 @@ ModelMesh 是一个开源的 AI 模型渠道发现、比较、路由与状态监
 - 使用结构化错误类型并实现一致的 HTTP 响应；请求路径中禁止随意使用 `unwrap()` 或 `expect()`。
 - HTTP 状态码必须表达真实结果，错误响应格式应稳定且便于前端展示。
 - 密钥和敏感配置只从后端配置或环境变量读取，不写入源码或日志。
+- 后端统一使用 `tracing` 输出结构化日志，不使用 `println!`、`eprintln!`、`dbg!` 或散落的自定义打印；development 与 test 环境只输出控制台，production 环境使用后台非阻塞写入并按本地日期保存到 `backend/logs/YYYYMMDD.log`。日志必须保留级别与请求上下文，不得记录密码、访问令牌、Authorization Header、连接地址中的凭证或其他敏感数据。
+- 所有环境变量必须在对应的 `.env.example` 中提供示例，并在变量上方添加清晰的中文注释，说明用途、是否必填、默认值、取值限制和必要的生产环境注意事项；示例文件不得包含真实密钥。
 - 新增异步逻辑时，要考虑取消、超时、并发上限和资源释放。
 - 合并前至少运行 `cargo fmt --check`、`cargo clippy --all-targets --all-features -- -D warnings` 和 `cargo test`。
 
-## 6. API 与目录边界
+## 7. API 与目录边界
 
 - API 路由统一放在 `/api` 下，并按资源或功能拆分。
 - 前端开发环境通过 Vite proxy 连接 Axum，避免在组件中处理跨域地址。
 - JSON 字段命名、分页方式、错误结构和状态码应保持一致。
 - API 合约发生变化时，应同步更新前端类型和相关文档。
+- API 错误响应使用稳定的数字业务错误码，统一结构为 `{"error":{"code":数字}}`；HTTP 状态码只表达协议层结果，业务错误码按领域分段且一经发布不得复用或改变含义。前端根据数字错误码映射 i18n 文案，后端不得将 Rust 枚举名、字段名或固定中英文消息作为公开错误契约。
+- 用户认证统一使用 `Authorization: Bearer <token>`，不使用 Cookie 保存登录状态；访问令牌只能由共享认证存储模块读写，并由统一 API 客户端自动附加，业务组件不得直接操作或记录令牌。后端只将令牌哈希保存到 Redis 并设置 TTL，默认有效期为 1 天，不在 PostgreSQL 中持久化访问令牌。
+- `/models` 与 `/account` 属于登录后页面，必须通过共享认证 Provider 和公共路由保护组件校验登录状态；未登录或令牌失效时跳转 `/login`，登录成功后返回原目标路径。受保护资源的后端 API 仍须独立校验 Bearer Token，不得只依赖前端路由守卫。
 - 数据库、缓存、第三方供应商客户端都应通过后端抽象层访问。
+- Redis 的 `GET`、`DEL`、带 TTL 的 `SET NX` 等通用操作统一封装在共享 Redis 客户端中；业务仓储只负责领域 key、值映射和业务语义，不得直接获取连接池或散落 `redis::cmd`。需要“仅不存在时写入并过期”的场景必须使用单条原子 `SET key value NX EX seconds`，不得分开执行 `SETNX` 与 `EXPIRE`。
+- PostgreSQL migration 新建表时必须紧随建表语句添加 `COMMENT ON TABLE`，并为每个字段添加 `COMMENT ON COLUMN`；所有注释使用清晰的中文业务描述说明表与字段的职责，表结构、字段含义或名称变化时必须同步更新对应注释。
 
-## 7. 依赖和提交要求
+## 8. 依赖和提交要求
 
 - 前端统一使用 pnpm，并提交 `pnpm-lock.yaml`；不要生成 npm、Yarn 或 Bun 的锁文件。
 - 首次克隆仓库后运行 `./scripts/setup-git-hooks.sh`，启用仓库维护的提交前检查。
 - 提交前 Hook 会格式化已暂存的前端和 Rust 文件，并按变更范围执行前后端校验；不要无故绕过。
+- Git 提交必须在对应范围的格式检查、静态检查、构建和测试全部通过后才能完成，任一检查失败都必须阻止提交；`backend/tests/`、`backend/migrations/`、依赖清单和锁文件均属于后端校验范围。
 - 添加依赖前先确认标准库或现有依赖无法清晰完成需求。
 - 不因局部功能引入重量级框架。
 - 修改应聚焦当前任务，避免夹带无关的大范围重构。

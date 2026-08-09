@@ -1,8 +1,6 @@
 use std::io;
 
-use crate::{clients::RedisClient, domain::UserId};
-
-const ACCESS_TOKEN_KEY_PREFIX: &str = "modelmesh:auth:access-token:";
+use crate::{clients::RedisClient, domain::UserId, redis_key};
 
 #[derive(Clone)]
 pub struct AccessTokenRepository {
@@ -18,7 +16,7 @@ impl AccessTokenRepository {
     pub async fn save_if_absent(&self, token_hash: &str, user_id: UserId) -> io::Result<bool> {
         self.redis
             .set_nx_with_ttl(
-                &access_token_key(token_hash),
+                &redis_key::access_token(token_hash),
                 &user_id.to_string(),
                 self.ttl_seconds,
             )
@@ -26,21 +24,13 @@ impl AccessTokenRepository {
     }
 
     pub async fn find_user_id(&self, token_hash: &str) -> io::Result<Option<UserId>> {
-        self.redis.get(&access_token_key(token_hash)).await
+        self.redis.get(&redis_key::access_token(token_hash)).await
     }
 
     pub async fn delete(&self, token_hash: &str) -> io::Result<()> {
         self.redis
-            .delete(&access_token_key(token_hash))
+            .delete(&redis_key::access_token(token_hash))
             .await
             .map(|_| ())
     }
 }
-
-fn access_token_key(token_hash: &str) -> String {
-    format!("{ACCESS_TOKEN_KEY_PREFIX}{token_hash}")
-}
-
-#[cfg(test)]
-#[path = "../../tests/unit/repository_access_token.rs"]
-mod tests;

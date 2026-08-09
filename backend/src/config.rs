@@ -1,7 +1,8 @@
 use std::{env, io, net::SocketAddr, path::PathBuf};
 
+use crate::redis_key;
+
 const DEFAULT_BIND_ADDRESS: &str = "127.0.0.1:3000";
-const DEFAULT_ACCESS_TOKEN_TTL_SECONDS: u64 = 24 * 60 * 60;
 const DEFAULT_DATABASE_ACQUIRE_TIMEOUT_SECONDS: u64 = 5;
 const DEFAULT_DATABASE_MAX_CONNECTIONS: u32 = 10;
 const DEFAULT_ENVIRONMENT: &str = "development";
@@ -40,6 +41,10 @@ impl AppEnvironment {
     pub const fn writes_log_files(self) -> bool {
         matches!(self, Self::Production)
     }
+
+    pub const fn logs_database_queries(self) -> bool {
+        matches!(self, Self::Development)
+    }
 }
 
 pub struct AppConfig {
@@ -59,7 +64,7 @@ pub struct AppConfig {
 impl AppConfig {
     pub fn from_env() -> io::Result<Self> {
         let access_token_ttl_seconds = env::var(ACCESS_TOKEN_TTL_SECONDS_ENV)
-            .map_or(Ok(DEFAULT_ACCESS_TOKEN_TTL_SECONDS), |value| {
+            .map_or(Ok(redis_key::ttl::ACCESS_TOKEN_SECONDS), |value| {
                 parse_positive_u64(ACCESS_TOKEN_TTL_SECONDS_ENV, &value)
             })?;
         let bind_address = parse_socket_address(

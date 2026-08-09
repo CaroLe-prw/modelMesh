@@ -1,7 +1,9 @@
-import { Link, NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Brand } from '@/components/common/brand';
-import { buttonVariants } from '@/components/ui/button-variants';
+import { HeaderAccountActions } from '@/components/layout/header-account-actions';
+import { HeaderDisplayControls } from '@/components/layout/header-display-controls';
+import { MobileHeaderMenu } from '@/components/layout/mobile-header-menu';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -10,7 +12,12 @@ const navItems = [
   { to: '/account', labelKey: 'nav.account', end: false },
 ];
 
-export function SiteHeader() {
+interface SiteHeaderProps {
+  isDark: boolean;
+  onToggleTheme: () => void;
+}
+
+export function SiteHeader({ isDark, onToggleTheme }: SiteHeaderProps) {
   const { t } = useTranslation();
 
   return (
@@ -38,24 +45,10 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <div className="header-auth-actions flex items-center">
-          <Link
-            className={buttonVariants({
-              variant: 'outline',
-              className: 'header-auth-button',
-            })}
-            to="/login"
-          >
-            {t('nav.login')}
-          </Link>
-          <Link
-            className={buttonVariants({
-              className: 'header-auth-button header-auth-register',
-            })}
-            to="/register"
-          >
-            {t('nav.register')}
-          </Link>
+        <div className="flex items-center gap-0.5">
+          <MobileHeaderMenu isDark={isDark} items={navItems} onToggleTheme={onToggleTheme} />
+          <HeaderDisplayControls isDark={isDark} onToggleTheme={onToggleTheme} />
+          <HeaderAccountActions />
         </div>
       </div>
     </header>

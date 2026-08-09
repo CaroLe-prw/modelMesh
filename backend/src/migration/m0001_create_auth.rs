@@ -1,3 +1,15 @@
+use sea_orm_migration::prelude::*;
+
+#[derive(DeriveMigrationName)]
+pub struct Migration;
+
+#[sea_orm_migration::async_trait::async_trait]
+impl MigrationTrait for Migration {
+    async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .get_connection()
+            .execute_unprepared(
+                r#"
 CREATE TABLE users (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
@@ -13,3 +25,16 @@ COMMENT ON COLUMN users.email IS '标准化后的用户登录邮箱';
 COMMENT ON COLUMN users.password_hash IS '使用 Argon2 生成的密码哈希';
 COMMENT ON COLUMN users.created_at IS '账号创建时间';
 COMMENT ON COLUMN users.updated_at IS '账号最后更新时间';
+"#,
+            )
+            .await?;
+
+        Ok(())
+    }
+
+    async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .drop_table(Table::drop().table(Alias::new("users")).to_owned())
+            .await
+    }
+}

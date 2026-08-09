@@ -11,6 +11,13 @@ fn public_error_codes_are_stable_and_unique() {
         (ErrorCode::EmailAlreadyExists, 11_003),
         (ErrorCode::InvalidCredentials, 11_004),
         (ErrorCode::Unauthenticated, 11_005),
+        (ErrorCode::Forbidden, 11_006),
+        (ErrorCode::InvalidApiKey, 12_001),
+        (ErrorCode::ApiKeyNameAlreadyExists, 12_002),
+        (ErrorCode::ApiKeyAlreadyExists, 12_003),
+        (ErrorCode::ApiKeyNotFound, 12_004),
+        (ErrorCode::AppRouteNotFound, 13_001),
+        (ErrorCode::InvalidAppRouteRoles, 13_002),
         (ErrorCode::DependencyUnavailable, 90_001),
         (ErrorCode::Internal, 99_999),
     ];

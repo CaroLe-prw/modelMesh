@@ -1,12 +1,7 @@
 use super::{
-    AppEnvironment, DEFAULT_ACCESS_TOKEN_TTL_SECONDS, DEFAULT_BIND_ADDRESS, parse_environment,
-    parse_positive_u32, parse_positive_u64, parse_positive_usize, parse_socket_address,
+    AppEnvironment, DEFAULT_BIND_ADDRESS, parse_environment, parse_positive_u32,
+    parse_positive_u64, parse_positive_usize, parse_socket_address,
 };
-
-#[test]
-fn access_tokens_expire_after_one_day_by_default() {
-    assert_eq!(DEFAULT_ACCESS_TOKEN_TTL_SECONDS, 86_400);
-}
 
 #[test]
 fn default_bind_address_is_valid() {
@@ -19,6 +14,13 @@ fn environment_accepts_supported_values_case_insensitively() {
         parse_environment("TEST_ENVIRONMENT", "Production").expect("environment should parse"),
         AppEnvironment::Production
     );
+}
+
+#[test]
+fn database_query_logging_is_only_enabled_in_development() {
+    assert!(AppEnvironment::Development.logs_database_queries());
+    assert!(!AppEnvironment::Test.logs_database_queries());
+    assert!(!AppEnvironment::Production.logs_database_queries());
 }
 
 #[test]

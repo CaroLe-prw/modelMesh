@@ -1,9 +1,12 @@
 import { apiClient } from '@/lib/api-client';
 import { clearAccessToken, saveAccessToken } from '@/lib/access-token';
 
+export type AccountRole = 'personal' | 'merchant' | 'admin';
+
 export interface AuthUser {
   id: number;
   email: string;
+  role: AccountRole;
 }
 
 export interface AuthCredentials {

@@ -1,5 +1,5 @@
-import { AccountAccessPanel } from '@/features/account/components/account-access-panel';
+import { AccountShell } from '@/features/account/components/account-shell';
 
 export function AccountPage() {
-  return <AccountAccessPanel />;
+  return <AccountShell />;
 }

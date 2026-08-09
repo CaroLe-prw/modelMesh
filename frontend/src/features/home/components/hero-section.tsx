@@ -3,7 +3,8 @@ import { FaGithub } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
-import { buttonVariants } from '@/components/ui/button-variants';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 
 const routeCandidates = [
   { name: 'Northstar', meta: '96.0% · 2.75s', selected: true },
@@ -39,29 +40,18 @@ export function HeroSection() {
           </p>
 
           <div className="hero-actions mt-8 flex flex-wrap">
-            <Link
-              className={buttonVariants({
-                size: 'xl',
-                className: 'hero-cta hero-cta-primary',
-              })}
-              to="/models"
-            >
-              {t('home.hero.explore')}
-              <ArrowRight aria-hidden="true" className="size-4" />
-            </Link>
-            <a
-              className={buttonVariants({
-                variant: 'outline',
-                size: 'xl',
-                className: 'hero-cta hero-cta-secondary',
-              })}
-              href="https://github.com/CaroLe-prw/modelMesh"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <FaGithub aria-hidden="true" className="size-4" />
-              {t('home.hero.openSource')}
-            </a>
+            <Button asChild className="hero-cta hero-cta-primary" size="lg">
+              <Link to="/models">
+                {t('home.hero.explore')}
+                <ArrowRight aria-hidden="true" className="size-4" />
+              </Link>
+            </Button>
+            <Button asChild className="hero-cta hero-cta-secondary" size="lg" variant="outline">
+              <a href="https://github.com/CaroLe-prw/modelMesh" target="_blank" rel="noreferrer">
+                <FaGithub aria-hidden="true" className="size-4" />
+                {t('home.hero.openSource')}
+              </a>
+            </Button>
           </div>
 
           <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[11px] text-muted-foreground">
@@ -84,8 +74,8 @@ export function RoutingPreview() {
   const { t } = useTranslation();
 
   return (
-    <div
-      className="relative mx-auto w-full max-w-[540px] rounded-xl border border-border bg-card p-3 shadow-[0_28px_80px_color-mix(in_srgb,var(--color-text)_10%,transparent)] sm:p-4"
+    <Card
+      className="relative mx-auto w-full max-w-[540px] gap-0 p-3 shadow-[0_28px_80px_color-mix(in_srgb,var(--color-text)_10%,transparent)] sm:p-4"
       id="routing"
     >
       <div className="flex items-center justify-between border-b border-border px-1 pb-3">
@@ -105,7 +95,7 @@ export function RoutingPreview() {
       </div>
 
       <div className="grid gap-4 py-4 sm:grid-cols-[1fr_34px_1fr] sm:items-center">
-        <div className="rounded-lg border border-border bg-secondary/55 p-4">
+        <Card className="gap-0 rounded-lg bg-secondary/55 p-4 shadow-none">
           <div className="flex items-center justify-between text-[10px] text-muted-foreground">
             <span>{t('home.routingPreview.request')}</span>
             <span className="font-mono">08:42:16</span>
@@ -120,7 +110,7 @@ export function RoutingPreview() {
               <b className="float-right text-foreground">cost</b>
             </span>
           </div>
-        </div>
+        </Card>
 
         <div
           className="route-line hidden h-26 w-px justify-self-center sm:block"
@@ -131,11 +121,11 @@ export function RoutingPreview() {
 
         <div className="space-y-2">
           {routeCandidates.map((candidate, index) => (
-            <div
+            <Card
               className={
                 candidate.selected
-                  ? 'flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/8 p-3'
-                  : 'flex items-center gap-3 rounded-lg border border-border bg-card p-3'
+                  ? 'flex-row items-center gap-3 rounded-lg border-primary/30 bg-primary/8 p-3 shadow-none'
+                  : 'flex-row items-center gap-3 rounded-lg p-3 shadow-none'
               }
               key={candidate.name}
             >
@@ -155,19 +145,19 @@ export function RoutingPreview() {
                 </small>
               </span>
               {candidate.selected && <Check aria-hidden="true" className="size-4 text-primary" />}
-            </div>
+            </Card>
           ))}
         </div>
       </div>
 
-      <div className="flex items-center justify-between rounded-lg border border-success/20 bg-success/8 px-4 py-3">
+      <Card className="flex-row items-center justify-between gap-4 rounded-lg border-success/20 bg-success/8 px-4 py-3 shadow-none">
         <span className="text-[10px] text-muted-foreground">
           {t('home.routingPreview.selected')} <b className="text-foreground">Northstar</b>
         </span>
         <span className="font-mono text-[10px] font-semibold text-success">
           {t('home.routingPreview.estimatedSavings')}
         </span>
-      </div>
-    </div>
+      </Card>
+    </Card>
   );
 }

@@ -27,6 +27,7 @@ pub struct LoginResponse {
 pub struct UserResponse {
     pub id: i64,
     pub email: String,
+    pub role: String,
 }
 
 impl From<User> for UserResponse {
@@ -34,6 +35,7 @@ impl From<User> for UserResponse {
         Self {
             id: user.id,
             email: user.email,
+            role: user.role.as_str().to_owned(),
         }
     }
 }

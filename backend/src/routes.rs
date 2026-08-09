@@ -1,3 +1,5 @@
+mod api_key;
+mod app_route;
 mod auth;
 mod health;
 
@@ -27,7 +29,11 @@ pub fn create_router(state: AppState) -> Router {
 }
 
 fn api_router() -> Router<AppState> {
-    Router::new().merge(auth::router()).merge(health::router())
+    Router::new()
+        .merge(app_route::router())
+        .merge(api_key::router())
+        .merge(auth::router())
+        .merge(health::router())
 }
 
 #[cfg(test)]

@@ -2,19 +2,24 @@ mod clients;
 mod config;
 mod domain;
 mod dto;
+mod entity;
 mod error;
 mod handlers;
 mod logging;
+mod migration;
 mod pools;
+mod redis_key;
 mod repository;
 mod routes;
+mod security;
 mod services;
 mod state;
 
 use clients::RedisClient;
 use config::AppConfig;
-use pools::{create_database_pool, create_redis_pool, verify_database_pool};
+use pools::{create_database_connection, create_redis_pool, verify_database_connection};
 use routes::create_router;
+use sea_orm_migration::MigratorTrait;
 use state::AppState;
 use std::{path::PathBuf, process::ExitCode};
 
@@ -35,7 +40,7 @@ async fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
         "logging initialized"
     );
 
-    if let Err(error) = run(config, manifest_dir).await {
+    if let Err(error) = run(config).await {
         tracing::error!(
             startup_stage = error.stage,
             "backend stopped after a fatal error"
@@ -46,25 +51,20 @@ async fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
     Ok(ExitCode::SUCCESS)
 }
 
-async fn run(config: AppConfig, manifest_dir: PathBuf) -> Result<(), StartupError> {
-    let database_pool = create_database_pool(&config)
+async fn run(config: AppConfig) -> Result<(), StartupError> {
+    let database = create_database_connection(&config)
         .await
-        .map_err(startup_error("database_pool_create"))?;
+        .map_err(startup_error("database_connection_create"))?;
     let redis_pool = create_redis_pool(&config).map_err(startup_error("redis_pool_create"))?;
     let redis = RedisClient::new(redis_pool);
-    verify_database_pool(&database_pool)
+    verify_database_connection(&database)
         .await
         .map_err(startup_error("database_verify"))?;
     tracing::info!("PostgreSQL connection verified");
     redis.ping().await.map_err(startup_error("redis_verify"))?;
     tracing::info!("Redis connection verified");
 
-    let migrations_path = manifest_dir.join("migrations");
-    let migrator = sqlx::migrate::Migrator::new(migrations_path.as_path())
-        .await
-        .map_err(startup_error("migrations_load"))?;
-    migrator
-        .run(&database_pool)
+    migration::Migrator::up(&database, None)
         .await
         .map_err(startup_error("migrations_run"))?;
     tracing::info!("database migrations completed");
@@ -72,7 +72,7 @@ async fn run(config: AppConfig, manifest_dir: PathBuf) -> Result<(), StartupErro
     let listener = tokio::net::TcpListener::bind(config.bind_address)
         .await
         .map_err(startup_error("server_bind"))?;
-    let state = AppState::new(database_pool, redis, config.access_token_ttl_seconds);
+    let state = AppState::new(database, redis, config.access_token_ttl_seconds);
     let app = create_router(state);
 
     tracing::info!(

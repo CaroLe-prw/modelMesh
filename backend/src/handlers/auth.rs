@@ -6,10 +6,35 @@ use axum::{
 };
 
 use crate::{
+    domain::{User, UserId},
     dto::{AuthRequest, AuthResponse, LoginResponse, UserResponse},
     error::AppError,
     state::AppState,
 };
+
+pub(crate) async fn authenticate_user(
+    state: &AppState,
+    headers: &HeaderMap,
+) -> Result<User, AppError> {
+    let token = bearer_token(headers).ok_or(AppError::Unauthenticated)?;
+    state
+        .auth_service
+        .current_user(token)
+        .await
+        .map_err(AppError::from)
+}
+
+pub(crate) async fn authenticate_user_id(
+    state: &AppState,
+    headers: &HeaderMap,
+) -> Result<UserId, AppError> {
+    let token = bearer_token(headers).ok_or(AppError::Unauthenticated)?;
+    state
+        .auth_service
+        .authenticate(token)
+        .await
+        .map_err(AppError::from)
+}
 
 pub async fn register(
     State(state): State<AppState>,
@@ -49,8 +74,7 @@ pub async fn current_user(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<UserResponse>, AppError> {
-    let token = bearer_token(&headers).ok_or(AppError::Unauthenticated)?;
-    let user = state.auth_service.current_user(token).await?;
+    let user = authenticate_user(&state, &headers).await?;
 
     Ok(Json(UserResponse::from(user)))
 }
@@ -65,7 +89,7 @@ pub async fn logout(
     Ok(StatusCode::NO_CONTENT)
 }
 
-fn bearer_token(headers: &HeaderMap) -> Option<&str> {
+pub(crate) fn bearer_token(headers: &HeaderMap) -> Option<&str> {
     let authorization = headers.get(AUTHORIZATION)?.to_str().ok()?;
     let (scheme, token) = authorization.split_once(' ')?;
 

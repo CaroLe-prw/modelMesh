@@ -35,12 +35,7 @@ impl RedisClient {
         value: &str,
         ttl_seconds: u64,
     ) -> io::Result<bool> {
-        if ttl_seconds == 0 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Redis key TTL must be greater than zero",
-            ));
-        }
+        validate_ttl(ttl_seconds)?;
 
         let mut connection = self.pool.get().await.map_err(io::Error::other)?;
         let response = redis::cmd("SET")
@@ -54,6 +49,20 @@ impl RedisClient {
             .map_err(io::Error::other)?;
 
         Ok(response.is_some())
+    }
+
+    pub async fn set_with_ttl(&self, key: &str, value: &str, ttl_seconds: u64) -> io::Result<()> {
+        validate_ttl(ttl_seconds)?;
+        let mut connection = self.pool.get().await.map_err(io::Error::other)?;
+
+        redis::cmd("SET")
+            .arg(key)
+            .arg(value)
+            .arg("EX")
+            .arg(ttl_seconds)
+            .query_async::<()>(&mut connection)
+            .await
+            .map_err(io::Error::other)
     }
 
     pub async fn get<T>(&self, key: &str) -> io::Result<Option<T>>
@@ -78,6 +87,31 @@ impl RedisClient {
             .map_err(io::Error::other)?;
 
         Ok(deleted > 0)
+    }
+
+    pub async fn delete_many(&self, keys: &[String]) -> io::Result<u64> {
+        if keys.is_empty() {
+            return Ok(0);
+        }
+
+        let mut connection = self.pool.get().await.map_err(io::Error::other)?;
+
+        redis::cmd("DEL")
+            .arg(keys)
+            .query_async::<u64>(&mut connection)
+            .await
+            .map_err(io::Error::other)
+    }
+}
+
+fn validate_ttl(ttl_seconds: u64) -> io::Result<()> {
+    if ttl_seconds == 0 {
+        Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Redis key TTL must be greater than zero",
+        ))
+    } else {
+        Ok(())
     }
 }
 

@@ -3,7 +3,8 @@ import type { LucideIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FaGithub } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
-import { buttonVariants } from '@/components/ui/button-variants';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 
 interface Feature {
   icon: LucideIcon;
@@ -49,8 +50,8 @@ export function ValueSection() {
           ))}
         </div>
 
-        <div
-          className="mt-4 grid overflow-hidden rounded-xl border border-border bg-card lg:grid-cols-[1fr_0.85fr]"
+        <Card
+          className="mt-4 grid gap-0 overflow-hidden py-0 lg:grid-cols-[1fr_0.85fr]"
           id="open-source"
         >
           <div className="p-7 sm:p-10">
@@ -65,24 +66,23 @@ export function ValueSection() {
               {t('home.value.description')}
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <a
-                className={buttonVariants()}
-                href="https://github.com/CaroLe-prw/modelMesh"
-                target="_blank"
-                rel="noreferrer"
-              >
-                <FaGithub aria-hidden="true" className="size-4" />
-                {t('home.value.repository')}
-              </a>
-              <Link className={buttonVariants({ variant: 'outline' })} to="/features">
-                {t('home.value.docs')}
-                <ArrowRight aria-hidden="true" className="size-4" />
-              </Link>
+              <Button asChild>
+                <a href="https://github.com/CaroLe-prw/modelMesh" target="_blank" rel="noreferrer">
+                  <FaGithub aria-hidden="true" className="size-4" />
+                  {t('home.value.repository')}
+                </a>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/features">
+                  {t('home.value.docs')}
+                  <ArrowRight aria-hidden="true" className="size-4" />
+                </Link>
+              </Button>
             </div>
           </div>
 
           <div className="border-t border-border bg-background p-5 lg:border-l lg:border-t-0 sm:p-7">
-            <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <Card className="gap-0 overflow-hidden rounded-lg py-0 shadow-none">
               <div className="flex items-center justify-between border-b border-border px-4 py-3">
                 <span className="flex items-center gap-2 text-[10px] font-semibold">
                   <Braces aria-hidden="true" className="size-3.5 text-primary" />
@@ -105,9 +105,9 @@ export function ValueSection() {
                   {'\n}'});
                 </code>
               </pre>
-            </div>
+            </Card>
           </div>
-        </div>
+        </Card>
       </div>
     </section>
   );
@@ -118,20 +118,22 @@ function FeatureCard({ feature }: { feature: Feature }) {
   const Icon = feature.icon;
 
   return (
-    <article className="group rounded-xl border border-border bg-card p-6 transition-colors hover:border-border-strong sm:p-7">
-      <div className="flex items-start justify-between">
-        <span className="grid size-10 place-items-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-          <Icon aria-hidden="true" className="size-4.5" />
+    <article className="h-full">
+      <Card className="group h-full gap-0 p-6 transition-colors hover:border-border-strong sm:p-7">
+        <div className="flex items-start justify-between">
+          <span className="grid size-10 place-items-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+            <Icon aria-hidden="true" className="size-4.5" />
+          </span>
+          <span className="font-mono text-[9px] text-muted-foreground">{feature.index}</span>
+        </div>
+        <h3 className="mt-8 text-lg font-bold tracking-[-0.025em]">{t(feature.titleKey)}</h3>
+        <p className="mt-3 min-h-18 text-xs leading-6 text-muted-foreground">
+          {t(feature.descriptionKey)}
+        </p>
+        <span className="mt-7 block border-t border-border pt-4 font-mono text-[9px] text-muted-foreground">
+          {feature.footnote}
         </span>
-        <span className="font-mono text-[9px] text-muted-foreground">{feature.index}</span>
-      </div>
-      <h3 className="mt-8 text-lg font-bold tracking-[-0.025em]">{t(feature.titleKey)}</h3>
-      <p className="mt-3 min-h-18 text-xs leading-6 text-muted-foreground">
-        {t(feature.descriptionKey)}
-      </p>
-      <span className="mt-7 block border-t border-border pt-4 font-mono text-[9px] text-muted-foreground">
-        {feature.footnote}
-      </span>
+      </Card>
     </article>
   );
 }

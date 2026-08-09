@@ -21,11 +21,12 @@ cargo run --manifest-path backend/Cargo.toml
 ```
 
 Create the PostgreSQL database and start the Redis instance referenced by `backend/.env` before
-starting the API. Database migrations run automatically during backend startup. The backend uses
-shared PostgreSQL and Redis connection pools and verifies both dependencies before accepting
-requests.
+starting the API. SeaORM migrations run automatically during backend startup and record applied
+versions in `seaql_migrations`. The backend uses shared PostgreSQL and Redis connection pools and
+verifies both dependencies before accepting requests.
 
 `MODELMESH_ENVIRONMENT=development` and `test` write structured logs only to the console.
+Development additionally enables SeaORM database query logs at the `info` level.
 `MODELMESH_ENVIRONMENT=production` writes them asynchronously to one local-date file per day under
 `backend/logs/YYYYMMDD.log` by default. Change the level filter with `MODELMESH_LOG_FILTER` and the
 directory with `MODELMESH_LOG_DIRECTORY`. Request logs never include HTTP headers, passwords, or
@@ -52,6 +53,36 @@ TTL. The available endpoints are:
 - `GET /api/auth/me`
 - `POST /api/auth/logout`
 
+Authentication responses include the account's highest `role`: `personal`, `merchant`, or
+`admin`. New accounts default to `personal`; role assignment is not exposed through public
+self-service APIs. Account-center route metadata and role visibility are stored in PostgreSQL.
+The frontend loads the current account's visible routes from `GET /api/account-routes` instead of
+inferring access from a hard-coded role hierarchy. Administrators can inspect and update the role
+matrix through `GET /api/admin/account-routes` and
+`PUT /api/admin/account-routes/{route_key}/roles`.
+Visible route lists are cached in Redis under `modelmesh:account-routes:user:{user_id}` for one
+day. Cache entries include the user's role, so a role change cannot reuse an old route list. A
+route permission update deletes the cached lists for every user in the affected old and new roles.
+
+Authenticated users can manage ModelMesh API keys through:
+
+- `GET /api/api-keys?page=1&pageSize=20&query=codex`
+- `POST /api/api-keys`
+- `PUT /api/api-keys/{api_key_id}`
+- `PUT /api/api-keys/{api_key_id}/status`
+- `DELETE /api/api-keys/{api_key_id}`
+
+The create endpoint returns the plaintext API key once. System-generated keys use the `sk-`
+prefix. PostgreSQL stores only its SHA-256 hash, masked display fragments, access controls,
+spending limits, status, optional expiration, and the latest successful usage time and source IP.
+API key names are unique within an account, and every read or mutation is scoped to the
+authenticated user.
+The list endpoint defaults to page 1 with 20 items per page and accepts up to 100 items per page.
+All paginated endpoints use the same response envelope: `items` contains the current page and
+`pagination` contains `page`, `pageSize`, `total`, and `totalPages`.
+The optional `query` parameter searches API key names, masked key identifiers, prefixes, suffixes,
+and performs an exact hash lookup when a complete API key is supplied.
+
 API errors keep the HTTP status code separate from a stable numeric business code:
 
 ```json
@@ -68,6 +99,7 @@ The initial error-code ranges are:
 | ------------- | ----------------------------- |
 | `10000-10999` | Common request errors         |
 | `11000-11999` | Authentication errors         |
+| `12000-12999` | API key management errors     |
 | `90000-99998` | Infrastructure errors         |
 | `99999`       | Unknown internal server error |
 

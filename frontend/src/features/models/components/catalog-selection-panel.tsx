@@ -4,7 +4,8 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
-import { buttonVariants } from '@/components/ui/button-variants';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { brands, catalogModels, formatUsd, tokenOptions, type BrandId } from '../data/marketplace';
 
@@ -29,7 +30,7 @@ export function CatalogSelectionPanel({
   const visibleModels = catalogModels.filter((model) => model.brandId === selectedBrandId);
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-card shadow-[0_20px_60px_color-mix(in_srgb,var(--color-text)_6%,transparent)]">
+    <Card className="gap-0 overflow-hidden py-0 shadow-[0_20px_60px_color-mix(in_srgb,var(--color-text)_6%,transparent)]">
       <SelectionStage
         description={t('pages.models.explorer.brand.description')}
         icon={Building2}
@@ -41,16 +42,14 @@ export function CatalogSelectionPanel({
             const isSelected = brand.id === selectedBrandId;
 
             return (
-              <button
+              <Button
                 className={cn(
-                  'flex min-h-20 items-center gap-3 rounded-lg border px-3 text-left transition-colors',
-                  isSelected
-                    ? 'border-primary/40 bg-primary/8'
-                    : 'border-border bg-background hover:border-border-strong hover:bg-accent',
+                  'h-auto min-h-20 justify-start whitespace-normal rounded-lg px-3 text-left',
+                  isSelected && 'border-primary/40',
                 )}
                 aria-pressed={isSelected}
                 key={brand.id}
-                type="button"
+                variant={isSelected ? 'secondary' : 'outline'}
                 onClick={() => onBrandChange(brand.id)}
               >
                 <span
@@ -71,7 +70,7 @@ export function CatalogSelectionPanel({
                     })}
                   </small>
                 </span>
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -88,16 +87,14 @@ export function CatalogSelectionPanel({
             const isSelected = model.id === selectedModelId;
 
             return (
-              <button
+              <Button
                 className={cn(
-                  'relative min-h-22 rounded-lg border p-3.5 text-left transition-colors',
-                  isSelected
-                    ? 'border-primary/40 bg-primary/8'
-                    : 'border-border bg-background hover:border-border-strong hover:bg-accent',
+                  'relative h-auto min-h-22 justify-start whitespace-normal rounded-lg p-3.5 text-left',
+                  isSelected && 'border-primary/40',
                 )}
                 aria-pressed={isSelected}
                 key={model.id}
-                type="button"
+                variant={isSelected ? 'secondary' : 'outline'}
                 onClick={() => onModelChange(model.id)}
               >
                 {isSelected && (
@@ -116,7 +113,7 @@ export function CatalogSelectionPanel({
                     count: model.merchantCount,
                   })}
                 </span>
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -133,16 +130,14 @@ export function CatalogSelectionPanel({
             const isSelected = token.id === selectedTokenId;
 
             return (
-              <button
+              <Button
                 className={cn(
-                  'flex min-h-18 flex-1 items-center gap-3 rounded-lg border px-4 text-left transition-colors',
-                  isSelected
-                    ? 'border-primary/40 bg-primary/8'
-                    : 'border-border bg-background hover:border-border-strong hover:bg-accent',
+                  'h-auto min-h-18 flex-1 justify-start whitespace-normal rounded-lg px-4 text-left',
+                  isSelected && 'border-primary/40',
                 )}
                 aria-pressed={isSelected}
                 key={token.id}
-                type="button"
+                variant={isSelected ? 'secondary' : 'outline'}
                 onClick={() => onTokenChange(token.id)}
               >
                 <span
@@ -167,22 +162,18 @@ export function CatalogSelectionPanel({
                 >
                   {t(`pages.models.explorer.token.${token.status}`)}
                 </Badge>
-              </button>
+              </Button>
             );
           })}
-          <Link
-            className={buttonVariants({
-              variant: 'outline',
-              className: 'min-h-18 min-w-36 border-dashed',
-            })}
-            to="/register"
-          >
-            <Plus aria-hidden="true" className="size-4" />
-            {t('pages.models.explorer.token.create')}
-          </Link>
+          <Button asChild className="min-h-18 min-w-36 border-dashed" variant="outline">
+            <Link to="/register">
+              <Plus aria-hidden="true" className="size-4" />
+              {t('pages.models.explorer.token.create')}
+            </Link>
+          </Button>
         </div>
       </SelectionStage>
-    </section>
+    </Card>
   );
 }
 
@@ -196,7 +187,7 @@ interface SelectionStageProps {
 
 function SelectionStage({ children, description, icon: Icon, step, title }: SelectionStageProps) {
   return (
-    <div className="border-b border-border p-4 sm:p-5">
+    <CardContent className="border-b border-border p-4 sm:p-5">
       <div className="mb-4 flex items-start gap-3">
         <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary">
           <Icon aria-hidden="true" className="size-3.5" />
@@ -210,6 +201,6 @@ function SelectionStage({ children, description, icon: Icon, step, title }: Sele
         </div>
       </div>
       {children}
-    </div>
+    </CardContent>
   );
 }

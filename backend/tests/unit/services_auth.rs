@@ -1,4 +1,5 @@
-use super::{generate_access_token, hash_access_token, normalize_email, validate_password};
+use super::{generate_access_token, normalize_email, validate_password};
+use crate::security::hash_secret;
 
 #[test]
 fn email_is_normalized() {
@@ -23,14 +24,14 @@ fn password_length_is_validated() {
 #[test]
 fn access_token_has_expected_format_and_hash() {
     let token = generate_access_token();
-    let token_hash = hash_access_token(&token);
+    let token_hash = hash_secret(&token);
 
     assert_eq!(token.len(), 64);
     assert!(token.bytes().all(|byte| byte.is_ascii_hexdigit()));
     assert_eq!(token_hash.len(), 64);
     assert_ne!(token, token_hash);
     assert_eq!(
-        hash_access_token("abc"),
+        hash_secret("abc"),
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
     );
 }

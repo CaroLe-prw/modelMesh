@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 interface BrandProps {
@@ -24,9 +25,12 @@ export function Brand({ compact = false }: BrandProps) {
         ModelMesh
       </span>
       {!compact && (
-        <span className="hidden rounded border border-border px-1.5 py-0.5 font-mono text-[8px] font-bold tracking-[0.14em] text-muted-foreground sm:inline">
+        <Badge
+          className="hidden h-auto rounded px-1.5 py-0.5 font-mono text-[8px] tracking-[0.14em] sm:inline-flex"
+          variant="outline"
+        >
           OPEN
-        </span>
+        </Badge>
       )}
     </Link>
   );

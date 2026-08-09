@@ -1,12 +1,18 @@
 use axum::{
-    Router,
+    Json, Router,
     body::{Body, to_bytes},
+    extract::Query,
     http::{Request, StatusCode},
+    routing::get,
 };
 use tower::ServiceExt;
 
 use super::create_router;
 use crate::state::AppState;
+use crate::{
+    domain::{ApiKey, ApiKeyStatus, Pagination},
+    dto::{ApiKeyResponse, ListApiKeysQuery, PaginatedResponse, PaginationResponse},
+};
 
 #[tokio::test]
 async fn health_route_returns_service_status() {
@@ -48,6 +54,38 @@ async fn current_user_requires_a_bearer_token() {
 }
 
 #[tokio::test]
+async fn api_keys_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/api-keys")
+                .body(Body::empty())
+                .expect("test request should be valid"),
+        )
+        .await
+        .expect("API key request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn account_routes_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/account-routes")
+                .body(Body::empty())
+                .expect("test request should be valid"),
+        )
+        .await
+        .expect("account routes request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
 async fn register_rejects_invalid_json_with_a_stable_error_code() {
     let response = test_router()
         .oneshot(
@@ -65,6 +103,72 @@ async fn register_rejects_invalid_json_with_a_stable_error_code() {
     assert_eq!(response_body(response).await, r#"{"error":{"code":10001}}"#);
 }
 
+#[tokio::test]
+async fn pagination_query_uses_camel_case_and_defaults() {
+    let router = Router::new().route("/pagination", get(pagination_probe));
+    let explicit = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/pagination?page=3&pageSize=40&query=codex&status=active")
+                .body(Body::empty())
+                .expect("pagination request should be valid"),
+        )
+        .await
+        .expect("pagination request should complete");
+    let defaults = router
+        .oneshot(
+            Request::builder()
+                .uri("/pagination")
+                .body(Body::empty())
+                .expect("default pagination request should be valid"),
+        )
+        .await
+        .expect("default pagination request should complete");
+
+    assert_eq!(response_body(explicit).await, "3:40:codex:active");
+    assert_eq!(response_body(defaults).await, "1:20::all");
+}
+
+#[tokio::test]
+async fn paginated_response_uses_shared_envelope() {
+    let response = Router::new()
+        .route("/pagination", get(pagination_response_probe))
+        .oneshot(
+            Request::builder()
+                .uri("/pagination")
+                .body(Body::empty())
+                .expect("pagination response request should be valid"),
+        )
+        .await
+        .expect("pagination response request should complete");
+
+    assert_eq!(
+        response_body(response).await,
+        r#"{"items":["first"],"pagination":{"page":2,"pageSize":20,"total":21,"totalPages":2}}"#
+    );
+}
+
+#[tokio::test]
+async fn api_key_timestamps_are_serialized_as_utc_instants() {
+    let response = Router::new()
+        .route("/api-key", get(api_key_timestamp_probe))
+        .oneshot(
+            Request::builder()
+                .uri("/api-key")
+                .body(Body::empty())
+                .expect("API key timestamp request should be valid"),
+        )
+        .await
+        .expect("API key timestamp request should complete");
+    let body = response_body(response).await;
+
+    assert!(body.contains(r#""expiresAt":"2026-09-01T12:30:00Z""#));
+    assert!(body.contains(r#""lastUsedAt":"2026-08-07T05:15:00Z""#));
+    assert!(body.contains(r#""lastUsedIp":"203.0.113.10""#));
+    assert!(body.contains(r#""createdAt":"2026-08-07T03:45:12Z""#));
+}
+
 fn test_router() -> Router {
     create_router(AppState::for_test())
 }
@@ -75,4 +179,58 @@ async fn response_body(response: axum::response::Response) -> String {
         .expect("response body should be readable");
 
     String::from_utf8(body.to_vec()).expect("response should be UTF-8")
+}
+
+async fn pagination_probe(Query(query): Query<ListApiKeysQuery>) -> String {
+    let status: Option<ApiKeyStatus> = query.status.map(Into::into);
+    let status = status.map_or("all", ApiKeyStatus::as_str);
+
+    format!(
+        "{}:{}:{}:{}",
+        query.pagination.page,
+        query.pagination.page_size,
+        query.query.unwrap_or_default(),
+        status,
+    )
+}
+
+async fn pagination_response_probe() -> Json<PaginatedResponse<&'static str>> {
+    let pagination = Pagination::new(2, 20).expect("test pagination should be valid");
+
+    Json(PaginatedResponse {
+        items: vec!["first"],
+        pagination: PaginationResponse::new(pagination, 21),
+    })
+}
+
+async fn api_key_timestamp_probe() -> Json<ApiKeyResponse> {
+    Json(ApiKeyResponse::from(ApiKey {
+        id: "00000000-0000-4000-8000-000000000001".to_owned(),
+        name: "timestamp-test".to_owned(),
+        key_prefix: "sk-abcd".to_owned(),
+        key_suffix: "1234".to_owned(),
+        status: ApiKeyStatus::Active,
+        ip_restriction_enabled: false,
+        ip_whitelist: String::new(),
+        ip_blacklist: String::new(),
+        quota_limit_microusd: 0,
+        rate_limit_enabled: false,
+        five_hour_limit_microusd: 0,
+        daily_limit_microusd: 0,
+        weekly_limit_microusd: 0,
+        expires_at: Some(
+            "2026-09-01T12:30:00Z"
+                .parse()
+                .expect("expiration should be valid"),
+        ),
+        last_used_at: Some(
+            "2026-08-07T05:15:00Z"
+                .parse()
+                .expect("last usage time should be valid"),
+        ),
+        last_used_ip: Some("203.0.113.10".to_owned()),
+        created_at: "2026-08-07T03:45:12Z"
+            .parse()
+            .expect("creation time should be valid"),
+    }))
 }

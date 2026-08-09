@@ -7,7 +7,7 @@
 ModelMesh 是一个开源的 AI 模型渠道发现、比较、路由与状态监测平台。
 
 - 前端目录：`frontend/`
-- 前端框架：React、TypeScript、Vite
+- 前端框架：React 19、TypeScript、Vite
 - 包管理器：pnpm
 - 代码检查：Oxlint
 - 样式系统：UnoCSS
@@ -41,37 +41,37 @@ ModelMesh 是一个开源的 AI 模型渠道发现、比较、路由与状态监
 | `--color-text-faint`         | `#9298A3` | 辅助信息             |
 | `--color-border`             | `#E3E5E9` | 默认边框             |
 | `--color-border-strong`      | `#D8DBE1` | 强调边框             |
-| `--color-primary`            | `#0F1419` | 主按钮、链接、选中态 |
+| `--color-primary`            | `#0FA2E7` | 主按钮、链接、选中态 |
 | `--color-primary-foreground` | `#FFFFFF` | 主色上的文字         |
-| `--color-primary-soft`       | `#ECEEF0` | 主色弱背景           |
+| `--color-primary-soft`       | `#E7F6FD` | 主色弱背景           |
 | `--color-success`            | `#11965C` | 成功、在线、健康     |
 | `--color-warning`            | `#DF8B18` | 警告、延迟、降级     |
 | `--color-danger`             | `#E94E4E` | 错误、离线、危险操作 |
 
 ### 开发者深色主题
 
-| 语义变量                     | 色值                        | 用途                 |
-| ---------------------------- | --------------------------- | -------------------- |
-| `--color-bg`                 | `#090B0F`                   | 页面背景             |
-| `--color-surface`            | `#101319`                   | 卡片、表格、弹层     |
-| `--color-surface-raised`     | `#151920`                   | 高层级浮层           |
-| `--color-surface-subtle`     | `#171B23`                   | 次级区域             |
-| `--color-surface-hover`      | `#1B2029`                   | 悬停背景             |
-| `--color-text`               | `#F2F5F7`                   | 主文字               |
-| `--color-text-muted`         | `#969EAA`                   | 次级文字             |
-| `--color-text-faint`         | `#697280`                   | 辅助信息             |
-| `--color-border`             | `#252A33`                   | 默认边框             |
-| `--color-border-strong`      | `#343B47`                   | 强调边框             |
-| `--color-primary`            | `#FFFFFF`                   | 主按钮、链接、选中态 |
-| `--color-primary-foreground` | `#0F1419`                   | 主色上的文字         |
-| `--color-primary-soft`       | `rgba(255, 255, 255, 0.11)` | 主色弱背景           |
-| `--color-success`            | `#4BD59A`                   | 成功、在线、健康     |
-| `--color-warning`            | `#EDB657`                   | 警告、延迟、降级     |
-| `--color-danger`             | `#FF6B74`                   | 错误、离线、危险操作 |
+| 语义变量                     | 色值                       | 用途                 |
+| ---------------------------- | -------------------------- | -------------------- |
+| `--color-bg`                 | `#090B0F`                  | 页面背景             |
+| `--color-surface`            | `#101319`                  | 卡片、表格、弹层     |
+| `--color-surface-raised`     | `#151920`                  | 高层级浮层           |
+| `--color-surface-subtle`     | `#171B23`                  | 次级区域             |
+| `--color-surface-hover`      | `#1B2029`                  | 悬停背景             |
+| `--color-text`               | `#F2F5F7`                  | 主文字               |
+| `--color-text-muted`         | `#969EAA`                  | 次级文字             |
+| `--color-text-faint`         | `#697280`                  | 辅助信息             |
+| `--color-border`             | `#252A33`                  | 默认边框             |
+| `--color-border-strong`      | `#343B47`                  | 强调边框             |
+| `--color-primary`            | `#0FA2E7`                  | 主按钮、链接、选中态 |
+| `--color-primary-foreground` | `#FFFFFF`                  | 主色上的文字         |
+| `--color-primary-soft`       | `rgba(15, 162, 231, 0.16)` | 主色弱背景           |
+| `--color-success`            | `#4BD59A`                  | 成功、在线、健康     |
+| `--color-warning`            | `#EDB657`                  | 警告、延迟、降级     |
+| `--color-danger`             | `#FF6B74`                  | 错误、离线、危险操作 |
 
 主题变量应定义在全局样式中，深色变量由 `.theme-dark` 覆盖。业务组件只使用语义变量，不直接写十六进制颜色。主题选择应保存在本地，并在首次访问时尊重系统主题偏好。
 
-品牌交互采用黑白配色：浅色主题使用近黑色 `#0F1419` 搭配白色文字，深色主题使用白色搭配近黑色文字。主色用于主按钮、链接、品牌标识和重点文字；成功状态继续使用绿色，避免品牌交互色与健康状态混淆。除非任务明确要求重新调整视觉方案，否则不得随意替换主色。
+品牌交互采用亮蓝色 `#0FA2E7` 搭配白色文字，浅色与深色主题保持同一品牌主色，弱背景分别使用浅蓝色与半透明蓝色。主色用于主按钮、链接、品牌标识和重点文字；成功状态继续使用绿色，避免品牌交互色与健康状态混淆。除非任务明确要求重新调整视觉方案，否则不得随意替换主色。
 
 ### 视觉细节
 
@@ -85,14 +85,30 @@ ModelMesh 是一个开源的 AI 模型渠道发现、比较、路由与状态监
 - 所有交互元素必须有清晰的 hover、focus、disabled 和 loading 状态。
 - 浅色与深色主题都要满足足够的文字对比度。
 
+### 响应式与移动端
+
+- 所有新增或修改的页面必须采用移动端优先的响应式设计，并保证核心浏览、筛选和操作流程可在手机上完整使用；不得把移动端支持作为后续补充项。
+- 默认至少覆盖 `360px` 至 `430px` 手机宽度、常见平板宽度和桌面宽度；提交前必须使用 `390px × 844px` 及一个桌面视口进行实际界面验证。
+- 页面根容器不得产生非预期的横向滚动。宽数据表可以在卡片内部横向滚动，并应通过固定关键列、移动端卡片列表或信息分层保证主要内容可读，但不得让整页随表格横向移动。
+- 桌面侧栏在移动端必须转换为紧凑的下拉导航、抽屉或横向标签，不得让用户先滚过完整侧栏才能看到页面内容。
+- 关键数据和主要操作不得仅在桌面端显示；移动端可以调整布局、密度和次序，但不得直接隐藏创建、编辑、状态切换、筛选等核心能力。
+- 表单、筛选器和操作栏在窄屏下应改为单列、换行或分组布局；弹层必须限制在可视区域内并允许内容滚动，底部主要操作应始终可达。
+- 图表与统计卡在移动端应按单列或双列重排，文字不得被无意义截断；需要横向浏览的数据必须提供明确且局部的滚动区域。
+- 触控目标建议不小于 `40px × 40px`，相邻危险操作应保持足够间距，并同时满足键盘操作、可见焦点和屏幕阅读器标签要求。
+- 响应式验证必须同时覆盖简体中文与英文、浅色与深色主题，重点检查长文案、菜单、表格固定列、弹层和页面级溢出。
+
 ## 3. React 与 TypeScript 约定
 
+- 前端代码统一遵循 React 19 的公共 API、类型定义和最佳实践；不得继续新增 React 19 已弃用的 API 或类型，也不得通过类型断言或忽略诊断绕过弃用警告。
+- 事件类型必须按实际事件语义选择 React 19 类型，例如表单提交使用 `SubmitEvent<HTMLFormElement>`，输入变更使用 `ChangeEvent<HTMLInputElement>`；不得使用已弃用的 `FormEvent` 作为通用替代。
 - 使用函数组件与 Hooks，不新增 class component。
 - TypeScript 保持严格类型；禁止用 `any` 绕过类型检查。
 - API DTO、领域模型和组件 Props 应使用明确的类型。
 - 所有完整的视觉区域和交互单元都应组件化；页面组件只负责组合功能，不承载复杂业务规则或大段 JSX。
 - `App.tsx` 只负责应用入口、全局 Provider、路由或顶层布局，不直接实现具体业务页面。
-- shadcn/ui 风格的基础组件统一放在 `src/components/ui/`，不得在业务目录复制 Button、Input、Dialog、Card 等基础实现。
+- shadcn/ui 基础组件必须优先从官方 registry 安装或以官方 registry 源码为基准维护，统一放在 `src/components/ui/`；交互原语统一采用 Radix UI 体系，不得混用 Base UI、React Aria 或自行实现一套相同能力。适配 UnoCSS 时只调整样式类、动画实现和语义主题变量，不得随意改变官方组件的组合结构、可访问性行为和公共 API，也不得在业务目录复制 Button、Input、Dialog、Card 等基础实现。
+- 业务页面和业务组件不得直接使用原生 `button`、`input`、`select`、`textarea`、`table`、`dialog`、`label` 等元素重复实现已有的 shadcn/ui 能力；必须优先引用 `src/components/ui/` 中的公共组件。原生元素只允许出现在公共 UI 组件内部，或用于 shadcn/ui 没有对应能力且确有语义、可访问性或浏览器原生行为要求的场景，并应在代码中保持统一封装。
+- 下拉选择器默认使用 `src/components/ui/select.tsx` 提供的 shadcn/ui `Select`、`SelectTrigger`、`SelectContent` 和 `SelectItem` 组合，保证触发器与浮层视觉一致；除非任务明确要求系统原生菜单，否则不得使用原生 `select` 或 `NativeSelect`。
 - 跨业务复用的组合组件放在 `src/components/common/`，例如状态徽标、空状态、错误状态、加载状态、分页器和通用数据表格。
 - 业务组件按功能放在 `src/features/<feature>/components/`，业务 Hooks、类型和 API 也应留在对应 feature 内。
 - 页面放在 `src/pages/`，布局放在 `src/layouts/`，跨业务 Hooks 放在 `src/hooks/`，通用工具放在 `src/lib/`。
@@ -122,6 +138,7 @@ ModelMesh 是一个开源的 AI 模型渠道发现、比较、路由与状态监
 - 只有无法静态发现且确实必要的 class 才加入 safelist。
 - 少量无法用原子类清晰表达的样式可以写普通 CSS，但仍须使用主题变量。
 - 如果采用 shadcn/ui 的设计或组件结构，应将组件适配为 UnoCSS 实现；不要直接引入其 Tailwind 配置，除非仓库明确决定更换样式方案。
+- shadcn/ui 官方 registry 使用的 Tailwind 类必须转换为 UnoCSS 可静态扫描的等价写法；项目特有的视觉变体可以在官方 `cva` 配置上扩展，但应优先沿用 `default`、`secondary`、`outline`、`destructive`、`ghost`、`link` 等官方变体名称。
 
 ## 5. 国际化约定
 
@@ -136,7 +153,8 @@ ModelMesh 是一个开源的 AI 模型渠道发现、比较、路由与状态监
 
 ## 6. Rust、Axum 与 Tokio 约定
 
-- 使用 Rust 2024 edition，最低 Rust 版本为 `1.94`，并与 `backend/Cargo.toml` 的 `rust-version` 保持一致。
+- 使用 Rust 2024 edition，最低 Rust 版本为 `1.94`；所有新增和修改的 Rust 代码必须遵循 Rust `1.94` 及以上稳定版本的语言、标准库和惯用写法，并与 `backend/Cargo.toml` 的 `rust-version` 保持一致。
+- 不得为了兼容 Rust `1.94` 以下版本而采用已过时的实现；需要使用高于当前 `rust-version` 才提供的能力时，必须同步提升 `rust-version`、工具链、CI 和相关文档，不得依赖 nightly 特性。
 - Rust 模块采用现代文件布局，使用 `feature.rs` 配合 `feature/` 子模块目录，不创建旧式 `feature/mod.rs`；`mod` 关键字仅用于正常的模块声明。
 - 后端 Rust 单元测试实现统一放在 `backend/tests/unit/`，生产源码只保留带 `#[cfg(test)]` 和 `#[path = "..."]` 的测试模块声明；不得在生产源码中编写大段内联测试。独立的集成测试直接放在 `backend/tests/`。
 - Axum handler 保持简短，只负责提取参数、调用服务和构造响应。
@@ -180,7 +198,7 @@ ModelMesh 是一个开源的 AI 模型渠道发现、比较、路由与状态监
 - 前端统一使用 pnpm，并提交 `pnpm-lock.yaml`；不要生成 npm、Yarn 或 Bun 的锁文件。
 - 首次克隆仓库后运行 `./scripts/setup-git-hooks.sh`，启用仓库维护的提交前检查。
 - 提交前 Hook 会格式化已暂存的前端和 Rust 文件，并按变更范围执行前后端校验；不要无故绕过。
-- Git 提交必须在对应范围的格式检查、静态检查、构建和测试全部通过后才能完成，任一检查失败都必须阻止提交；`backend/tests/`、`backend/migrations/`、依赖清单和锁文件均属于后端校验范围。
+- Git 提交必须在对应范围的格式检查、静态检查、构建和测试全部通过后才能完成，任一检查失败都必须阻止提交；`backend/tests/`、`backend/src/migration/`、依赖清单和锁文件均属于后端校验范围。
 - 添加依赖前先确认标准库或现有依赖无法清晰完成需求。
 - 不因局部功能引入重量级框架。
 - 修改应聚焦当前任务，避免夹带无关的大范围重构。

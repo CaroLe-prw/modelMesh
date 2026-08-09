@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { SiteHeader } from '@/components/layout/site-header';
+import { Toaster } from '@/components/ui/sonner';
+import { AccountRouteContent } from '@/features/account/components/account-route-content';
 import { ProtectedRoute } from '@/features/auth/components/protected-route';
 import { useDocumentLocale } from '@/hooks/use-document-locale';
 import { useTheme } from '@/hooks/use-theme';
@@ -13,18 +15,22 @@ import { RoutingPage } from '@/pages/routing-page';
 import './App.css';
 
 function App() {
-  useTheme();
+  const { isDark, toggleTheme } = useTheme();
   useDocumentLocale();
 
   return (
     <div className="app min-h-screen bg-background text-foreground">
-      <SiteHeader />
+      <SiteHeader isDark={isDark} onToggleTheme={toggleTheme} />
       <main>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/models" element={<ModelsPage />} />
-            <Route path="/account" element={<AccountPage />} />
+            <Route element={<AccountPage />}>
+              <Route path="/account/*" element={<AccountRouteContent />} />
+              <Route path="/merchant/*" element={<AccountRouteContent />} />
+              <Route path="/admin/*" element={<AccountRouteContent />} />
+            </Route>
           </Route>
           <Route path="/routing" element={<RoutingPage />} />
           <Route path="/features" element={<FeaturesPage />} />
@@ -34,6 +40,13 @@ function App() {
         </Routes>
       </main>
       <SiteFooter />
+      <Toaster
+        closeButton
+        position="top-right"
+        richColors
+        theme={isDark ? 'dark' : 'light'}
+        toastOptions={{ duration: 4000 }}
+      />
     </div>
   );
 }

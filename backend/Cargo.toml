@@ -1,3 +1,4 @@
+#:schema https://json.schemastore.org/any.json
 [package]
 name = "backend"
 version = "0.1.0"
@@ -17,16 +18,25 @@ argon2 = "0.5.3"
 axum = "0.8.9"
 deadpool-redis = "0.23.0"
 dotenvy = "0.15.7"
-jiff = "0.2.24"
+jiff = { version = "0.2.24", features = ["serde"] }
+log = "0.4.33"
 password-hash = { version = "0.5.0", features = ["getrandom"] }
-serde = { version = "1.0.229", features = ["derive"] }
-sha2 = "0.11"
-sqlx = { version = "0.9.0", default-features = false, features = [
-  "migrate",
-  "postgres",
-  "runtime-tokio",
-  "tls-rustls-ring-webpki",
+sea-orm = { version = "2.0.0", default-features = false, features = [
+  "macros",
+  "runtime-tokio-rustls",
+  "sqlx-postgres",
+  "with-ipnetwork",
+  "with-time",
+  "with-uuid",
 ] }
+sea-orm-migration = { version = "2.0.0", default-features = false, features = [
+  "runtime-tokio-rustls",
+  "sqlx-postgres",
+] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.149"
+sha2 = "0.11"
+time = "0.3.55"
 tokio = { version = "1.53.1", features = [
   "macros",
   "rt-multi-thread",

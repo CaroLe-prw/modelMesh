@@ -10,6 +10,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "oxlint",
+    "prepare": "sh ../scripts/setup-git-hooks.sh",
     "preview": "vite preview",
     "ui:add": "pnpm dlx --package shadcn@4.16.1 --package zod@3.25.76 shadcn add",
     "ui:info": "pnpm dlx --package shadcn@4.16.1 --package zod@3.25.76 shadcn info"
@@ -17,13 +18,18 @@
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
     "i18next": "^26.3.6",
     "lucide-react": "^1.28.0",
+    "radix-ui": "1.6.7",
     "react": "^19.2.8",
+    "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.8",
     "react-i18next": "^17.0.11",
     "react-icons": "^5.7.0",
     "react-router-dom": "^7.18.2",
+    "recharts": "^3.10.1",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {

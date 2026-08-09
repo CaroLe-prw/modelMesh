@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { useAuth } from '@/features/auth/context/auth-context';
 
 export function ProtectedRoute() {
@@ -44,9 +45,9 @@ function RouteStatus({ children }: { children: ReactNode }) {
   return (
     <section className="relative z-10 grid min-h-[calc(100vh-188px)] place-items-center px-4 py-14">
       <div className="hero-grid absolute inset-0 -z-10 opacity-45" aria-hidden="true" />
-      <div className="w-full max-w-sm rounded-xl border border-border bg-card p-7 text-center shadow-[0_24px_70px_color-mix(in_srgb,var(--color-text)_7%,transparent)]">
+      <Card className="w-full max-w-sm gap-0 p-7 text-center shadow-[0_24px_70px_color-mix(in_srgb,var(--color-text)_7%,transparent)]">
         {children}
-      </div>
+      </Card>
     </section>
   );
 }

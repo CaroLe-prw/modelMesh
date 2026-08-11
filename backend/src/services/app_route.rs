@@ -3,6 +3,8 @@ use crate::{
     repository::{AppRouteCacheRepository, AppRouteRepository, AppRouteRoleChange, AuthRepository},
 };
 
+use super::authorization::require_admin;
+
 const ROUTE_ACCESS_KEY: &str = "admin.route-access";
 
 #[derive(Clone)]
@@ -63,11 +65,26 @@ impl AppRouteService {
         &self,
         requester_role: AccountRole,
     ) -> Result<Vec<AppRoute>, AppRouteServiceError> {
-        ensure_admin(requester_role)?;
-        self.repository
+        require_admin(requester_role, AppRouteServiceError::Forbidden)?;
+        match self.cache.find_all().await {
+            Ok(Some(routes)) => return Ok(routes),
+            Ok(None) => {}
+            Err(error) => {
+                tracing::warn!(%error, "admin route matrix cache read failed");
+            }
+        }
+
+        let routes = self
+            .repository
             .list_all()
             .await
-            .map_err(|_| AppRouteServiceError::Internal)
+            .map_err(|_| AppRouteServiceError::Internal)?;
+
+        if let Err(error) = self.cache.save_all(&routes).await {
+            tracing::warn!(%error, "admin route matrix cache write failed");
+        }
+
+        Ok(routes)
     }
 
     pub async fn update_roles(
@@ -76,7 +93,7 @@ impl AppRouteService {
         route_key: &str,
         role_values: Vec<String>,
     ) -> Result<AppRoute, AppRouteServiceError> {
-        ensure_admin(requester_role)?;
+        require_admin(requester_role, AppRouteServiceError::Forbidden)?;
         let roles = parse_roles(role_values)?;
 
         validate_managed_route_roles(route_key, &roles)?;
@@ -103,10 +120,10 @@ impl AppRouteService {
             .await
             .map_err(|_| AppRouteServiceError::Internal)?;
         self.cache
-            .invalidate_users(&user_ids)
+            .invalidate_permission_change(&user_ids)
             .await
             .map_err(|error| {
-                tracing::error!(%error, "account route cache invalidation failed");
+                tracing::error!(%error, "route permission caches invalidation failed");
                 AppRouteServiceError::Internal
             })?;
 
@@ -124,14 +141,6 @@ fn affected_roles(change: &AppRouteRoleChange) -> Vec<AccountRole> {
     }
 
     roles
-}
-
-fn ensure_admin(role: AccountRole) -> Result<(), AppRouteServiceError> {
-    if role == AccountRole::Admin {
-        Ok(())
-    } else {
-        Err(AppRouteServiceError::Forbidden)
-    }
 }
 
 fn parse_roles(values: Vec<String>) -> Result<Vec<AccountRole>, AppRouteServiceError> {

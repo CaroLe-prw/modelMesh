@@ -14,7 +14,7 @@ export function AccountRouteContent() {
   if (state.status === 'loading' || state.status === 'inactive') {
     return (
       <AccountRouteStatus>
-        <LoaderCircle aria-hidden="true" className="size-6 animate-spin text-primary" />
+        <LoaderCircle aria-hidden="true" className="mx-auto size-6 animate-spin text-primary" />
         <p className="mt-3 text-sm text-muted-foreground">
           {t('pages.account.routeAccessState.loading')}
         </p>

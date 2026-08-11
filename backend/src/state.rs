@@ -4,9 +4,13 @@ use crate::{
     clients::RedisClient,
     repository::{
         AccessTokenRepository, ApiKeyRepository, AppRouteCacheRepository, AppRouteRepository,
-        AuthRepository,
+        AuthRepository, BrandPresetRepository, BrandRepository, ModelCatalogRepository,
+        ModelRepository, UserCacheRepository,
     },
-    services::{ApiKeyService, AppRouteService, AuthService},
+    services::{
+        ApiKeyService, AppRouteService, AuthService, BrandPresetService, BrandService,
+        ModelCatalogService, ModelService,
+    },
 };
 
 #[derive(Clone)]
@@ -14,6 +18,10 @@ pub struct AppState {
     pub auth_service: AuthService,
     pub api_key_service: ApiKeyService,
     pub app_route_service: AppRouteService,
+    pub brand_service: BrandService,
+    pub brand_preset_service: BrandPresetService,
+    pub model_catalog_service: ModelCatalogService,
+    pub model_service: ModelService,
     pub database: DatabaseConnection,
     pub redis: RedisClient,
     pub service_name: &'static str,
@@ -35,9 +43,24 @@ impl AppState {
                 auth_repository.clone(),
             ),
             api_key_service: ApiKeyService::new(ApiKeyRepository::new(database.clone())),
+            brand_service: BrandService::new(
+                BrandRepository::new(database.clone()),
+                BrandPresetRepository::new(database.clone()),
+            ),
+            brand_preset_service: BrandPresetService::new(BrandPresetRepository::new(
+                database.clone(),
+            )),
+            model_catalog_service: ModelCatalogService::new(ModelCatalogRepository::new(
+                database.clone(),
+            )),
+            model_service: ModelService::new(
+                ModelRepository::new(database.clone()),
+                ModelCatalogRepository::new(database.clone()),
+            ),
             auth_service: AuthService::new(
                 auth_repository,
                 AccessTokenRepository::new(redis.clone(), access_token_ttl_seconds),
+                UserCacheRepository::with_default_ttl(redis.clone()),
             ),
             database,
             redis,

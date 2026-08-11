@@ -3,6 +3,21 @@ mod m0002_create_api_keys;
 mod m0003_add_api_key_last_usage;
 mod m0004_add_user_role;
 mod m0005_create_app_routes;
+mod m0006_seed_app_routes;
+mod m0007_seed_merchant_routes;
+mod m0008_seed_merchant_operations;
+mod m0009_seed_admin_routes;
+mod m0010_remove_admin_merchant_requests;
+mod m0011_seed_admin_management_routes;
+mod m0012_seed_admin_catalog_management;
+mod m0013_create_brand_presets;
+mod m0014_drop_brand_preset_search_terms;
+mod m0015_create_brands;
+mod m0016_create_model_catalog;
+mod m0017_add_model_catalog_cache_prices;
+mod m0018_create_models;
+mod m0019_add_complete_model_pricing;
+mod m0020_store_custom_model_default_pricing;
 
 use sea_orm_migration::prelude::*;
 
@@ -17,6 +32,21 @@ impl MigratorTrait for Migrator {
             Box::new(m0003_add_api_key_last_usage::Migration),
             Box::new(m0004_add_user_role::Migration),
             Box::new(m0005_create_app_routes::Migration),
+            Box::new(m0006_seed_app_routes::Migration),
+            Box::new(m0007_seed_merchant_routes::Migration),
+            Box::new(m0008_seed_merchant_operations::Migration),
+            Box::new(m0009_seed_admin_routes::Migration),
+            Box::new(m0010_remove_admin_merchant_requests::Migration),
+            Box::new(m0011_seed_admin_management_routes::Migration),
+            Box::new(m0012_seed_admin_catalog_management::Migration),
+            Box::new(m0013_create_brand_presets::Migration),
+            Box::new(m0014_drop_brand_preset_search_terms::Migration),
+            Box::new(m0015_create_brands::Migration),
+            Box::new(m0016_create_model_catalog::Migration),
+            Box::new(m0017_add_model_catalog_cache_prices::Migration),
+            Box::new(m0018_create_models::Migration),
+            Box::new(m0019_add_complete_model_pricing::Migration),
+            Box::new(m0020_store_custom_model_default_pricing::Migration),
         ]
     }
 }

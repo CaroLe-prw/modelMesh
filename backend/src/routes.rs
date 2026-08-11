@@ -1,7 +1,11 @@
 mod api_key;
 mod app_route;
 mod auth;
+mod brand;
+mod brand_preset;
 mod health;
+mod model;
+mod model_catalog;
 
 use axum::{Router, http::Request};
 use tower_http::trace::{DefaultOnFailure, DefaultOnResponse, TraceLayer};
@@ -33,7 +37,11 @@ fn api_router() -> Router<AppState> {
         .merge(app_route::router())
         .merge(api_key::router())
         .merge(auth::router())
+        .merge(brand::router())
+        .merge(brand_preset::router())
         .merge(health::router())
+        .merge(model_catalog::router())
+        .merge(model::router())
 }
 
 #[cfg(test)]

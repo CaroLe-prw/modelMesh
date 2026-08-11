@@ -5,7 +5,10 @@ use axum::{
 };
 use serde::Serialize;
 
-use crate::services::{ApiKeyServiceError, AppRouteServiceError, AuthServiceError};
+use crate::services::{
+    ApiKeyServiceError, AppRouteServiceError, AuthServiceError, BrandPresetServiceError,
+    BrandServiceError, ModelCatalogServiceError, ModelServiceError,
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u32)]
@@ -23,6 +26,15 @@ pub enum ErrorCode {
     ApiKeyNotFound = 12_004,
     AppRouteNotFound = 13_001,
     InvalidAppRouteRoles = 13_002,
+    InvalidBrand = 14_001,
+    BrandAlreadyExists = 14_002,
+    BrandPresetNotFound = 14_003,
+    BrandNotFound = 14_004,
+    InvalidModelCatalogLookup = 15_001,
+    ModelCatalogEntryNotFound = 15_002,
+    InvalidModel = 16_001,
+    ModelAlreadyExists = 16_002,
+    ModelNotFound = 16_003,
     DependencyUnavailable = 90_001,
     Internal = 99_999,
 }
@@ -48,6 +60,15 @@ pub enum AppError {
     ApiKeyNotFound,
     AppRouteNotFound,
     InvalidAppRouteRoles,
+    InvalidBrand,
+    BrandAlreadyExists,
+    BrandPresetNotFound,
+    BrandNotFound,
+    InvalidModelCatalogLookup,
+    ModelCatalogEntryNotFound,
+    InvalidModel,
+    ModelAlreadyExists,
+    ModelNotFound,
     DependencyUnavailable,
     Internal,
 }
@@ -98,6 +119,52 @@ impl From<AppRouteServiceError> for AppError {
     }
 }
 
+impl From<BrandPresetServiceError> for AppError {
+    fn from(error: BrandPresetServiceError) -> Self {
+        match error {
+            BrandPresetServiceError::Forbidden => Self::Forbidden,
+            BrandPresetServiceError::Internal => Self::Internal,
+        }
+    }
+}
+
+impl From<BrandServiceError> for AppError {
+    fn from(error: BrandServiceError) -> Self {
+        match error {
+            BrandServiceError::Forbidden => Self::Forbidden,
+            BrandServiceError::InvalidInput => Self::InvalidBrand,
+            BrandServiceError::AlreadyExists => Self::BrandAlreadyExists,
+            BrandServiceError::PresetNotFound => Self::BrandPresetNotFound,
+            BrandServiceError::NotFound => Self::BrandNotFound,
+            BrandServiceError::Internal => Self::Internal,
+        }
+    }
+}
+
+impl From<ModelCatalogServiceError> for AppError {
+    fn from(error: ModelCatalogServiceError) -> Self {
+        match error {
+            ModelCatalogServiceError::Forbidden => Self::Forbidden,
+            ModelCatalogServiceError::InvalidInput => Self::InvalidModelCatalogLookup,
+            ModelCatalogServiceError::NotFound => Self::ModelCatalogEntryNotFound,
+            ModelCatalogServiceError::Internal => Self::Internal,
+        }
+    }
+}
+
+impl From<ModelServiceError> for AppError {
+    fn from(error: ModelServiceError) -> Self {
+        match error {
+            ModelServiceError::Forbidden => Self::Forbidden,
+            ModelServiceError::InvalidInput => Self::InvalidModel,
+            ModelServiceError::AlreadyExists => Self::ModelAlreadyExists,
+            ModelServiceError::BrandNotFound => Self::BrandNotFound,
+            ModelServiceError::NotFound => Self::ModelNotFound,
+            ModelServiceError::Internal => Self::Internal,
+        }
+    }
+}
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, code) = match self {
@@ -118,6 +185,20 @@ impl IntoResponse for AppError {
             Self::InvalidAppRouteRoles => {
                 (StatusCode::BAD_REQUEST, ErrorCode::InvalidAppRouteRoles)
             }
+            Self::InvalidBrand => (StatusCode::BAD_REQUEST, ErrorCode::InvalidBrand),
+            Self::BrandAlreadyExists => (StatusCode::CONFLICT, ErrorCode::BrandAlreadyExists),
+            Self::BrandPresetNotFound => (StatusCode::BAD_REQUEST, ErrorCode::BrandPresetNotFound),
+            Self::BrandNotFound => (StatusCode::NOT_FOUND, ErrorCode::BrandNotFound),
+            Self::InvalidModelCatalogLookup => (
+                StatusCode::BAD_REQUEST,
+                ErrorCode::InvalidModelCatalogLookup,
+            ),
+            Self::ModelCatalogEntryNotFound => {
+                (StatusCode::NOT_FOUND, ErrorCode::ModelCatalogEntryNotFound)
+            }
+            Self::InvalidModel => (StatusCode::BAD_REQUEST, ErrorCode::InvalidModel),
+            Self::ModelAlreadyExists => (StatusCode::CONFLICT, ErrorCode::ModelAlreadyExists),
+            Self::ModelNotFound => (StatusCode::NOT_FOUND, ErrorCode::ModelNotFound),
             Self::DependencyUnavailable => (
                 StatusCode::SERVICE_UNAVAILABLE,
                 ErrorCode::DependencyUnavailable,

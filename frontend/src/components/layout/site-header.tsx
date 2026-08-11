@@ -22,10 +22,15 @@ export function SiteHeader({ isDark, onToggleTheme }: SiteHeaderProps) {
 
   return (
     <header className="relative z-30 border-b border-border/80 bg-background/90 backdrop-blur">
-      <div className="mx-auto flex h-17 w-full max-w-[1212px] items-center justify-between px-4">
-        <Brand />
+      <div className="mx-auto grid h-17 w-full max-w-[1212px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-4">
+        <div className="col-start-1 justify-self-start">
+          <Brand />
+        </div>
 
-        <nav className="hidden items-center gap-1 md:flex" aria-label={t('nav.mainLabel')}>
+        <nav
+          className="col-start-2 hidden items-center gap-1 justify-self-center md:flex"
+          aria-label={t('nav.mainLabel')}
+        >
           {navItems.map((item) => (
             <NavLink
               className={({ isActive }) =>
@@ -45,7 +50,7 @@ export function SiteHeader({ isDark, onToggleTheme }: SiteHeaderProps) {
           ))}
         </nav>
 
-        <div className="flex items-center gap-0.5">
+        <div className="col-start-3 flex items-center gap-0.5 justify-self-end">
           <MobileHeaderMenu isDark={isDark} items={navItems} onToggleTheme={onToggleTheme} />
           <HeaderDisplayControls isDark={isDark} onToggleTheme={onToggleTheme} />
           <HeaderAccountActions />

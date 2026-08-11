@@ -1,4 +1,8 @@
 pub mod api_key;
 pub mod app_route;
 pub mod auth;
+pub mod brand;
+pub mod brand_preset;
 pub mod health;
+pub mod model;
+pub mod model_catalog;

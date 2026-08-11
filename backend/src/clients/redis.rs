@@ -5,6 +5,15 @@ use deadpool_redis::{
     redis::{self, FromRedisValue},
 };
 
+const GET_THEN_GET_PREFIXED_SCRIPT: &str = r#"
+local linked_value = redis.call('GET', KEYS[1])
+if not linked_value then
+    return {}
+end
+local related_value = redis.call('GET', ARGV[1] .. linked_value)
+return {linked_value, related_value or ''}
+"#;
+
 #[derive(Clone)]
 pub struct RedisClient {
     pool: RedisPool,
@@ -78,6 +87,24 @@ impl RedisClient {
             .map_err(io::Error::other)
     }
 
+    pub async fn get_then_get_prefixed(
+        &self,
+        key: &str,
+        related_key_prefix: &str,
+    ) -> io::Result<Option<(String, Option<String>)>> {
+        let mut connection = self.pool.get().await.map_err(io::Error::other)?;
+        let values = redis::cmd("EVAL")
+            .arg(GET_THEN_GET_PREFIXED_SCRIPT)
+            .arg(1)
+            .arg(key)
+            .arg(related_key_prefix)
+            .query_async::<Vec<String>>(&mut connection)
+            .await
+            .map_err(io::Error::other)?;
+
+        parse_linked_values(values)
+    }
+
     pub async fn delete(&self, key: &str) -> io::Result<bool> {
         let mut connection = self.pool.get().await.map_err(io::Error::other)?;
         let deleted = redis::cmd("DEL")
@@ -102,6 +129,29 @@ impl RedisClient {
             .await
             .map_err(io::Error::other)
     }
+}
+
+fn parse_linked_values(values: Vec<String>) -> io::Result<Option<(String, Option<String>)>> {
+    if values.is_empty() {
+        return Ok(None);
+    }
+    let [linked_value, related_value]: [String; 2] = values.try_into().map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Redis linked lookup returned an invalid response",
+        )
+    })?;
+    if linked_value.is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Redis linked lookup returned an empty source value",
+        ));
+    }
+
+    Ok(Some((
+        linked_value,
+        (!related_value.is_empty()).then_some(related_value),
+    )))
 }
 
 fn validate_ttl(ttl_seconds: u64) -> io::Result<()> {

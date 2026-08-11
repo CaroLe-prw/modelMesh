@@ -8,9 +8,12 @@ use crate::{
     domain::{User, UserId},
     repository::{
         AccessTokenRepository, AuthRepository, NewUserRecord, RepositoryConflict, RepositoryError,
+        UserCacheRepository,
     },
     security::hash_secret,
 };
+
+use super::auth_session_cache::AuthSessionCache;
 
 const ACCESS_TOKEN_GENERATION_ATTEMPTS: usize = 3;
 const PASSWORD_HASH_CONCURRENCY: usize = 4;
@@ -18,8 +21,10 @@ const PASSWORD_HASH_CONCURRENCY: usize = 4;
 #[derive(Clone)]
 pub struct AuthService {
     access_tokens: AccessTokenRepository,
+    local_sessions: AuthSessionCache,
     password_hash_slots: Arc<Semaphore>,
     repository: AuthRepository,
+    user_cache: UserCacheRepository,
 }
 
 pub struct AuthResult {
@@ -38,11 +43,17 @@ pub enum AuthServiceError {
 }
 
 impl AuthService {
-    pub fn new(repository: AuthRepository, access_tokens: AccessTokenRepository) -> Self {
+    pub fn new(
+        repository: AuthRepository,
+        access_tokens: AccessTokenRepository,
+        user_cache: UserCacheRepository,
+    ) -> Self {
         Self {
             access_tokens,
+            local_sessions: AuthSessionCache::with_defaults(),
             password_hash_slots: Arc::new(Semaphore::new(PASSWORD_HASH_CONCURRENCY)),
             repository,
+            user_cache,
         }
     }
 
@@ -88,37 +99,77 @@ impl AuthService {
         }
 
         let access_token = self.create_access_token(user.id).await?;
+        let user = User {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+        };
 
-        Ok(AuthResult {
-            access_token,
-            user: User {
-                id: user.id,
-                email: user.email,
-                role: user.role,
-            },
-        })
+        if let Err(error) = self.user_cache.save(&user).await {
+            tracing::warn!(user_id = user.id, %error, "current user cache write failed");
+        }
+
+        self.local_sessions
+            .insert(hash_secret(&access_token), user.clone());
+
+        Ok(AuthResult { access_token, user })
     }
 
     pub async fn current_user(&self, access_token: &str) -> Result<User, AuthServiceError> {
-        let user_id = self.authenticate(access_token).await?;
+        let token_hash = hash_secret(access_token);
+        if let Some(user) = self.local_sessions.get(&token_hash) {
+            return Ok(user);
+        }
 
-        self.repository
+        let (user_id, cached_user) =
+            match self.user_cache.find_by_access_token_hash(&token_hash).await {
+                Ok(Some(result)) => result,
+                Ok(None) => return Err(AuthServiceError::Unauthenticated),
+                Err(error) => {
+                    tracing::warn!(%error, "authenticated user cache read failed");
+                    return Err(AuthServiceError::Internal);
+                }
+            };
+        if let Some(user) = cached_user {
+            self.local_sessions.insert(token_hash, user.clone());
+            return Ok(user);
+        }
+
+        let user = self
+            .repository
             .find_user_by_id(user_id)
             .await
             .map_err(|_| AuthServiceError::Internal)?
-            .ok_or(AuthServiceError::Unauthenticated)
+            .ok_or(AuthServiceError::Unauthenticated)?;
+
+        if let Err(error) = self.user_cache.save(&user).await {
+            tracing::warn!(user_id, %error, "current user cache write failed");
+        }
+
+        self.local_sessions.insert(token_hash, user.clone());
+
+        Ok(user)
     }
 
     pub async fn logout(&self, access_token: &str) -> Result<(), AuthServiceError> {
+        let token_hash = hash_secret(access_token);
+        self.local_sessions.revoke(token_hash.clone());
         self.access_tokens
-            .delete(&hash_secret(access_token))
+            .delete(&token_hash)
             .await
-            .map_err(|_| AuthServiceError::Internal)
+            .map_err(|_| AuthServiceError::Internal)?;
+
+        Ok(())
     }
 
     pub async fn authenticate(&self, access_token: &str) -> Result<UserId, AuthServiceError> {
+        let token_hash = hash_secret(access_token);
+        if let Some(user) = self.local_sessions.get(&token_hash) {
+            return Ok(user.id);
+        }
+
         self.access_tokens
-            .find_user_id(&hash_secret(access_token))
+            .find_user_id(&token_hash)
             .await
             .map_err(|_| AuthServiceError::Internal)?
             .ok_or(AuthServiceError::Unauthenticated)

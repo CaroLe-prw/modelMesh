@@ -1,23 +1,8 @@
-use super::{
-    AppRouteServiceError, affected_roles, ensure_admin, parse_roles, validate_managed_route_roles,
-};
+use super::{AppRouteServiceError, affected_roles, parse_roles, validate_managed_route_roles};
 use crate::{
     domain::{AccountRole, AppRoute, AppRouteGroup},
     repository::AppRouteRoleChange,
 };
-
-#[test]
-fn only_admin_can_manage_route_permissions() {
-    assert_eq!(ensure_admin(AccountRole::Admin), Ok(()));
-    assert_eq!(
-        ensure_admin(AccountRole::Merchant),
-        Err(AppRouteServiceError::Forbidden)
-    );
-    assert_eq!(
-        ensure_admin(AccountRole::Personal),
-        Err(AppRouteServiceError::Forbidden)
-    );
-}
 
 #[test]
 fn role_updates_are_strict_and_deduplicated() {

@@ -3,6 +3,11 @@ mod api_key;
 mod app_route;
 mod app_route_cache;
 mod auth;
+mod brand;
+mod brand_preset;
+mod model;
+mod model_catalog;
+mod user_cache;
 
 use std::{fmt, ops::Deref};
 
@@ -13,11 +18,19 @@ pub use api_key::{ApiKeyRepository, ApiKeySearch, NewApiKeyRecord, UpdateApiKeyR
 pub use app_route::{AppRouteRepository, AppRouteRoleChange};
 pub use app_route_cache::AppRouteCacheRepository;
 pub use auth::{AuthRepository, NewUserRecord};
+pub use brand::{BrandRepository, BrandSearch, NewBrandRecord, UpdateBrandRecord};
+pub use brand_preset::BrandPresetRepository;
+pub use model::{ModelRepository, ModelSearch, NewModelRecord, UpdateModelPricingRecord};
+pub use model_catalog::{ModelCatalogRepository, NewModelCatalogEntry};
+pub use user_cache::UserCacheRepository;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RepositoryConflict {
     ApiKeyName,
     ApiKeyValue,
+    BrandIdentifier,
+    BrandPreset,
+    ModelIdentifier,
     UserEmail,
 }
 

@@ -25,6 +25,27 @@ starting the API. SeaORM migrations run automatically during backend startup and
 versions in `seaql_migrations`. The backend uses shared PostgreSQL and Redis connection pools and
 verifies both dependencies before accepting requests.
 
+On every startup, the backend immediately refreshes the public [models.dev](https://models.dev/)
+catalog in a detached background task, then continues on the configured schedule. Catalog writes
+use a dedicated single-connection PostgreSQL pool so a slow refresh cannot exhaust the API request
+pool.
+Successful cached data remains available if a later sync fails. Set
+`MODELMESH_MODELS_DEV_SYNC_INTERVAL_HOURS` to control the periodic refresh interval; it defaults to
+`24` hours. Transient connection, timeout, 429, and upstream 5xx failures are retried three times
+by default with exponential delay. The source URL, connect/request timeouts, attempt count, and
+initial retry delay can be configured with the `MODELMESH_MODELS_DEV_*` variables documented in
+`backend/.env.example`; a custom URL should only point to a trusted internal mirror. The backend
+preserves each upstream model object and converts the complete models.dev
+cost structure into fixed-point prices in PostgreSQL, including input, output, reasoning,
+cache-read, cache-write, audio input/output, legacy `context_over_200k`, every context tier, and
+experimental-mode prices. The administrator form renders these groups dynamically and can also
+store custom context tiers. Created models keep synchronized defaults and manual overrides
+separately: blank fields read `default_pricing_nano_usd` and follow later catalog refreshes, while
+entered values read `pricing_overrides_nano_usd` and remain fixed until an administrator changes
+them. Custom models store their administrator-maintained baseline directly in
+`default_pricing_nano_usd`. Customer-facing model responses use the effective merged price book
+from the `models` table and do not depend on a live models.dev lookup.
+
 `MODELMESH_ENVIRONMENT=development` and `test` write structured logs only to the console.
 Development additionally enables SeaORM database query logs at the `info` level.
 `MODELMESH_ENVIRONMENT=production` writes them asynchronously to one local-date file per day under
@@ -55,14 +76,33 @@ TTL. The available endpoints are:
 
 Authentication responses include the account's highest `role`: `personal`, `merchant`, or
 `admin`. New accounts default to `personal`; role assignment is not exposed through public
-self-service APIs. Account-center route metadata and role visibility are stored in PostgreSQL.
+self-service APIs. Current-user snapshots are cached in Redis under
+`modelmesh:auth:user:v1:{user_id}` for one day; cache misses fall back to PostgreSQL and refill the
+entry. Account-center route metadata and role visibility are stored in PostgreSQL.
 The frontend loads the current account's visible routes from `GET /api/account-routes` instead of
 inferring access from a hard-coded role hierarchy. Administrators can inspect and update the role
 matrix through `GET /api/admin/account-routes` and
 `PUT /api/admin/account-routes/{route_key}/roles`.
-Visible route lists are cached in Redis under `modelmesh:account-routes:user:{user_id}` for one
-day. Cache entries include the user's role, so a role change cannot reuse an old route list. A
-route permission update deletes the cached lists for every user in the affected old and new roles.
+Visible route lists are cached in Redis under `modelmesh:account-routes:v7:user:{user_id}` for one
+day. The administrator's full route permission matrix is cached under
+`modelmesh:account-routes:v7:admin:matrix` for the same duration. Cache entries include their
+scope, so user-visible lists and the administrator matrix cannot be mixed. A route permission
+update deletes the matrix cache and every affected user's visible-route cache in one Redis
+operation.
+
+Merchant and administrator accounts also receive database-controlled merchant routes for the
+operations dashboard, channels, model listings, usage logs, withdrawal requests, business
+requests, merchant profile, and support tickets. These screens currently provide responsive UI
+preview data; their write actions remain non-persistent until the corresponding business APIs are
+connected.
+
+Administrator accounts receive additional database-controlled routes for the operations overview,
+user and merchant management, marketplace brand and model catalog management, platform-wide usage
+records, withdrawal review, an immutable financial ledger, channel and model reviews, risk alerts,
+audit logs, ticket management, route access, and system settings. The administration screens
+currently use responsive preview data;
+financial amounts are represented as integer micro-USD values so the later API contract does not
+depend on floating-point money.
 
 Authenticated users can manage ModelMesh API keys through:
 
@@ -100,6 +140,10 @@ The initial error-code ranges are:
 | `10000-10999` | Common request errors         |
 | `11000-11999` | Authentication errors         |
 | `12000-12999` | API key management errors     |
+| `13000-13999` | Account route errors          |
+| `14000-14999` | Brand management errors       |
+| `15000-15999` | Model catalog lookup errors   |
+| `16000-16999` | Model management errors       |
 | `90000-99998` | Infrastructure errors         |
 | `99999`       | Unknown internal server error |
 

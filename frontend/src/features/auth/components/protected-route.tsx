@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/features/auth/context/auth-context';
 
-export function ProtectedRoute() {
+export function ProtectedRoute({ renderOutletWhileLoading = false }: ProtectedRouteProps) {
   const { t } = useTranslation();
   const location = useLocation();
   const { retry, state } = useAuth();
@@ -18,6 +18,10 @@ export function ProtectedRoute() {
   }
 
   if (state.status === 'loading') {
+    if (renderOutletWhileLoading) {
+      return <Outlet />;
+    }
+
     return (
       <RouteStatus>
         <LoaderCircle aria-hidden="true" className="mx-auto size-7 animate-spin text-primary" />
@@ -39,6 +43,10 @@ export function ProtectedRoute() {
   }
 
   return <Outlet />;
+}
+
+interface ProtectedRouteProps {
+  renderOutletWhileLoading?: boolean;
 }
 
 function RouteStatus({ children }: { children: ReactNode }) {

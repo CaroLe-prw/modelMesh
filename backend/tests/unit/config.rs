@@ -1,5 +1,8 @@
 use super::{
-    AppEnvironment, DEFAULT_BIND_ADDRESS, parse_environment, parse_positive_u32,
+    AppEnvironment, DEFAULT_BIND_ADDRESS, DEFAULT_MODELS_DEV_CATALOG_URL,
+    DEFAULT_MODELS_DEV_CONNECT_TIMEOUT_SECONDS, DEFAULT_MODELS_DEV_MAX_ATTEMPTS,
+    DEFAULT_MODELS_DEV_REQUEST_TIMEOUT_SECONDS, DEFAULT_MODELS_DEV_RETRY_DELAY_SECONDS,
+    DEFAULT_MODELS_DEV_SYNC_INTERVAL_HOURS, parse_environment, parse_positive_u32,
     parse_positive_u64, parse_positive_usize, parse_socket_address,
 };
 
@@ -37,4 +40,21 @@ fn connection_count_must_be_positive() {
 #[test]
 fn timeout_must_be_positive() {
     assert!(parse_positive_u64("TEST_TIMEOUT", "0").is_err());
+}
+
+#[test]
+fn models_dev_sync_defaults_to_twenty_four_hours() {
+    assert_eq!(DEFAULT_MODELS_DEV_SYNC_INTERVAL_HOURS, 24);
+}
+
+#[test]
+fn models_dev_http_defaults_allow_retrying_a_large_catalog() {
+    assert_eq!(
+        DEFAULT_MODELS_DEV_CATALOG_URL,
+        "https://models.dev/api.json"
+    );
+    assert_eq!(DEFAULT_MODELS_DEV_CONNECT_TIMEOUT_SECONDS, 10);
+    assert_eq!(DEFAULT_MODELS_DEV_REQUEST_TIMEOUT_SECONDS, 120);
+    assert_eq!(DEFAULT_MODELS_DEV_MAX_ATTEMPTS, 3);
+    assert_eq!(DEFAULT_MODELS_DEV_RETRY_DELAY_SECONDS, 2);
 }

@@ -26,6 +26,8 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/models" element={<ModelsPage />} />
+          </Route>
+          <Route element={<ProtectedRoute renderOutletWhileLoading />}>
             <Route element={<AccountPage />}>
               <Route path="/account/*" element={<AccountRouteContent />} />
               <Route path="/merchant/*" element={<AccountRouteContent />} />

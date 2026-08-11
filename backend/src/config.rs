@@ -8,6 +8,12 @@ const DEFAULT_DATABASE_MAX_CONNECTIONS: u32 = 10;
 const DEFAULT_ENVIRONMENT: &str = "development";
 const DEFAULT_LOG_DIRECTORY: &str = "logs";
 const DEFAULT_LOG_FILTER: &str = "info";
+const DEFAULT_MODELS_DEV_CATALOG_URL: &str = "https://models.dev/api.json";
+const DEFAULT_MODELS_DEV_CONNECT_TIMEOUT_SECONDS: u64 = 10;
+const DEFAULT_MODELS_DEV_MAX_ATTEMPTS: u32 = 3;
+const DEFAULT_MODELS_DEV_REQUEST_TIMEOUT_SECONDS: u64 = 120;
+const DEFAULT_MODELS_DEV_RETRY_DELAY_SECONDS: u64 = 2;
+const DEFAULT_MODELS_DEV_SYNC_INTERVAL_HOURS: u64 = 24;
 const DEFAULT_REDIS_MAX_CONNECTIONS: usize = 10;
 const DEFAULT_REDIS_WAIT_TIMEOUT_SECONDS: u64 = 5;
 const BIND_ADDRESS_ENV: &str = "MODELMESH_BIND_ADDRESS";
@@ -18,6 +24,12 @@ const DATABASE_URL_ENV: &str = "DATABASE_URL";
 const ENVIRONMENT_ENV: &str = "MODELMESH_ENVIRONMENT";
 const LOG_DIRECTORY_ENV: &str = "MODELMESH_LOG_DIRECTORY";
 const LOG_FILTER_ENV: &str = "MODELMESH_LOG_FILTER";
+const MODELS_DEV_CATALOG_URL_ENV: &str = "MODELMESH_MODELS_DEV_CATALOG_URL";
+const MODELS_DEV_CONNECT_TIMEOUT_SECONDS_ENV: &str = "MODELMESH_MODELS_DEV_CONNECT_TIMEOUT_SECONDS";
+const MODELS_DEV_MAX_ATTEMPTS_ENV: &str = "MODELMESH_MODELS_DEV_MAX_ATTEMPTS";
+const MODELS_DEV_REQUEST_TIMEOUT_SECONDS_ENV: &str = "MODELMESH_MODELS_DEV_REQUEST_TIMEOUT_SECONDS";
+const MODELS_DEV_RETRY_DELAY_SECONDS_ENV: &str = "MODELMESH_MODELS_DEV_RETRY_DELAY_SECONDS";
+const MODELS_DEV_SYNC_INTERVAL_HOURS_ENV: &str = "MODELMESH_MODELS_DEV_SYNC_INTERVAL_HOURS";
 const REDIS_MAX_CONNECTIONS_ENV: &str = "MODELMESH_REDIS_MAX_CONNECTIONS";
 const REDIS_URL_ENV: &str = "REDIS_URL";
 const REDIS_WAIT_TIMEOUT_SECONDS_ENV: &str = "MODELMESH_REDIS_WAIT_TIMEOUT_SECONDS";
@@ -47,6 +59,7 @@ impl AppEnvironment {
     }
 }
 
+#[derive(Clone)]
 pub struct AppConfig {
     pub access_token_ttl_seconds: u64,
     pub bind_address: SocketAddr,
@@ -56,6 +69,12 @@ pub struct AppConfig {
     pub environment: AppEnvironment,
     pub log_directory: PathBuf,
     pub log_filter: String,
+    pub models_dev_catalog_url: String,
+    pub models_dev_connect_timeout_seconds: u64,
+    pub models_dev_max_attempts: u32,
+    pub models_dev_request_timeout_seconds: u64,
+    pub models_dev_retry_delay_seconds: u64,
+    pub models_dev_sync_interval_seconds: u64,
     pub redis_max_connections: usize,
     pub redis_url: String,
     pub redis_wait_timeout_seconds: u64,
@@ -88,6 +107,52 @@ impl AppConfig {
             env::var(LOG_DIRECTORY_ENV).unwrap_or_else(|_| DEFAULT_LOG_DIRECTORY.to_owned()),
         );
         let log_filter = env::var(LOG_FILTER_ENV).unwrap_or_else(|_| DEFAULT_LOG_FILTER.to_owned());
+        let models_dev_catalog_url = env::var(MODELS_DEV_CATALOG_URL_ENV)
+            .unwrap_or_else(|_| DEFAULT_MODELS_DEV_CATALOG_URL.to_owned());
+        let models_dev_connect_timeout_seconds = env::var(MODELS_DEV_CONNECT_TIMEOUT_SECONDS_ENV)
+            .map_or(
+            Ok(DEFAULT_MODELS_DEV_CONNECT_TIMEOUT_SECONDS),
+            |value| parse_positive_u64(MODELS_DEV_CONNECT_TIMEOUT_SECONDS_ENV, &value),
+        )?;
+        let models_dev_max_attempts = env::var(MODELS_DEV_MAX_ATTEMPTS_ENV)
+            .map_or(Ok(DEFAULT_MODELS_DEV_MAX_ATTEMPTS), |value| {
+                parse_positive_u32(MODELS_DEV_MAX_ATTEMPTS_ENV, &value)
+            })?;
+        if models_dev_max_attempts > 10 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("{MODELS_DEV_MAX_ATTEMPTS_ENV} must not exceed 10"),
+            ));
+        }
+        let models_dev_request_timeout_seconds = env::var(MODELS_DEV_REQUEST_TIMEOUT_SECONDS_ENV)
+            .map_or(
+            Ok(DEFAULT_MODELS_DEV_REQUEST_TIMEOUT_SECONDS),
+            |value| parse_positive_u64(MODELS_DEV_REQUEST_TIMEOUT_SECONDS_ENV, &value),
+        )?;
+        let models_dev_retry_delay_seconds = env::var(MODELS_DEV_RETRY_DELAY_SECONDS_ENV)
+            .map_or(Ok(DEFAULT_MODELS_DEV_RETRY_DELAY_SECONDS), |value| {
+                parse_positive_u64(MODELS_DEV_RETRY_DELAY_SECONDS_ENV, &value)
+            })?;
+        if models_dev_request_timeout_seconds < models_dev_connect_timeout_seconds {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!(
+                    "{MODELS_DEV_REQUEST_TIMEOUT_SECONDS_ENV} must be greater than or equal to {MODELS_DEV_CONNECT_TIMEOUT_SECONDS_ENV}"
+                ),
+            ));
+        }
+        let models_dev_sync_interval_hours = env::var(MODELS_DEV_SYNC_INTERVAL_HOURS_ENV)
+            .map_or(Ok(DEFAULT_MODELS_DEV_SYNC_INTERVAL_HOURS), |value| {
+                parse_positive_u64(MODELS_DEV_SYNC_INTERVAL_HOURS_ENV, &value)
+            })?;
+        let models_dev_sync_interval_seconds = models_dev_sync_interval_hours
+            .checked_mul(60 * 60)
+            .ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    format!("{MODELS_DEV_SYNC_INTERVAL_HOURS_ENV} is too large"),
+                )
+            })?;
         let redis_max_connections = env::var(REDIS_MAX_CONNECTIONS_ENV)
             .map_or(Ok(DEFAULT_REDIS_MAX_CONNECTIONS), |value| {
                 parse_positive_usize(REDIS_MAX_CONNECTIONS_ENV, &value)
@@ -107,6 +172,12 @@ impl AppConfig {
             environment,
             log_directory,
             log_filter,
+            models_dev_catalog_url,
+            models_dev_connect_timeout_seconds,
+            models_dev_max_attempts,
+            models_dev_request_timeout_seconds,
+            models_dev_retry_delay_seconds,
+            models_dev_sync_interval_seconds,
             redis_max_connections,
             redis_url,
             redis_wait_timeout_seconds,

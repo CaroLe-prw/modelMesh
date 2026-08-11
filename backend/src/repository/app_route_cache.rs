@@ -8,6 +8,8 @@ use crate::{
     redis_key,
 };
 
+const ADMIN_ROUTE_MATRIX_SCOPE: &str = "admin:matrix";
+
 #[derive(Clone)]
 pub struct AppRouteCacheRepository {
     redis: RedisClient,
@@ -29,11 +31,24 @@ impl AppRouteCacheRepository {
         expected_role: AccountRole,
     ) -> io::Result<Option<Vec<AppRoute>>> {
         let key = redis_key::account_routes(user_id);
-        let Some(value) = self.redis.get::<String>(&key).await? else {
+        self.find_routes(&key, expected_role.as_str()).await
+    }
+
+    pub async fn find_all(&self) -> io::Result<Option<Vec<AppRoute>>> {
+        self.find_routes(redis_key::account_route_matrix(), ADMIN_ROUTE_MATRIX_SCOPE)
+            .await
+    }
+
+    async fn find_routes(
+        &self,
+        key: &str,
+        expected_scope: &str,
+    ) -> io::Result<Option<Vec<AppRoute>>> {
+        let Some(value) = self.redis.get::<String>(key).await? else {
             return Ok(None);
         };
-        let Some(routes) = deserialize_routes(&value, expected_role) else {
-            self.redis.delete(&key).await?;
+        let Some(routes) = deserialize_routes(&value, expected_scope) else {
+            self.redis.delete(key).await?;
             return Ok(None);
         };
 
@@ -46,29 +61,45 @@ impl AppRouteCacheRepository {
         role: AccountRole,
         routes: &[AppRoute],
     ) -> io::Result<()> {
-        let value = serialize_routes(role, routes)?;
+        let key = redis_key::account_routes(user_id);
+        self.save_routes(&key, role.as_str(), routes).await
+    }
+
+    pub async fn save_all(&self, routes: &[AppRoute]) -> io::Result<()> {
+        self.save_routes(
+            redis_key::account_route_matrix(),
+            ADMIN_ROUTE_MATRIX_SCOPE,
+            routes,
+        )
+        .await
+    }
+
+    async fn save_routes(&self, key: &str, scope: &str, routes: &[AppRoute]) -> io::Result<()> {
+        let value = serialize_routes(scope, routes)?;
+        self.redis.set_with_ttl(key, &value, self.ttl_seconds).await
+    }
+
+    pub async fn invalidate_permission_change(&self, user_ids: &[UserId]) -> io::Result<u64> {
         self.redis
-            .set_with_ttl(
-                &redis_key::account_routes(user_id),
-                &value,
-                self.ttl_seconds,
-            )
+            .delete_many(&permission_change_keys(user_ids))
             .await
     }
+}
 
-    pub async fn invalidate_users(&self, user_ids: &[UserId]) -> io::Result<u64> {
-        let keys = user_ids
+fn permission_change_keys(user_ids: &[UserId]) -> Vec<String> {
+    let mut keys = Vec::with_capacity(user_ids.len() + 1);
+    keys.push(redis_key::account_route_matrix().to_owned());
+    keys.extend(
+        user_ids
             .iter()
-            .map(|user_id| redis_key::account_routes(*user_id))
-            .collect::<Vec<_>>();
-
-        self.redis.delete_many(&keys).await
-    }
+            .map(|user_id| redis_key::account_routes(*user_id)),
+    );
+    keys
 }
 
 #[derive(Deserialize, Serialize)]
 struct CachedAppRoutes {
-    role: String,
+    scope: String,
     routes: Vec<CachedAppRoute>,
 }
 
@@ -84,9 +115,9 @@ struct CachedAppRoute {
     roles: Vec<String>,
 }
 
-fn serialize_routes(role: AccountRole, routes: &[AppRoute]) -> io::Result<String> {
+fn serialize_routes(scope: &str, routes: &[AppRoute]) -> io::Result<String> {
     let cached = CachedAppRoutes {
-        role: role.as_str().to_owned(),
+        scope: scope.to_owned(),
         routes: routes
             .iter()
             .map(|route| CachedAppRoute {
@@ -109,10 +140,10 @@ fn serialize_routes(role: AccountRole, routes: &[AppRoute]) -> io::Result<String
     serde_json::to_string(&cached).map_err(io::Error::other)
 }
 
-fn deserialize_routes(value: &str, expected_role: AccountRole) -> Option<Vec<AppRoute>> {
+fn deserialize_routes(value: &str, expected_scope: &str) -> Option<Vec<AppRoute>> {
     let cached = serde_json::from_str::<CachedAppRoutes>(value).ok()?;
 
-    if cached.role != expected_role.as_str() {
+    if cached.scope != expected_scope {
         return None;
     }
 

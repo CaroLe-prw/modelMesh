@@ -86,6 +86,196 @@ async fn account_routes_require_a_bearer_token() {
 }
 
 #[tokio::test]
+async fn brand_presets_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/admin/brand-presets")
+                .body(Body::empty())
+                .expect("test request should be valid"),
+        )
+        .await
+        .expect("brand preset request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn brands_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/admin/brands")
+                .body(Body::empty())
+                .expect("brand request should be valid"),
+        )
+        .await
+        .expect("brand request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn model_catalog_lookup_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/admin/model-catalog/lookup?brandId=openai&modelId=gpt-5")
+                .body(Body::empty())
+                .expect("model catalog request should be valid"),
+        )
+        .await
+        .expect("model catalog request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn model_catalog_list_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/admin/model-catalog?brandId=openai")
+                .body(Body::empty())
+                .expect("model catalog list request should be valid"),
+        )
+        .await
+        .expect("model catalog list request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn models_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/admin/models")
+                .body(Body::empty())
+                .expect("model request should be valid"),
+        )
+        .await
+        .expect("model request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn model_creation_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/admin/models")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"brandId":"openai","identifier":"gpt-5","status":"published"}"#,
+                ))
+                .expect("model creation request should be valid"),
+        )
+        .await
+        .expect("model creation request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn model_batch_creation_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/admin/models/batch")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"brandId":"openai","modelIds":["gpt-5"],"status":"published"}"#,
+                ))
+                .expect("model batch creation request should be valid"),
+        )
+        .await
+        .expect("model batch creation request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn model_deletion_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri("/api/admin/models/42")
+                .body(Body::empty())
+                .expect("model deletion request should be valid"),
+        )
+        .await
+        .expect("model deletion request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn model_pricing_updates_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("PUT")
+                .uri("/api/admin/models/42")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"priceOverrides":[]}"#))
+                .expect("model pricing update request should be valid"),
+        )
+        .await
+        .expect("model pricing update request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn brand_updates_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("PUT")
+                .uri("/api/admin/brands/openai")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"name":"OpenAI","sortOrder":10}"#))
+                .expect("brand update request should be valid"),
+        )
+        .await
+        .expect("brand update request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn brand_deletion_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri("/api/admin/brands/openai")
+                .body(Body::empty())
+                .expect("brand deletion request should be valid"),
+        )
+        .await
+        .expect("brand deletion request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
 async fn register_rejects_invalid_json_with_a_stable_error_code() {
     let response = test_router()
         .oneshot(

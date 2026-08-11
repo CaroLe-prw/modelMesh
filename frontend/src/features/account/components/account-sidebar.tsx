@@ -1,4 +1,3 @@
-import { Activity } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,7 @@ import { accountRouteIcon } from '@/features/account/account-routes';
 import type { AccountRouteGroup } from '@/features/account/api/account-routes';
 import { useAccountRoutes } from '@/features/account/context/account-routes-context';
 
-const navigationGroups: readonly AccountRouteGroup[] = ['personal', 'merchant', 'admin'];
+const navigationGroups: readonly AccountRouteGroup[] = ['admin', 'merchant', 'personal'];
 
 export function AccountSidebar() {
   const { t } = useTranslation();
@@ -26,14 +25,16 @@ export function AccountSidebar() {
     return null;
   }
 
-  const navigationItems = state.routes;
+  const navigationItems = navigationGroups.flatMap((group) =>
+    state.routes.filter((item) => item.group === group),
+  );
   const activeItem =
     navigationItems.find((item) => location.pathname === item.path) ?? navigationItems[0];
 
   return (
     <>
       <Card className="gap-0 py-0 shadow-sm lg:hidden">
-        <div className="flex items-center gap-2 p-3">
+        <div className="p-3">
           <Select onValueChange={navigate} value={activeItem.path}>
             <SelectTrigger
               aria-label={t('pages.account.navigation.mobileLabel')}
@@ -56,13 +57,6 @@ export function AccountSidebar() {
               })}
             </SelectContent>
           </Select>
-          <span
-            className="grid size-10 shrink-0 place-items-center rounded-md bg-success/10 text-success"
-            title={t('pages.account.navigation.serviceHealthy')}
-          >
-            <Activity aria-hidden="true" className="size-4" />
-            <span className="sr-only">{t('pages.account.navigation.serviceHealthy')}</span>
-          </span>
         </div>
       </Card>
 
@@ -103,11 +97,6 @@ export function AccountSidebar() {
             );
           })}
         </nav>
-
-        <div className="flex items-center gap-2 border-t border-border px-4 py-3.5 text-xs text-muted-foreground">
-          <Activity aria-hidden="true" className="size-4 text-success" />
-          {t('pages.account.navigation.serviceHealthy')}
-        </div>
       </Card>
     </>
   );

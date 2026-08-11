@@ -1,7 +1,11 @@
 mod api_key;
 mod app_route;
 mod auth;
+mod brand;
+mod brand_preset;
 mod health;
+mod model;
+mod model_catalog;
 mod pagination;
 
 pub use api_key::{
@@ -10,5 +14,16 @@ pub use api_key::{
 };
 pub use app_route::{AppRouteResponse, UpdateAppRouteRolesRequest};
 pub use auth::{AuthRequest, AuthResponse, LoginResponse, UserResponse};
+pub use brand::{
+    BrandResponse, BrandStatusRequest, CreateBrandRequest, ListBrandsQuery, UpdateBrandRequest,
+};
+pub use brand_preset::BrandPresetResponse;
 pub use health::{DependencyStatus, HealthResponse, ReadinessResponse};
+pub use model::{
+    BatchCreateModelsRequest, CreateModelRequest, ListModelsQuery, ModelPriceGroupRequest,
+    ModelPriceOverrideRequest, ModelResponse, ModelStatusRequest, UpdateModelPricingRequest,
+};
+pub use model_catalog::{
+    ModelCatalogEntryResponse, ModelCatalogListQuery, ModelCatalogLookupQuery,
+};
 pub use pagination::{PaginatedResponse, PaginationQuery, PaginationResponse};

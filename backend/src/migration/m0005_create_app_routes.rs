@@ -49,36 +49,6 @@ COMMENT ON TABLE app_route_roles IS '账户中心路由与可见账号角色的�
 COMMENT ON COLUMN app_route_roles.route_id IS '被授权访问的路由标识';
 COMMENT ON COLUMN app_route_roles.role IS '允许查看该路由的账号角色';
 COMMENT ON COLUMN app_route_roles.created_at IS '路由角色授权创建时间';
-
-INSERT INTO app_routes (route_key, path, label_key, icon_key, group_key, sort_order) VALUES
-    ('account.api-keys', '/account/api-keys', 'pages.account.navigation.apiKeys', 'key-round', 'personal', 100),
-    ('account.usage', '/account/usage', 'pages.account.navigation.usage', 'usage', 'personal', 110),
-    ('account.billing', '/account/billing', 'pages.account.navigation.billing', 'circle-dollar-sign', 'personal', 120),
-    ('account.orders', '/account/orders', 'pages.account.navigation.orders', 'file-text', 'personal', 130),
-    ('account.redeem', '/account/redeem', 'pages.account.navigation.redeem', 'gift', 'personal', 140),
-    ('account.referrals', '/account/referrals', 'pages.account.navigation.referrals', 'users-round', 'personal', 150),
-    ('account.profile', '/account/profile', 'pages.account.navigation.profile', 'user-round', 'personal', 160),
-    ('account.support', '/account/support', 'pages.account.navigation.support', 'message-square-text', 'personal', 170),
-    ('merchant.support', '/merchant/support', 'pages.account.navigation.merchantSupport', 'store', 'merchant', 200),
-    ('admin.support', '/admin/support', 'pages.account.navigation.adminSupport', 'shield-check', 'admin', 300),
-    ('admin.route-access', '/admin/route-access', 'pages.account.navigation.routeAccess', 'route', 'admin', 310);
-
-INSERT INTO app_route_roles (route_id, role)
-SELECT id, role
-FROM app_routes
-CROSS JOIN (VALUES ('personal'), ('merchant'), ('admin')) AS inherited_roles(role)
-WHERE group_key = 'personal';
-
-INSERT INTO app_route_roles (route_id, role)
-SELECT id, role
-FROM app_routes
-CROSS JOIN (VALUES ('merchant'), ('admin')) AS inherited_roles(role)
-WHERE group_key = 'merchant';
-
-INSERT INTO app_route_roles (route_id, role)
-SELECT id, 'admin'
-FROM app_routes
-WHERE group_key = 'admin';
 "#,
             )
             .await?;

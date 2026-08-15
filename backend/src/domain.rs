@@ -16,4 +16,8 @@ pub use model::{ManagedModel, ModelStatus};
 pub use model_catalog::ModelCatalogEntry;
 pub use model_pricing::{ModelPriceRates, ModelPriceTier, ModelPricing, usd_per_million_to_nano};
 pub use pagination::{Page, Pagination};
-pub use user::{AccountRole, User, UserId};
+pub use user::{
+    AccountRole, AccountStatus, ManagedUser, ManagedUserBalanceAdjustment,
+    ManagedUserBalanceAdjustmentKind, ManagedUserBalanceAdjustmentPage, ManagedUserSort,
+    ManagedUserSortField, SortDirection, User, UserId,
+};

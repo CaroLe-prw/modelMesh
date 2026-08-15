@@ -11,20 +11,7 @@ export type AdminReviewStatus = 'approved' | 'pending' | 'rejected';
 export type AdminRiskSeverity = 'critical' | 'high' | 'low' | 'medium';
 export type AdminRiskStatus = 'investigating' | 'open' | 'resolved';
 export type AdminRiskType = 'amount' | 'frequency' | 'login' | 'usage';
-export type AdminUserRole = 'admin' | 'merchant' | 'personal';
-export type AdminUserStatus = 'active' | 'disabled';
 export type AdminWithdrawalStatus = 'approved' | 'pending' | 'rejected';
-
-export interface AdminUser {
-  balanceMicrousd: number;
-  createdAt: string;
-  email: string;
-  id: string;
-  lastLoginAt: string;
-  lastLoginIp: string;
-  role: AdminUserRole;
-  status: AdminUserStatus;
-}
 
 export interface AdminLedgerEntry {
   account: string;
@@ -103,49 +90,6 @@ export interface AdminAuditLog {
   outcome: AdminAuditOutcome;
   target: string;
 }
-
-export const adminUsers: AdminUser[] = [
-  {
-    balanceMicrousd: 286_480_000,
-    createdAt: '2026-07-02T02:18:00Z',
-    email: '470481357@example.com',
-    id: 'user_470481357',
-    lastLoginAt: '2026-08-09T04:18:12Z',
-    lastLoginIp: '198.51.100.17',
-    role: 'personal',
-    status: 'active',
-  },
-  {
-    balanceMicrousd: 4_826_720_000,
-    createdAt: '2026-07-12T06:20:00Z',
-    email: 'ops@northstar.example',
-    id: 'user_merchant_0047',
-    lastLoginAt: '2026-08-09T03:46:50Z',
-    lastLoginIp: '203.0.113.28',
-    role: 'merchant',
-    status: 'active',
-  },
-  {
-    balanceMicrousd: 0,
-    createdAt: '2026-04-18T08:00:00Z',
-    email: 'admin@modelmesh.local',
-    id: 'user_admin_0001',
-    lastLoginAt: '2026-08-09T04:22:18Z',
-    lastLoginIp: '192.168.1.18',
-    role: 'admin',
-    status: 'active',
-  },
-  {
-    balanceMicrousd: 12_600_000,
-    createdAt: '2026-06-21T11:42:00Z',
-    email: 'risk-review@example.com',
-    id: 'user_204883105',
-    lastLoginAt: '2026-08-08T10:56:12Z',
-    lastLoginIp: '203.0.113.42',
-    role: 'personal',
-    status: 'disabled',
-  },
-];
 
 export const adminLedgerEntries: AdminLedgerEntry[] = [
   {

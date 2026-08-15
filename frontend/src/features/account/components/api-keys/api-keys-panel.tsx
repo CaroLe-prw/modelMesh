@@ -2,7 +2,6 @@ import { AlertCircle, LoaderCircle, RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { DataPagination } from '@/components/common/data-pagination';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -16,8 +15,8 @@ import {
 } from '@/features/account/api/api-keys';
 import { ApiKeyCreatedDialog } from '@/features/account/components/api-keys/api-key-created-dialog';
 import { ApiKeyDialog } from '@/features/account/components/api-keys/api-key-dialog';
+import { ApiKeyList } from '@/features/account/components/api-keys/api-key-list';
 import { ApiKeyToolbar } from '@/features/account/components/api-keys/api-key-toolbar';
-import { ApiKeysMobileList } from '@/features/account/components/api-keys/api-keys-mobile-list';
 import {
   defaultApiKeyVisibleColumnIds,
   type ApiKeyDraft,
@@ -25,7 +24,6 @@ import {
   type ApiKeyOptionalColumnId,
   type ApiKeyStatus,
 } from '@/features/account/components/api-keys/api-key-types';
-import { ApiKeysTable } from '@/features/account/components/api-keys/api-keys-table';
 import { useAuth } from '@/features/auth/context/auth-context';
 import { API_ERROR_CODE } from '@/lib/api-error-codes';
 import { ApiError } from '@/lib/api-client';
@@ -279,26 +277,9 @@ export function ApiKeysPanel() {
 
   const hasItems = apiKeys.length > 0;
   const isInitialLoading = isLoading && !hasItems;
-
   return (
     <>
-      <Card className="gap-0 overflow-hidden py-0 shadow-[0_18px_50px_color-mix(in_srgb,var(--color-text)_5%,transparent)]">
-        <div className="flex flex-col gap-4 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="font-semibold tracking-[-0.02em]">
-              {t('pages.account.sections.apiKeys.panelTitle')}
-            </h2>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              {t('pages.account.sections.apiKeys.panelDescription')}
-            </p>
-          </div>
-          <span className="self-start rounded-full border border-primary/20 bg-primary/8 px-2.5 py-1 text-xs font-medium text-primary">
-            {t('pages.account.sections.apiKeys.keyCount', {
-              count: pagination.total,
-            })}
-          </span>
-        </div>
-
+      <div className="grid min-w-0 gap-3">
         <ApiKeyToolbar
           disabled={isMutating}
           isRefreshing={isLoading}
@@ -319,7 +300,7 @@ export function ApiKeysPanel() {
         />
 
         {loadError && hasItems && (
-          <Alert className="m-4 w-auto" variant="destructive">
+          <Alert className="w-auto" variant="destructive">
             <AlertCircle aria-hidden="true" />
             <AlertTitle>{t('pages.account.sections.apiKeys.feedback.loadError')}</AlertTitle>
             <AlertDescription>
@@ -332,75 +313,50 @@ export function ApiKeysPanel() {
         )}
 
         {isInitialLoading ? (
-          <div className="grid min-h-64 place-items-center px-6 py-12 text-center">
+          <Card className="grid min-h-48 place-items-center gap-0 px-6 text-center shadow-sm">
             <div>
               <LoaderCircle
                 aria-hidden="true"
-                className="mx-auto size-6 animate-spin text-primary"
+                className="mx-auto size-5 animate-spin text-primary"
               />
-              <p className="mt-3 text-sm text-muted-foreground">
+              <p className="mt-2 text-xs text-muted-foreground">
                 {t('pages.account.sections.apiKeys.feedback.loading')}
               </p>
             </div>
-          </div>
+          </Card>
         ) : loadError && !hasItems ? (
-          <div className="grid min-h-64 place-items-center px-6 py-12 text-center">
+          <Card className="grid min-h-48 place-items-center gap-0 px-6 text-center shadow-sm">
             <div>
-              <AlertCircle aria-hidden="true" className="mx-auto size-6 text-destructive" />
-              <strong className="mt-3 block text-sm">
+              <AlertCircle aria-hidden="true" className="mx-auto size-5 text-destructive" />
+              <strong className="mt-2 block text-sm">
                 {t('pages.account.sections.apiKeys.feedback.loadError')}
               </strong>
-              <Button className="mt-4" onClick={reload} size="sm" variant="outline">
+              <Button className="mt-3" onClick={reload} size="sm" variant="outline">
                 <RefreshCw aria-hidden="true" />
                 {t('pages.account.sections.apiKeys.feedback.retry')}
               </Button>
             </div>
-          </div>
-        ) : !hasItems ? (
-          <div className="grid min-h-56 place-items-center px-6 py-12 text-center">
-            <div>
-              <strong className="text-sm">{t('pages.account.sections.apiKeys.emptyTitle')}</strong>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {t('pages.account.sections.apiKeys.emptyDescription')}
-              </p>
-            </div>
-          </div>
+          </Card>
         ) : (
-          <>
-            <ApiKeysMobileList
-              apiKeys={apiKeys}
-              copiedKeyId={copiedKeyId}
-              disabled={isMutating}
-              onCopy={handleCopy}
-              onDelete={handleDelete}
-              onEdit={handleEdit}
-              onToggleStatus={handleToggleStatus}
-              visibleColumns={visibleColumns}
-            />
-            <div className="hidden overflow-x-auto md:block">
-              <ApiKeysTable
-                apiKeys={apiKeys}
-                copiedKeyId={copiedKeyId}
-                disabled={isMutating}
-                onCopy={handleCopy}
-                onDelete={handleDelete}
-                onEdit={handleEdit}
-                onToggleStatus={handleToggleStatus}
-                visibleColumns={visibleColumns}
-              />
-            </div>
-            <DataPagination
-              disabled={isLoading || isMutating}
-              metadata={pagination}
-              onPageChange={setPage}
-              onPageSizeChange={(value) => {
-                setPageSize(value);
-                setPage(DEFAULT_PAGE);
-              }}
-            />
-          </>
+          <ApiKeyList
+            apiKeys={apiKeys}
+            copiedKeyId={copiedKeyId}
+            disabled={isMutating}
+            isLoading={isLoading}
+            onCopy={handleCopy}
+            onDelete={handleDelete}
+            onEdit={handleEdit}
+            onPageChange={setPage}
+            onPageSizeChange={(value) => {
+              setPageSize(value);
+              setPage(DEFAULT_PAGE);
+            }}
+            onToggleStatus={handleToggleStatus}
+            pagination={pagination}
+            visibleColumns={visibleColumns}
+          />
         )}
-      </Card>
+      </div>
 
       <ApiKeyDialog
         apiKey={editingApiKey}

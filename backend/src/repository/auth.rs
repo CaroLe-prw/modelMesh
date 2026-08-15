@@ -1,10 +1,12 @@
+use std::net::IpAddr;
+
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter,
-    QuerySelect, Set,
+    QuerySelect, Set, entity::prelude::IpNetwork, sea_query::Expr,
 };
 
 use crate::{
-    domain::{AccountRole, User, UserId},
+    domain::{AccountRole, AccountStatus, User, UserId},
     entity::user,
 };
 
@@ -18,6 +20,7 @@ pub struct AuthRepository {
 pub struct NewUserRecord {
     pub email: String,
     pub password_hash: String,
+    pub username: String,
 }
 
 pub struct AuthUserRecord {
@@ -25,6 +28,7 @@ pub struct AuthUserRecord {
     pub email: String,
     pub password_hash: String,
     pub role: AccountRole,
+    pub status: AccountStatus,
 }
 
 impl AuthRepository {
@@ -36,6 +40,7 @@ impl AuthRepository {
         let created_user = user::ActiveModel {
             email: Set(new_user.email),
             password_hash: Set(new_user.password_hash),
+            username: Set(new_user.username),
             ..Default::default()
         }
         .insert(&self.database)
@@ -60,6 +65,7 @@ impl AuthRepository {
                 email: user.email,
                 password_hash: user.password_hash,
                 role: parse_role(&user.role)?,
+                status: parse_status(&user.status)?,
             })
         })
         .transpose()
@@ -90,6 +96,47 @@ impl AuthRepository {
             .await
             .map_err(RepositoryError::from)
     }
+
+    pub async fn record_login(
+        &self,
+        user_id: UserId,
+        ip_address: Option<IpAddr>,
+    ) -> Result<(), RepositoryError> {
+        let result = user::Entity::update_many()
+            .set(user::ActiveModel {
+                last_login_ip: Set(ip_address.map(IpNetwork::from)),
+                ..Default::default()
+            })
+            .col_expr(user::Column::LastLoginAt, Expr::current_timestamp())
+            .col_expr(user::Column::LastActiveAt, Expr::current_timestamp())
+            .filter(user::Column::Id.eq(user_id))
+            .exec(&self.database)
+            .await?;
+
+        if result.rows_affected == 1 {
+            Ok(())
+        } else {
+            Err(RepositoryError::InvalidData(
+                "authenticated user disappeared before login was recorded".to_owned(),
+            ))
+        }
+    }
+
+    pub async fn record_activity(&self, user_id: UserId) -> Result<(), RepositoryError> {
+        let result = user::Entity::update_many()
+            .col_expr(user::Column::LastActiveAt, Expr::current_timestamp())
+            .filter(user::Column::Id.eq(user_id))
+            .exec(&self.database)
+            .await?;
+
+        if result.rows_affected == 1 {
+            Ok(())
+        } else {
+            Err(RepositoryError::InvalidData(
+                "authenticated user disappeared before activity was recorded".to_owned(),
+            ))
+        }
+    }
 }
 
 fn user_from_model(user: user::Model) -> Result<User, RepositoryError> {
@@ -97,7 +144,13 @@ fn user_from_model(user: user::Model) -> Result<User, RepositoryError> {
         id: user.id,
         email: user.email,
         role: parse_role(&user.role)?,
+        status: parse_status(&user.status)?,
     })
+}
+
+fn parse_status(value: &str) -> Result<AccountStatus, RepositoryError> {
+    AccountStatus::from_database(value)
+        .ok_or_else(|| RepositoryError::InvalidData(format!("unknown user status `{value}`")))
 }
 
 fn parse_role(value: &str) -> Result<AccountRole, RepositoryError> {

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { useManagementDataColumns as useAdminDataColumns } from '@/components/common/use-management-data-columns';
 import {
   Select,
   SelectContent,
@@ -96,6 +97,7 @@ export function AdminMerchantsPanel() {
     },
     {
       className: 'w-18 text-right',
+      hideable: false,
       key: 'actions',
       label: t('pages.account.sections.admin.merchants.columns.actions'),
       render: (merchant) => (
@@ -134,13 +136,19 @@ export function AdminMerchantsPanel() {
       render: (merchant) => formatMerchantDate(i18n.resolvedLanguage, merchant.createdAt),
     },
   ];
+  const { columnOptions, isColumnVisible, setColumnVisibility, visibleColumnKeys, visibleColumns } =
+    useAdminDataColumns(columns);
 
   return (
     <div className="grid min-w-0 gap-3">
       <AdminFilterToolbar
+        columnOptions={columnOptions}
+        onColumnVisibilityChange={setColumnVisibility}
         onQueryChange={setQuery}
+        onRefresh={() => undefined}
         placeholder={t('pages.account.sections.admin.merchants.search')}
         query={query}
+        visibleColumnKeys={visibleColumnKeys}
       >
         <Select onValueChange={(value) => setStatus(value as MerchantStatusFilter)} value={status}>
           <SelectTrigger
@@ -160,12 +168,12 @@ export function AdminMerchantsPanel() {
       </AdminFilterToolbar>
       <AdminDataList
         caption={t('pages.account.sections.admin.merchants.caption')}
-        columns={columns}
+        columns={visibleColumns}
         emptyIcon={Store}
         emptyText={t('pages.account.sections.admin.merchants.empty')}
         getKey={(merchant) => merchant.id}
         items={visibleMerchants}
-        mobileFields={mobileFields}
+        mobileFields={mobileFields.filter((field) => isColumnVisible(field.key))}
         mobileHeader={(merchant) => (
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">

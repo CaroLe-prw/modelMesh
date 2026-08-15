@@ -83,7 +83,7 @@ export function UsageRecordsTable({
         </TableCaption>
         <TableHeader className="bg-card">
           <TableRow className="hover:bg-card">
-            <TableHead className="sticky left-0 z-20 h-11 min-w-[132px] border-r border-border/70 bg-card px-4 text-xs text-muted-foreground shadow-[12px_0_22px_-14px_color-mix(in_srgb,var(--color-text)_24%,transparent)]">
+            <TableHead className="h-11 min-w-[132px] bg-card px-4 text-xs text-muted-foreground">
               {t('pages.account.sections.usage.columns.apiKey')}
             </TableHead>
             {visibleColumns.has('model') && (
@@ -141,7 +141,7 @@ export function UsageRecordsTable({
         <TableBody>
           {records.map((record, index) => (
             <TableRow className="group h-[70px]" key={`${currentPage}-${record.id}-${index}`}>
-              <TableCell className="sticky left-0 z-[2] border-r border-border/70 bg-card px-4 font-medium shadow-[12px_0_22px_-14px_color-mix(in_srgb,var(--color-text)_24%,transparent)] transition-colors group-hover:bg-muted/50">
+              <TableCell className="bg-card px-4 font-medium transition-colors group-hover:bg-muted/50">
                 {record.apiKey}
               </TableCell>
               {visibleColumns.has('model') && (

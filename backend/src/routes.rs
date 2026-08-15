@@ -6,6 +6,7 @@ mod brand_preset;
 mod health;
 mod model;
 mod model_catalog;
+mod user_management;
 
 use axum::{Router, http::Request};
 use tower_http::trace::{DefaultOnFailure, DefaultOnResponse, TraceLayer};
@@ -42,6 +43,7 @@ fn api_router() -> Router<AppState> {
         .merge(health::router())
         .merge(model_catalog::router())
         .merge(model::router())
+        .merge(user_management::router())
 }
 
 #[cfg(test)]

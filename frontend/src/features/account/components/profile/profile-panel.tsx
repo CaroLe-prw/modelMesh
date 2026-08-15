@@ -4,6 +4,7 @@ import { ProfileOverviewCard } from '@/features/account/components/profile/profi
 import { ProfileSecurityCards } from '@/features/account/components/profile/profile-security-cards';
 import { logout as logoutRequest } from '@/features/auth/api/auth';
 import { useAuth } from '@/features/auth/context/auth-context';
+import { userDisplayName } from '@/lib/user-display';
 
 export function ProfilePanel() {
   const { setGuest, state } = useAuth();
@@ -14,7 +15,7 @@ export function ProfilePanel() {
     return null;
   }
 
-  const displayName = state.user.email.split('@')[0] || state.user.email;
+  const displayName = userDisplayName(state.user.email);
 
   async function handleLogout() {
     setIsLoggingOut(true);

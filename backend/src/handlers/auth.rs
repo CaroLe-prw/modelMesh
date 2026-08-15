@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    extract::{State, rejection::JsonRejection},
+    extract::{ConnectInfo, State, rejection::JsonRejection},
     http::{HeaderMap, StatusCode, header::AUTHORIZATION},
     response::IntoResponse,
 };
@@ -56,12 +56,13 @@ pub async fn register(
 
 pub async fn login(
     State(state): State<AppState>,
+    ConnectInfo(address): ConnectInfo<std::net::SocketAddr>,
     payload: Result<Json<AuthRequest>, JsonRejection>,
 ) -> Result<impl IntoResponse, AppError> {
     let Json(request) = payload.map_err(|_| AppError::InvalidRequest)?;
     let result = state
         .auth_service
-        .login(request.email, request.password)
+        .login(request.email, request.password, Some(address.ip()))
         .await?;
 
     Ok(Json(LoginResponse {

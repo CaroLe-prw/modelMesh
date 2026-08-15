@@ -1,6 +1,7 @@
 import { ScrollText } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useManagementDataColumns as useAdminDataColumns } from '@/components/common/use-management-data-columns';
 import {
   Select,
   SelectContent,
@@ -124,13 +125,19 @@ export function AdminUsageLogsPanel() {
       render: (log) => formatMicrousd(i18n.resolvedLanguage, log.costMicrousd),
     },
   ];
+  const { columnOptions, isColumnVisible, setColumnVisibility, visibleColumnKeys, visibleColumns } =
+    useAdminDataColumns(columns);
 
   return (
     <div className="grid min-w-0 gap-3">
       <AdminFilterToolbar
+        columnOptions={columnOptions}
+        onColumnVisibilityChange={setColumnVisibility}
         onQueryChange={setQuery}
+        onRefresh={() => undefined}
         placeholder={t('pages.account.sections.admin.usageLogs.search')}
         query={query}
+        visibleColumnKeys={visibleColumnKeys}
       >
         <Select onValueChange={(value) => setStatus(value as UsageStatusFilter)} value={status}>
           <SelectTrigger
@@ -150,12 +157,12 @@ export function AdminUsageLogsPanel() {
       </AdminFilterToolbar>
       <AdminDataList
         caption={t('pages.account.sections.admin.usageLogs.caption')}
-        columns={columns}
+        columns={visibleColumns}
         emptyIcon={ScrollText}
         emptyText={t('pages.account.sections.admin.usageLogs.empty')}
         getKey={(log) => log.id}
         items={visibleLogs}
-        mobileFields={mobileFields}
+        mobileFields={mobileFields.filter((field) => isColumnVisible(field.key))}
         mobileHeader={(log) => (
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">

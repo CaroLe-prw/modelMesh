@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { useManagementDataColumns as useAdminDataColumns } from '@/components/common/use-management-data-columns';
 import {
   Select,
   SelectContent,
@@ -101,6 +102,7 @@ export function AdminWithdrawalsPanel() {
     },
     {
       className: 'min-w-24 text-right',
+      hideable: false,
       key: 'actions',
       label: t('pages.account.sections.admin.withdrawals.columns.actions'),
       render: (withdrawal) => (
@@ -132,13 +134,19 @@ export function AdminWithdrawalsPanel() {
       ),
     },
   ];
+  const { columnOptions, isColumnVisible, setColumnVisibility, visibleColumnKeys, visibleColumns } =
+    useAdminDataColumns(columns);
 
   return (
     <div className="grid min-w-0 gap-3">
       <AdminFilterToolbar
+        columnOptions={columnOptions}
+        onColumnVisibilityChange={setColumnVisibility}
         onQueryChange={setQuery}
+        onRefresh={() => undefined}
         placeholder={t('pages.account.sections.admin.withdrawals.search')}
         query={query}
+        visibleColumnKeys={visibleColumnKeys}
       >
         <Select
           onValueChange={(value) => setStatus(value as WithdrawalStatusFilter)}
@@ -161,12 +169,12 @@ export function AdminWithdrawalsPanel() {
       </AdminFilterToolbar>
       <AdminDataList
         caption={t('pages.account.sections.admin.withdrawals.caption')}
-        columns={columns}
+        columns={visibleColumns}
         emptyIcon={WalletCards}
         emptyText={t('pages.account.sections.admin.withdrawals.empty')}
         getKey={(withdrawal) => withdrawal.id}
         items={visibleWithdrawals}
-        mobileFields={mobileFields}
+        mobileFields={mobileFields.filter((field) => isColumnVisible(field.key))}
         mobileHeader={(withdrawal) => (
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">

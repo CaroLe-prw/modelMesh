@@ -1,4 +1,4 @@
-use super::{generate_access_token, normalize_email, validate_password};
+use super::{default_username, generate_access_token, normalize_email, validate_password};
 use crate::security::hash_secret;
 
 #[test]
@@ -19,6 +19,15 @@ fn malformed_email_is_rejected() {
 fn password_length_is_validated() {
     assert!(validate_password("eight888").is_ok());
     assert!(validate_password("short").is_err());
+}
+
+#[test]
+fn default_username_uses_a_bounded_email_prefix() {
+    assert_eq!(default_username("carole@example.com"), "carole");
+    assert_eq!(
+        default_username(&format!("{}@example.com", "x".repeat(80))).len(),
+        64
+    );
 }
 
 #[test]

@@ -7,7 +7,7 @@ export function SiteFooter() {
 
   return (
     <footer className="relative z-10 border-t border-border">
-      <div className="mx-auto flex w-full max-w-[1212px] flex-col gap-5 px-4 py-8 sm:flex-row sm:items-center sm:justify-between">
+      <div className="page-shell mx-auto flex flex-col gap-5 py-8 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Brand compact />
           <span className="text-xs text-muted-foreground">{t('footer.tagline')}</span>

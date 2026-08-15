@@ -1,12 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
+import type { AdminUserStatus } from '@/features/account/api/admin-users';
 import type {
   AdminAuditOutcome,
   AdminMerchantStatus,
   AdminReconciliationStatus,
   AdminReviewStatus,
   AdminRiskStatus,
-  AdminUserStatus,
   AdminWithdrawalStatus,
 } from '@/features/account/components/admin/admin-demo-data';
 import type { MerchantUsageStatus } from '@/features/account/components/merchant/merchant-demo-data';

@@ -32,6 +32,11 @@ fn migrations_are_registered_in_schema_order() {
             "m0018_create_models",
             "m0019_add_complete_model_pricing",
             "m0020_store_custom_model_default_pricing",
+            "m0021_add_user_management",
+            "m0022_add_user_activity",
+            "m0023_repair_user_request_limits",
+            "m0024_add_user_profile_fields",
+            "m0025_create_user_balance_adjustments",
         ]
     );
 }

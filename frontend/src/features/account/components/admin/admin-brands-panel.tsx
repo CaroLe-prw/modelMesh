@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { useManagementDataColumns as useAdminDataColumns } from '@/components/common/use-management-data-columns';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -319,6 +320,7 @@ export function AdminBrandsPanel() {
     },
     {
       className: 'min-w-48',
+      hideable: false,
       key: 'actions',
       label: t('pages.account.sections.admin.catalogManagement.brands.columns.actions'),
       render: (brand) => (
@@ -369,13 +371,31 @@ export function AdminBrandsPanel() {
       ),
     },
   ];
+  const { columnOptions, isColumnVisible, setColumnVisibility, visibleColumnKeys, visibleColumns } =
+    useAdminDataColumns(columns);
 
   return (
     <div className="grid min-w-0 gap-3">
       <AdminFilterToolbar
+        columnOptions={columnOptions}
+        disabled={isMutating}
+        isRefreshing={isLoading}
+        onColumnVisibilityChange={setColumnVisibility}
         onQueryChange={setQuery}
+        onRefresh={reload}
         placeholder={t('pages.account.sections.admin.catalogManagement.brands.search')}
+        primaryAction={
+          <AddBrandDialog
+            existingIds={existingIds}
+            onCreate={createBrand}
+            onPresetRetry={retryBrandPresets}
+            presets={brandPresets}
+            presetStatus={brandPresetsState.status}
+            suggestedSortOrder={maxSortOrder + 10}
+          />
+        }
         query={query}
+        visibleColumnKeys={visibleColumnKeys}
       >
         <Select onValueChange={(value) => setStatus(value as BrandStatusFilter)} value={status}>
           <SelectTrigger
@@ -392,14 +412,6 @@ export function AdminBrandsPanel() {
             ))}
           </SelectContent>
         </Select>
-        <AddBrandDialog
-          existingIds={existingIds}
-          onCreate={createBrand}
-          onPresetRetry={retryBrandPresets}
-          presets={brandPresets}
-          presetStatus={brandPresetsState.status}
-          suggestedSortOrder={maxSortOrder + 10}
-        />
       </AdminFilterToolbar>
       {isLoading && brandsState.length === 0 ? (
         <div className="grid min-h-48 place-items-center rounded-xl border border-border bg-card text-center shadow-sm">
@@ -426,12 +438,12 @@ export function AdminBrandsPanel() {
       ) : (
         <AdminDataList
           caption={t('pages.account.sections.admin.catalogManagement.brands.caption')}
-          columns={columns}
+          columns={visibleColumns}
           emptyIcon={Building2}
           emptyText={t('pages.account.sections.admin.catalogManagement.brands.empty')}
           getKey={(brand) => brand.id}
           items={brandsState}
-          mobileFields={mobileFields}
+          mobileFields={mobileFields.filter((field) => isColumnVisible(field.key))}
           mobileHeader={(brand) => (
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
@@ -447,6 +459,7 @@ export function AdminBrandsPanel() {
             </div>
           )}
           notice={null}
+          selectionDisabled={isMutating}
         />
       )}
       <EditBrandDialog

@@ -96,7 +96,7 @@ export function ApiKeysTable({
         </TableCaption>
         <TableHeader className="bg-card">
           <TableRow className="hover:bg-card">
-            <TableHead className="sticky left-0 z-20 h-11 w-[140px] min-w-[140px] border-r border-border/70 bg-card px-4 text-xs text-muted-foreground shadow-[12px_0_22px_-14px_color-mix(in_srgb,var(--color-text)_24%,transparent)]">
+            <TableHead className="h-11 w-[140px] min-w-[140px] bg-card px-4 text-xs text-muted-foreground">
               {t('pages.account.sections.apiKeys.columns.name')}
             </TableHead>
             {visibleColumns.has('key') && (
@@ -154,7 +154,7 @@ export function ApiKeysTable({
                 {t('pages.account.sections.apiKeys.columns.createdAt')}
               </TableHead>
             )}
-            <TableHead className="sticky right-0 z-20 h-11 w-[168px] min-w-[168px] border-l border-border/70 bg-card pr-4 text-center text-xs text-muted-foreground shadow-[-12px_0_22px_-14px_color-mix(in_srgb,var(--color-text)_24%,transparent)]">
+            <TableHead className="h-11 w-[168px] min-w-[168px] bg-card pr-4 text-center text-xs text-muted-foreground">
               {t('pages.account.sections.apiKeys.columns.actions')}
             </TableHead>
           </TableRow>
@@ -162,7 +162,7 @@ export function ApiKeysTable({
         <TableBody>
           {apiKeys.map((apiKey) => (
             <TableRow className="group h-[62px]" key={apiKey.id}>
-              <TableCell className="sticky left-0 z-[2] border-r border-border/70 bg-card px-4 font-medium shadow-[12px_0_22px_-14px_color-mix(in_srgb,var(--color-text)_24%,transparent)] transition-colors group-hover:bg-muted/50">
+              <TableCell className="bg-card px-4 font-medium transition-colors group-hover:bg-muted/50">
                 {apiKey.name}
               </TableCell>
               {visibleColumns.has('key') && (
@@ -241,7 +241,7 @@ export function ApiKeysTable({
                   {dateFormatter.format(new Date(apiKey.createdAt))}
                 </TableCell>
               )}
-              <TableCell className="sticky right-0 z-[2] border-l border-border/70 bg-card pr-4 shadow-[-12px_0_22px_-14px_color-mix(in_srgb,var(--color-text)_24%,transparent)] transition-colors group-hover:bg-muted/50">
+              <TableCell className="bg-card pr-4 transition-colors group-hover:bg-muted/50">
                 <ApiKeyActions
                   apiKey={apiKey}
                   disabled={disabled}

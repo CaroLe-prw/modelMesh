@@ -15,7 +15,7 @@ export function RoutingPage() {
   return (
     <section className="relative z-10">
       <div className="hero-grid absolute inset-0 -z-10 opacity-60" aria-hidden="true" />
-      <div className="mx-auto grid min-h-[calc(100vh-188px)] w-full max-w-[1212px] gap-12 px-4 py-14 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:py-20">
+      <div className="page-shell mx-auto grid min-h-[calc(100vh-188px)] gap-12 py-14 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:py-20">
         <div>
           <Badge className="border-primary/20 bg-primary/8 text-primary">
             {t('pages.routing.badge')}

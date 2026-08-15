@@ -22,7 +22,7 @@ export function SiteHeader({ isDark, onToggleTheme }: SiteHeaderProps) {
 
   return (
     <header className="relative z-30 border-b border-border/80 bg-background/90 backdrop-blur">
-      <div className="mx-auto grid h-17 w-full max-w-[1212px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-4">
+      <div className="page-shell mx-auto grid h-17 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center">
         <div className="col-start-1 justify-self-start">
           <Brand />
         </div>

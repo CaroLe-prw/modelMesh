@@ -23,10 +23,6 @@ impl AccessTokenRepository {
             .await
     }
 
-    pub async fn find_user_id(&self, token_hash: &str) -> io::Result<Option<UserId>> {
-        self.redis.get(&redis_key::access_token(token_hash)).await
-    }
-
     pub async fn delete(&self, token_hash: &str) -> io::Result<()> {
         self.redis
             .delete(&redis_key::access_token(token_hash))

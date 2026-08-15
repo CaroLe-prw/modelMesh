@@ -12,7 +12,7 @@ export function StatsStrip() {
 
   return (
     <section className="relative z-10 border-b border-border bg-card">
-      <div className="mx-auto grid w-full max-w-[1212px] grid-cols-2 px-4 md:grid-cols-4">
+      <div className="page-shell mx-auto grid grid-cols-2 md:grid-cols-4">
         {stats.map((stat) => (
           <div
             className="border-r border-border px-4 py-6 first:border-l md:px-7"

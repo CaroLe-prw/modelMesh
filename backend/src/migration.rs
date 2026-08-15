@@ -18,6 +18,11 @@ mod m0017_add_model_catalog_cache_prices;
 mod m0018_create_models;
 mod m0019_add_complete_model_pricing;
 mod m0020_store_custom_model_default_pricing;
+mod m0021_add_user_management;
+mod m0022_add_user_activity;
+mod m0023_repair_user_request_limits;
+mod m0024_add_user_profile_fields;
+mod m0025_create_user_balance_adjustments;
 
 use sea_orm_migration::prelude::*;
 
@@ -47,6 +52,11 @@ impl MigratorTrait for Migrator {
             Box::new(m0018_create_models::Migration),
             Box::new(m0019_add_complete_model_pricing::Migration),
             Box::new(m0020_store_custom_model_default_pricing::Migration),
+            Box::new(m0021_add_user_management::Migration),
+            Box::new(m0022_add_user_activity::Migration),
+            Box::new(m0023_repair_user_request_limits::Migration),
+            Box::new(m0024_add_user_profile_fields::Migration),
+            Box::new(m0025_create_user_balance_adjustments::Migration),
         ]
     }
 }

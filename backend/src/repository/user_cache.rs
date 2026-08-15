@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     clients::RedisClient,
-    domain::{AccountRole, User, UserId},
+    domain::{AccountRole, AccountStatus, User, UserId},
     redis_key,
 };
 
@@ -59,6 +59,13 @@ impl UserCacheRepository {
             .set_with_ttl(&redis_key::current_user(user.id), &value, self.ttl_seconds)
             .await
     }
+
+    pub async fn delete(&self, user_id: UserId) -> io::Result<()> {
+        self.redis
+            .delete(&redis_key::current_user(user_id))
+            .await
+            .map(|_| ())
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -66,6 +73,7 @@ struct CachedUser {
     email: String,
     id: UserId,
     role: String,
+    status: String,
 }
 
 fn serialize_user(user: &User) -> io::Result<String> {
@@ -73,6 +81,7 @@ fn serialize_user(user: &User) -> io::Result<String> {
         email: user.email.clone(),
         id: user.id,
         role: user.role.as_str().to_owned(),
+        status: user.status.as_str().to_owned(),
     })
     .map_err(io::Error::other)
 }
@@ -88,6 +97,7 @@ fn deserialize_user(value: &str, expected_user_id: UserId) -> Option<User> {
         email: cached.email,
         id: cached.id,
         role: AccountRole::from_database(&cached.role)?,
+        status: AccountStatus::from_database(&cached.status)?,
     })
 }
 

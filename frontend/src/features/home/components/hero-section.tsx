@@ -23,7 +23,7 @@ export function HeroSection() {
   return (
     <section className="relative z-10 border-b border-border" id="top">
       <div className="hero-grid absolute inset-0 -z-10 opacity-70" aria-hidden="true" />
-      <div className="mx-auto grid w-full max-w-[1212px] gap-12 px-4 pb-16 pt-14 lg:grid-cols-[1.03fr_0.97fr] lg:items-center lg:pb-20 lg:pt-20">
+      <div className="page-shell mx-auto grid gap-12 pb-16 pt-14 lg:grid-cols-[1.03fr_0.97fr] lg:items-center lg:pb-20 lg:pt-20">
         <div>
           <Badge className="border-primary/20 bg-primary/8 text-primary">
             <Sparkles aria-hidden="true" className="size-3" />

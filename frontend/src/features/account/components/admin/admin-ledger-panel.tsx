@@ -2,6 +2,7 @@ import { ArrowDownLeft, ArrowUpRight, BookLock, CircleAlert } from 'lucide-react
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useManagementDataColumns as useAdminDataColumns } from '@/components/common/use-management-data-columns';
 import {
   Select,
   SelectContent,
@@ -153,6 +154,8 @@ export function AdminLedgerPanel() {
       render: (entry) => formatMerchantDate(i18n.resolvedLanguage, entry.createdAt),
     },
   ];
+  const { columnOptions, isColumnVisible, setColumnVisibility, visibleColumnKeys, visibleColumns } =
+    useAdminDataColumns(columns);
 
   return (
     <div className="grid min-w-0 gap-3">
@@ -174,9 +177,13 @@ export function AdminLedgerPanel() {
         />
       </div>
       <AdminFilterToolbar
+        columnOptions={columnOptions}
+        onColumnVisibilityChange={setColumnVisibility}
         onQueryChange={setQuery}
+        onRefresh={() => undefined}
         placeholder={t('pages.account.sections.admin.ledger.search')}
         query={query}
+        visibleColumnKeys={visibleColumnKeys}
       >
         <Select onValueChange={(value) => setType(value as LedgerTypeFilter)} value={type}>
           <SelectTrigger
@@ -214,12 +221,12 @@ export function AdminLedgerPanel() {
       </AdminFilterToolbar>
       <AdminDataList
         caption={t('pages.account.sections.admin.ledger.caption')}
-        columns={columns}
+        columns={visibleColumns}
         emptyIcon={BookLock}
         emptyText={t('pages.account.sections.admin.ledger.empty')}
         getKey={(entry) => entry.id}
         items={visibleEntries}
-        mobileFields={mobileFields}
+        mobileFields={mobileFields.filter((field) => isColumnVisible(field.key))}
         mobileHeader={(entry) => (
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">

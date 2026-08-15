@@ -4,10 +4,47 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
-function Table({ className, ...props }: React.ComponentProps<'table'>) {
+function Table({
+  className,
+  selectable = false,
+  stickyEdges = true,
+  ...props
+}: React.ComponentProps<'table'> & { selectable?: boolean; stickyEdges?: boolean }) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [isOverflowing, setIsOverflowing] = React.useState(false);
+
+  React.useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateOverflow = () => {
+      setIsOverflowing(container.scrollWidth > container.clientWidth + 1);
+    };
+
+    updateOverflow();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateOverflow);
+      return () => window.removeEventListener('resize', updateOverflow);
+    }
+
+    const observer = new ResizeObserver(updateOverflow);
+    observer.observe(container);
+    if (container.firstElementChild) observer.observe(container.firstElementChild);
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
+    <div
+      ref={containerRef}
+      data-overflowing={isOverflowing}
+      data-slot="table-container"
+      className="relative w-full overflow-x-auto"
+    >
       <table
+        data-selectable={selectable ? 'true' : undefined}
+        data-sticky-edges={stickyEdges && isOverflowing}
         data-slot="table"
         className={cn('w-full caption-bottom text-sm', className)}
         {...props}

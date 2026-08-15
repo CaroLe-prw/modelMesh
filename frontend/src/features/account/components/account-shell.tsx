@@ -12,16 +12,16 @@ export function AccountShell() {
       <div className="hero-grid absolute inset-0 -z-10 opacity-35" aria-hidden="true" />
       <div
         className={cn(
-          'mx-auto grid w-full max-w-[1440px] gap-4 px-3 py-5 sm:gap-6 sm:px-4 sm:py-8 lg:items-start lg:gap-7 lg:py-10',
+          'page-shell mx-auto grid min-w-0 gap-4 py-5 sm:gap-6 sm:py-8 lg:items-start lg:gap-7 lg:py-10',
           showNavigation && 'lg:grid-cols-[248px_minmax(0,1fr)]',
         )}
       >
         {showNavigation ? (
-          <aside className="lg:sticky lg:top-6">
+          <aside className="min-w-0 lg:sticky lg:top-6">
             <AccountSidebar />
           </aside>
         ) : null}
-        <div className="min-w-0">
+        <div className="min-w-0 max-w-full">
           <Outlet />
         </div>
       </div>

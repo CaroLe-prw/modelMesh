@@ -17,6 +17,7 @@
   --color-text-faint: #9298a3;
   --color-border: #e3e5e9;
   --color-border-strong: #d8dbe1;
+  --color-sticky-column-shadow: rgba(24, 26, 31, 0.075);
   --color-primary: #0fa2e7;
   --color-primary-foreground: #ffffff;
   --color-primary-soft: #e7f6fd;
@@ -72,6 +73,7 @@
   --color-text-faint: #697280;
   --color-border: #252a33;
   --color-border-strong: #343b47;
+  --color-sticky-column-shadow: rgba(0, 0, 0, 0.32);
   --color-primary: #0fa2e7;
   --color-primary-foreground: #ffffff;
   --color-primary-soft: rgba(15, 162, 231, 0.16);

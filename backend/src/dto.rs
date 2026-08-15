@@ -7,6 +7,7 @@ mod health;
 mod model;
 mod model_catalog;
 mod pagination;
+mod user_management;
 
 pub use api_key::{
     ApiKeyResponse, ApiKeyStatusRequest, CreateApiKeyRequest, CreateApiKeyResponse,
@@ -27,3 +28,10 @@ pub use model_catalog::{
     ModelCatalogEntryResponse, ModelCatalogListQuery, ModelCatalogLookupQuery,
 };
 pub use pagination::{PaginatedResponse, PaginationQuery, PaginationResponse};
+pub use user_management::{
+    AdjustManagedUserBalanceRequest, BatchDeleteManagedUsersRequest,
+    BatchDeleteManagedUsersResponse, CreateManagedUserRequest,
+    ListManagedUserBalanceAdjustmentsQuery, ListManagedUsersQuery,
+    ManagedUserBalanceAdjustmentListResponse, ManagedUserBalanceAdjustmentResponse,
+    ManagedUserResponse, UpdateManagedUserRequest,
+};

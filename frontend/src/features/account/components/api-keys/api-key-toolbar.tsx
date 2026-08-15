@@ -1,15 +1,7 @@
-import { Columns3, Plus, RefreshCw, Search } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { ManagementFilterToolbar } from '@/components/common/management-data-list';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -52,89 +44,46 @@ export function ApiKeyToolbar({
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-col gap-3 border-b border-border p-4 xl:flex-row xl:items-center xl:justify-between">
-      <div className="grid gap-2 sm:grid-cols-[minmax(260px,1fr)_150px] xl:w-[520px]">
-        <div className="relative">
-          <Search
-            aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            aria-label={t('pages.account.sections.apiKeys.searchPlaceholder')}
-            className="pl-9"
-            disabled={disabled}
-            onChange={(event) => onQueryChange(event.target.value)}
-            placeholder={t('pages.account.sections.apiKeys.searchPlaceholder')}
-            value={query}
-          />
-        </div>
-
-        <Select
-          disabled={disabled}
-          onValueChange={(value) => onStatusChange(value as 'all' | ApiKeyStatus)}
-          value={status}
-        >
-          <SelectTrigger
-            className="w-full"
-            aria-label={t('pages.account.sections.apiKeys.statusFilter')}
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('pages.account.sections.apiKeys.allStatuses')}</SelectItem>
-            {apiKeyStatusOptions.map((option) => (
-              <SelectItem key={option} value={option}>
-                {t(`pages.account.sections.apiKeys.statuses.${option}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex items-center gap-2 self-stretch sm:self-end xl:self-auto">
-        <Button
-          aria-label={t('pages.account.sections.apiKeys.refresh')}
-          disabled={disabled || isRefreshing}
-          onClick={onRefresh}
-          size="icon"
-          title={t('pages.account.sections.apiKeys.refresh')}
-          variant="outline"
-        >
-          <RefreshCw aria-hidden="true" className={isRefreshing ? 'animate-spin' : undefined} />
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button className="hidden md:inline-flex" variant="outline">
-              <Columns3 aria-hidden="true" />
-              {t('pages.account.sections.apiKeys.columnSettings')}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              {t('pages.account.sections.apiKeys.visibleColumns')}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {apiKeyOptionalColumnIds.map((column) => (
-              <DropdownMenuCheckboxItem
-                checked={visibleColumns.has(column)}
-                key={column}
-                onCheckedChange={(checked) => onColumnVisibilityChange(column, checked === true)}
-                onSelect={(event) => event.preventDefault()}
-              >
-                {t(`pages.account.sections.apiKeys.columns.${column}`)}
-              </DropdownMenuCheckboxItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="whitespace-normal text-xs font-normal leading-5 text-muted-foreground">
-              {t('pages.account.sections.apiKeys.fixedColumnsHint')}
-            </DropdownMenuLabel>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button className="flex-1 sm:flex-none" disabled={disabled} onClick={onCreate}>
+    <ManagementFilterToolbar
+      columnOptions={apiKeyOptionalColumnIds.map((column) => ({
+        key: column,
+        label: t(`pages.account.sections.apiKeys.columns.${column}`),
+      }))}
+      disabled={disabled}
+      isRefreshing={isRefreshing}
+      onColumnVisibilityChange={onColumnVisibilityChange}
+      onQueryChange={onQueryChange}
+      onRefresh={onRefresh}
+      placeholder={t('pages.account.sections.apiKeys.searchPlaceholder')}
+      primaryAction={
+        <Button className="flex-1 md:flex-none" disabled={disabled} onClick={onCreate}>
           <Plus aria-hidden="true" />
           {t('pages.account.sections.apiKeys.create')}
         </Button>
-      </div>
-    </div>
+      }
+      query={query}
+      visibleColumnKeys={visibleColumns}
+    >
+      <Select
+        disabled={disabled}
+        onValueChange={(value) => onStatusChange(value as 'all' | ApiKeyStatus)}
+        value={status}
+      >
+        <SelectTrigger
+          aria-label={t('pages.account.sections.apiKeys.statusFilter')}
+          className="w-full md:w-40"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">{t('pages.account.sections.apiKeys.allStatuses')}</SelectItem>
+          {apiKeyStatusOptions.map((option) => (
+            <SelectItem key={option} value={option}>
+              {t(`pages.account.sections.apiKeys.statuses.${option}`)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </ManagementFilterToolbar>
   );
 }

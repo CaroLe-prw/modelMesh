@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { useManagementDataColumns as useAdminDataColumns } from '@/components/common/use-management-data-columns';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -123,6 +124,7 @@ export function AdminRiskAlertsPanel() {
     },
     {
       className: 'min-w-24 text-right',
+      hideable: false,
       key: 'actions',
       label: t('pages.account.sections.admin.riskAlerts.columns.actions'),
       render: (alert) => <RiskActions onAct={showPreview} resolved={alert.status === 'resolved'} />,
@@ -155,13 +157,19 @@ export function AdminRiskAlertsPanel() {
       render: (alert) => <RiskActions onAct={showPreview} resolved={alert.status === 'resolved'} />,
     },
   ];
+  const { columnOptions, isColumnVisible, setColumnVisibility, visibleColumnKeys, visibleColumns } =
+    useAdminDataColumns(columns);
 
   return (
     <div className="grid min-w-0 gap-3">
       <AdminFilterToolbar
+        columnOptions={columnOptions}
+        onColumnVisibilityChange={setColumnVisibility}
         onQueryChange={setQuery}
+        onRefresh={() => undefined}
         placeholder={t('pages.account.sections.admin.riskAlerts.search')}
         query={query}
+        visibleColumnKeys={visibleColumnKeys}
       >
         <Select
           onValueChange={(value) => setSeverity(value as RiskSeverityFilter)}
@@ -199,12 +207,12 @@ export function AdminRiskAlertsPanel() {
       </AdminFilterToolbar>
       <AdminDataList
         caption={t('pages.account.sections.admin.riskAlerts.caption')}
-        columns={columns}
+        columns={visibleColumns}
         emptyIcon={ShieldAlert}
         emptyText={t('pages.account.sections.admin.riskAlerts.empty')}
         getKey={(alert) => alert.id}
         items={visibleAlerts}
-        mobileFields={mobileFields}
+        mobileFields={mobileFields.filter((field) => isColumnVisible(field.key))}
         mobileHeader={(alert) => (
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">

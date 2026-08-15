@@ -30,7 +30,7 @@ export function MarketplaceExplorer() {
 
   return (
     <section className="relative z-10 pb-20 pt-10 sm:pt-12">
-      <div className="mx-auto max-w-7xl space-y-8 px-5 sm:px-7">
+      <div className="page-shell mx-auto space-y-8">
         <CatalogSelectionPanel
           selectedBrandId={selectedBrandId}
           selectedModelId={selectedModelId}

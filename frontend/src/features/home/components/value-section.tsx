@@ -43,7 +43,7 @@ export function ValueSection() {
 
   return (
     <section className="relative z-10 border-t border-border bg-secondary/35 py-20" id="features">
-      <div className="mx-auto w-full max-w-[1212px] px-4">
+      <div className="page-shell mx-auto">
         <div className="grid gap-4 md:grid-cols-3">
           {features.map((feature) => (
             <FeatureCard feature={feature} key={feature.index} />

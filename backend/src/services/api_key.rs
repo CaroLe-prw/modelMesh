@@ -4,13 +4,15 @@ use jiff::Timestamp;
 use uuid::Uuid;
 
 use crate::{
-    domain::{ApiKey, ApiKeyStatus, Page, Pagination, UserId},
+    domain::{AccountRole, ApiKey, ApiKeyStatus, Page, Pagination, UserId},
     repository::{
         ApiKeyRepository, ApiKeySearch, NewApiKeyRecord, RepositoryConflict, RepositoryError,
         UpdateApiKeyRecord,
     },
     security::hash_secret,
 };
+
+use super::authorization::require_admin;
 
 const API_KEY_GENERATION_ATTEMPTS: usize = 3;
 const MAX_IP_RULES_LENGTH: usize = 8_192;
@@ -56,6 +58,7 @@ pub struct CreatedApiKey {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ApiKeyServiceError {
+    Forbidden,
     InvalidInput,
     NameAlreadyExists,
     KeyAlreadyExists,
@@ -94,6 +97,22 @@ impl ApiKeyService {
             .list_by_user(user_id, &search, pagination)
             .await
             .map_err(|_| ApiKeyServiceError::Internal)
+    }
+
+    pub async fn list_for_admin(
+        &self,
+        requester_role: AccountRole,
+        user_id: UserId,
+        pagination: Pagination,
+        query: Option<String>,
+        status: Option<ApiKeyStatus>,
+    ) -> Result<Page<ApiKey>, ApiKeyServiceError> {
+        require_admin(requester_role, ApiKeyServiceError::Forbidden)?;
+        if user_id <= 0 {
+            return Err(ApiKeyServiceError::InvalidInput);
+        }
+
+        self.list(user_id, pagination, query, status).await
     }
 
     pub async fn create(

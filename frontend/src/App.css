@@ -3,6 +3,17 @@
   overflow: hidden;
 }
 
+.account-mobile-route-scroll {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  overscroll-behavior-inline: contain;
+  touch-action: pan-x;
+}
+
+.account-mobile-route-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 .app::before {
   position: absolute;
   z-index: 0;
@@ -89,6 +100,120 @@
 
 .model-table tbody tr:hover td {
   background: var(--color-surface-hover);
+}
+
+[data-slot='table'][data-sticky-edges='true'] > thead > tr > :first-child,
+[data-slot='table'][data-sticky-edges='true'] > tbody > tr > :first-child {
+  position: sticky;
+  left: 0;
+  border-right: 1px solid var(--color-border);
+}
+
+[data-slot='table'][data-sticky-edges='true'] > thead > tr > :last-child,
+[data-slot='table'][data-sticky-edges='true'] > tbody > tr > :last-child {
+  position: sticky;
+  right: 0;
+  border-left: 1px solid var(--color-border);
+}
+
+[data-slot='table'][data-sticky-edges='true'] > thead > tr > :first-child,
+[data-slot='table'][data-sticky-edges='true'] > thead > tr > :last-child {
+  z-index: 30;
+  background: color-mix(in srgb, var(--color-surface-subtle) 55%, var(--color-surface));
+}
+
+[data-slot='table'][data-sticky-edges='true'] > tbody > tr > :first-child,
+[data-slot='table'][data-sticky-edges='true'] > tbody > tr > :last-child {
+  z-index: 20;
+  background: var(--color-surface);
+}
+
+[data-slot='table'][data-sticky-edges='true'] > tbody > tr:hover > :first-child,
+[data-slot='table'][data-sticky-edges='true'] > tbody > tr:hover > :last-child {
+  background: var(--color-surface-hover);
+}
+
+[data-slot='table'][data-sticky-edges='true'] > thead > tr > :first-child::after,
+[data-slot='table'][data-sticky-edges='true'] > tbody > tr > :first-child::after,
+[data-slot='table'][data-sticky-edges='true'] > thead > tr > :last-child::before,
+[data-slot='table'][data-sticky-edges='true'] > tbody > tr > :last-child::before {
+  position: absolute;
+  top: 0;
+  bottom: -1px;
+  width: 14px;
+  content: '';
+  pointer-events: none;
+}
+
+[data-slot='table'][data-sticky-edges='true'] > thead > tr > :first-child::after,
+[data-slot='table'][data-sticky-edges='true'] > tbody > tr > :first-child::after {
+  right: -14px;
+  background: linear-gradient(to right, var(--color-sticky-column-shadow), transparent);
+}
+
+[data-slot='table'][data-sticky-edges='true'] > thead > tr > :last-child::before,
+[data-slot='table'][data-sticky-edges='true'] > tbody > tr > :last-child::before {
+  left: -14px;
+  background: linear-gradient(to left, var(--color-sticky-column-shadow), transparent);
+}
+
+[data-slot='table'][data-selectable='true'][data-sticky-edges='true'] > thead > tr > :first-child,
+[data-slot='table'][data-selectable='true'][data-sticky-edges='true'] > tbody > tr > :first-child {
+  z-index: 31;
+  border-right: 0;
+}
+
+[data-slot='table'][data-selectable='true'][data-sticky-edges='true']
+  > thead
+  > tr
+  > :first-child::after,
+[data-slot='table'][data-selectable='true'][data-sticky-edges='true']
+  > tbody
+  > tr
+  > :first-child::after {
+  display: none;
+}
+
+[data-slot='table'][data-selectable='true'][data-sticky-edges='true'] > thead > tr > :nth-child(2),
+[data-slot='table'][data-selectable='true'][data-sticky-edges='true'] > tbody > tr > :nth-child(2) {
+  position: sticky;
+  left: 48px;
+  border-right: 1px solid var(--color-border);
+}
+
+[data-slot='table'][data-selectable='true'][data-sticky-edges='true'] > thead > tr > :nth-child(2) {
+  z-index: 30;
+  background: color-mix(in srgb, var(--color-surface-subtle) 55%, var(--color-surface));
+}
+
+[data-slot='table'][data-selectable='true'][data-sticky-edges='true'] > tbody > tr > :nth-child(2) {
+  z-index: 20;
+  background: var(--color-surface);
+}
+
+[data-slot='table'][data-selectable='true'][data-sticky-edges='true']
+  > tbody
+  > tr:hover
+  > :nth-child(2) {
+  background: var(--color-surface-hover);
+}
+
+[data-slot='table'][data-selectable='true'][data-sticky-edges='true']
+  > thead
+  > tr
+  > :nth-child(2)::after,
+[data-slot='table'][data-selectable='true'][data-sticky-edges='true']
+  > tbody
+  > tr
+  > :nth-child(2)::after {
+  position: absolute;
+  top: 0;
+  right: -14px;
+  bottom: -1px;
+  width: 14px;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(to right, var(--color-sticky-column-shadow), transparent);
 }
 
 .theme-dark .app::before {

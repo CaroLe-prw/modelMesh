@@ -7,7 +7,7 @@ use serde::Serialize;
 
 use crate::services::{
     ApiKeyServiceError, AppRouteServiceError, AuthServiceError, BrandPresetServiceError,
-    BrandServiceError, ModelCatalogServiceError, ModelServiceError,
+    BrandServiceError, ModelCatalogServiceError, ModelServiceError, UserManagementServiceError,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -35,6 +35,10 @@ pub enum ErrorCode {
     InvalidModel = 16_001,
     ModelAlreadyExists = 16_002,
     ModelNotFound = 16_003,
+    InvalidManagedUser = 17_001,
+    ManagedUserNotFound = 17_002,
+    InvalidBalanceAdjustment = 17_003,
+    ManagedUserDeleteConflict = 17_004,
     DependencyUnavailable = 90_001,
     Internal = 99_999,
 }
@@ -69,6 +73,10 @@ pub enum AppError {
     InvalidModel,
     ModelAlreadyExists,
     ModelNotFound,
+    InvalidManagedUser,
+    ManagedUserNotFound,
+    InvalidBalanceAdjustment,
+    ManagedUserDeleteConflict,
     DependencyUnavailable,
     Internal,
 }
@@ -99,6 +107,7 @@ impl From<AuthServiceError> for AppError {
 impl From<ApiKeyServiceError> for AppError {
     fn from(error: ApiKeyServiceError) -> Self {
         match error {
+            ApiKeyServiceError::Forbidden => Self::Forbidden,
             ApiKeyServiceError::InvalidInput => Self::InvalidApiKey,
             ApiKeyServiceError::NameAlreadyExists => Self::ApiKeyNameAlreadyExists,
             ApiKeyServiceError::KeyAlreadyExists => Self::ApiKeyAlreadyExists,
@@ -165,6 +174,22 @@ impl From<ModelServiceError> for AppError {
     }
 }
 
+impl From<UserManagementServiceError> for AppError {
+    fn from(error: UserManagementServiceError) -> Self {
+        match error {
+            UserManagementServiceError::Forbidden => Self::Forbidden,
+            UserManagementServiceError::InvalidEmail => Self::InvalidEmail,
+            UserManagementServiceError::InvalidPassword => Self::InvalidPassword,
+            UserManagementServiceError::EmailAlreadyExists => Self::EmailAlreadyExists,
+            UserManagementServiceError::InvalidInput => Self::InvalidManagedUser,
+            UserManagementServiceError::InvalidBalanceAdjustment => Self::InvalidBalanceAdjustment,
+            UserManagementServiceError::DeleteConflict => Self::ManagedUserDeleteConflict,
+            UserManagementServiceError::NotFound => Self::ManagedUserNotFound,
+            UserManagementServiceError::Internal => Self::Internal,
+        }
+    }
+}
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, code) = match self {
@@ -199,6 +224,14 @@ impl IntoResponse for AppError {
             Self::InvalidModel => (StatusCode::BAD_REQUEST, ErrorCode::InvalidModel),
             Self::ModelAlreadyExists => (StatusCode::CONFLICT, ErrorCode::ModelAlreadyExists),
             Self::ModelNotFound => (StatusCode::NOT_FOUND, ErrorCode::ModelNotFound),
+            Self::InvalidManagedUser => (StatusCode::BAD_REQUEST, ErrorCode::InvalidManagedUser),
+            Self::ManagedUserNotFound => (StatusCode::NOT_FOUND, ErrorCode::ManagedUserNotFound),
+            Self::InvalidBalanceAdjustment => {
+                (StatusCode::BAD_REQUEST, ErrorCode::InvalidBalanceAdjustment)
+            }
+            Self::ManagedUserDeleteConflict => {
+                (StatusCode::CONFLICT, ErrorCode::ManagedUserDeleteConflict)
+            }
             Self::DependencyUnavailable => (
                 StatusCode::SERVICE_UNAVAILABLE,
                 ErrorCode::DependencyUnavailable,

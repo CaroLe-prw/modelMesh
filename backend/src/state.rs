@@ -5,11 +5,11 @@ use crate::{
     repository::{
         AccessTokenRepository, ApiKeyRepository, AppRouteCacheRepository, AppRouteRepository,
         AuthRepository, BrandPresetRepository, BrandRepository, ModelCatalogRepository,
-        ModelRepository, UserCacheRepository,
+        ModelRepository, UserCacheRepository, UserManagementRepository,
     },
     services::{
         ApiKeyService, AppRouteService, AuthService, BrandPresetService, BrandService,
-        ModelCatalogService, ModelService,
+        ModelCatalogService, ModelService, UserManagementService,
     },
 };
 
@@ -22,6 +22,7 @@ pub struct AppState {
     pub brand_preset_service: BrandPresetService,
     pub model_catalog_service: ModelCatalogService,
     pub model_service: ModelService,
+    pub user_management_service: UserManagementService,
     pub database: DatabaseConnection,
     pub redis: RedisClient,
     pub service_name: &'static str,
@@ -35,12 +36,18 @@ impl AppState {
         access_token_ttl_seconds: u64,
     ) -> Self {
         let auth_repository = AuthRepository::new(database.clone());
+        let auth_service = AuthService::new(
+            auth_repository.clone(),
+            AccessTokenRepository::new(redis.clone(), access_token_ttl_seconds),
+            UserCacheRepository::with_default_ttl(redis.clone()),
+            std::time::Duration::from_secs(access_token_ttl_seconds),
+        );
 
         Self {
             app_route_service: AppRouteService::new(
                 AppRouteRepository::new(database.clone()),
                 AppRouteCacheRepository::with_default_ttl(redis.clone()),
-                auth_repository.clone(),
+                auth_repository,
             ),
             api_key_service: ApiKeyService::new(ApiKeyRepository::new(database.clone())),
             brand_service: BrandService::new(
@@ -57,11 +64,11 @@ impl AppState {
                 ModelRepository::new(database.clone()),
                 ModelCatalogRepository::new(database.clone()),
             ),
-            auth_service: AuthService::new(
-                auth_repository,
-                AccessTokenRepository::new(redis.clone(), access_token_ttl_seconds),
-                UserCacheRepository::with_default_ttl(redis.clone()),
+            user_management_service: UserManagementService::new(
+                UserManagementRepository::new(database.clone()),
+                auth_service.clone(),
             ),
+            auth_service,
             database,
             redis,
             service_name: "modelmesh-backend",

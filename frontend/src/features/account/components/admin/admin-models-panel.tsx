@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { DataPagination } from '@/components/common/data-pagination';
+import { useManagementDataColumns as useAdminDataColumns } from '@/components/common/use-management-data-columns';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +26,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -402,6 +402,7 @@ export function AdminModelsPanel() {
     },
     {
       className: 'min-w-48',
+      hideable: false,
       key: 'actions',
       label: t('pages.account.sections.admin.catalogManagement.models.columns.actions'),
       render: (model) => (
@@ -467,16 +468,33 @@ export function AdminModelsPanel() {
       ),
     },
   ];
+  const { columnOptions, isColumnVisible, setColumnVisibility, visibleColumnKeys, visibleColumns } =
+    useAdminDataColumns(columns);
 
   return (
     <div className="grid min-w-0 gap-3">
       <AdminFilterToolbar
+        columnOptions={columnOptions}
+        disabled={isMutating}
+        isRefreshing={modelsLoading}
+        onColumnVisibilityChange={setColumnVisibility}
         onQueryChange={(value) => {
           setQuery(value);
           setPage(DEFAULT_PAGE);
         }}
+        onRefresh={reloadModels}
         placeholder={t('pages.account.sections.admin.catalogManagement.models.search')}
+        primaryAction={
+          <AddModelDialog
+            brands={brandOptions}
+            brandStatus={brandStatus}
+            existingModelKeys={modelsState.map((model) => `${model.brandId}/${model.identifier}`)}
+            onBrandRetry={() => setBrandRefreshVersion((version) => version + 1)}
+            onCreate={createModels}
+          />
+        }
         query={query}
+        visibleColumnKeys={visibleColumnKeys}
       >
         <Select
           onValueChange={(value) => {
@@ -523,13 +541,6 @@ export function AdminModelsPanel() {
             ))}
           </SelectContent>
         </Select>
-        <AddModelDialog
-          brands={brandOptions}
-          brandStatus={brandStatus}
-          existingModelKeys={modelsState.map((model) => `${model.brandId}/${model.identifier}`)}
-          onBrandRetry={() => setBrandRefreshVersion((version) => version + 1)}
-          onCreate={createModels}
-        />
       </AdminFilterToolbar>
       {modelsLoading && modelsState.length === 0 ? (
         <div className="grid min-h-48 place-items-center rounded-xl border border-border bg-card text-center shadow-sm">
@@ -557,12 +568,25 @@ export function AdminModelsPanel() {
         <>
           <AdminDataList
             caption={t('pages.account.sections.admin.catalogManagement.models.caption')}
-            columns={columns}
+            columns={visibleColumns}
             emptyIcon={Boxes}
             emptyText={t('pages.account.sections.admin.catalogManagement.models.empty')}
+            footer={
+              pagination.total > 0 ? (
+                <DataPagination
+                  disabled={modelsLoading || isMutating}
+                  metadata={pagination}
+                  onPageChange={setPage}
+                  onPageSizeChange={(value) => {
+                    setPageSize(value);
+                    setPage(DEFAULT_PAGE);
+                  }}
+                />
+              ) : undefined
+            }
             getKey={(model) => String(model.id)}
             items={modelsState}
-            mobileFields={mobileFields}
+            mobileFields={mobileFields.filter((field) => isColumnVisible(field.key))}
             mobileHeader={(model) => (
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -575,20 +599,8 @@ export function AdminModelsPanel() {
               </div>
             )}
             notice={null}
+            selectionDisabled={isMutating}
           />
-          {pagination.total > 0 && (
-            <Card className="gap-0 py-0 shadow-sm">
-              <DataPagination
-                disabled={modelsLoading || isMutating}
-                metadata={pagination}
-                onPageChange={setPage}
-                onPageSizeChange={(value) => {
-                  setPageSize(value);
-                  setPage(DEFAULT_PAGE);
-                }}
-              />
-            </Card>
-          )}
         </>
       )}
       <EditModelDialog

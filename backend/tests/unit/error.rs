@@ -27,6 +27,10 @@ fn public_error_codes_are_stable_and_unique() {
         (ErrorCode::InvalidModel, 16_001),
         (ErrorCode::ModelAlreadyExists, 16_002),
         (ErrorCode::ModelNotFound, 16_003),
+        (ErrorCode::InvalidManagedUser, 17_001),
+        (ErrorCode::ManagedUserNotFound, 17_002),
+        (ErrorCode::InvalidBalanceAdjustment, 17_003),
+        (ErrorCode::ManagedUserDeleteConflict, 17_004),
         (ErrorCode::DependencyUnavailable, 90_001),
         (ErrorCode::Internal, 99_999),
     ];

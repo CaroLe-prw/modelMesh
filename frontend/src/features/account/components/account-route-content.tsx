@@ -48,7 +48,7 @@ export function AccountRouteContent() {
 function AccountRouteStatus({ children }: { children: React.ReactNode }) {
   return (
     <Card className="grid min-h-56 place-items-center p-7 text-center shadow-sm">
-      <div>{children}</div>
+      <div className="flex flex-col items-center">{children}</div>
     </Card>
   );
 }

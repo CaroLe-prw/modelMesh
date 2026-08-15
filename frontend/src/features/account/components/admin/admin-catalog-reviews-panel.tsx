@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { useManagementDataColumns as useAdminDataColumns } from '@/components/common/use-management-data-columns';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -121,6 +122,7 @@ export function AdminCatalogReviewsPanel() {
     },
     {
       className: 'min-w-24 text-right',
+      hideable: false,
       key: 'review',
       label: t('pages.account.sections.admin.catalogReviews.columns.review'),
       render: (review) => (
@@ -152,13 +154,19 @@ export function AdminCatalogReviewsPanel() {
       ),
     },
   ];
+  const { columnOptions, isColumnVisible, setColumnVisibility, visibleColumnKeys, visibleColumns } =
+    useAdminDataColumns(columns);
 
   return (
     <div className="grid min-w-0 gap-3">
       <AdminFilterToolbar
+        columnOptions={columnOptions}
+        onColumnVisibilityChange={setColumnVisibility}
         onQueryChange={setQuery}
+        onRefresh={() => undefined}
         placeholder={t('pages.account.sections.admin.catalogReviews.search')}
         query={query}
+        visibleColumnKeys={visibleColumnKeys}
       >
         <Select onValueChange={(value) => setKind(value as CatalogKindFilter)} value={kind}>
           <SelectTrigger
@@ -193,12 +201,12 @@ export function AdminCatalogReviewsPanel() {
       </AdminFilterToolbar>
       <AdminDataList
         caption={t('pages.account.sections.admin.catalogReviews.caption')}
-        columns={columns}
+        columns={visibleColumns}
         emptyIcon={PackageCheck}
         emptyText={t('pages.account.sections.admin.catalogReviews.empty')}
         getKey={(review) => review.id}
         items={visibleReviews}
-        mobileFields={mobileFields}
+        mobileFields={mobileFields.filter((field) => isColumnVisible(field.key))}
         mobileHeader={(review) => (
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">

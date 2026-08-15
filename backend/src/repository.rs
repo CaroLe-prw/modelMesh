@@ -8,6 +8,7 @@ mod brand_preset;
 mod model;
 mod model_catalog;
 mod user_cache;
+mod user_management;
 
 use std::{fmt, ops::Deref};
 
@@ -23,6 +24,10 @@ pub use brand_preset::BrandPresetRepository;
 pub use model::{ModelRepository, ModelSearch, NewModelRecord, UpdateModelPricingRecord};
 pub use model_catalog::{ModelCatalogRepository, NewModelCatalogEntry};
 pub use user_cache::UserCacheRepository;
+pub use user_management::{
+    CreateManagedUserRecord, ManagedUserBalanceAdjustmentResult, ManagedUserDeletionResult,
+    UpdateManagedUserRecord, UserManagementRepository, UserSearch,
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RepositoryConflict {

@@ -26,7 +26,7 @@ use routes::create_router;
 use sea_orm_migration::MigratorTrait;
 use services::ModelCatalogSyncService;
 use state::AppState;
-use std::{path::PathBuf, process::ExitCode, time::Duration};
+use std::{net::SocketAddr, path::PathBuf, process::ExitCode, time::Duration};
 
 struct StartupError {
     stage: &'static str,
@@ -96,9 +96,12 @@ async fn run(config: AppConfig) -> Result<(), StartupError> {
         "ModelMesh backend listening"
     );
 
-    axum::serve(listener, app)
-        .await
-        .map_err(startup_error("server_serve"))?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .map_err(startup_error("server_serve"))?;
 
     Ok(())
 }

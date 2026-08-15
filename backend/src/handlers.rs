@@ -6,3 +6,4 @@ pub mod brand_preset;
 pub mod health;
 pub mod model;
 pub mod model_catalog;
+pub mod user_management;

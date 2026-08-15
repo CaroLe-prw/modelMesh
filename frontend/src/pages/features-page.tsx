@@ -8,7 +8,7 @@ export function FeaturesPage() {
   return (
     <>
       <section className="relative z-10 border-b border-border bg-secondary/35">
-        <div className="mx-auto w-full max-w-[1212px] px-4 py-14 sm:py-18">
+        <div className="page-shell mx-auto py-14 sm:py-18">
           <Badge className="border-primary/20 bg-primary/8 text-primary">
             {t('pages.features.badge')}
           </Badge>

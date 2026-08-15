@@ -166,6 +166,165 @@ async fn models_require_a_bearer_token() {
 }
 
 #[tokio::test]
+async fn managed_users_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/admin/users")
+                .body(Body::empty())
+                .expect("managed users request should be valid"),
+        )
+        .await
+        .expect("managed users request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn managed_user_creation_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/admin/users")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"email":"user@example.com","password":"strong-password","role":"personal","balanceMicrousd":0,"concurrencyLimit":1,"rpmLimit":0}"#,
+                ))
+                .expect("managed user creation request should be valid"),
+        )
+        .await
+        .expect("managed user creation request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn managed_user_updates_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("PUT")
+                .uri("/api/admin/users/42")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"role":"personal","status":"active","concurrencyLimit":100000,"rpmLimit":0}"#,
+                ))
+                .expect("managed user update request should be valid"),
+        )
+        .await
+        .expect("managed user update request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn managed_user_deletion_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri("/api/admin/users/42")
+                .body(Body::empty())
+                .expect("managed user deletion request should be valid"),
+        )
+        .await
+        .expect("managed user deletion request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn managed_user_batch_deletion_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/admin/users/batch-delete")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"userIds":[41,42]}"#))
+                .expect("managed user batch deletion request should be valid"),
+        )
+        .await
+        .expect("managed user batch deletion request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn managed_user_api_keys_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/admin/users/42/api-keys")
+                .body(Body::empty())
+                .expect("managed user API key request should be valid"),
+        )
+        .await
+        .expect("managed user API key request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn managed_user_balance_adjustments_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/admin/users/42/balance-adjustments?page=1&pageSize=20")
+                .body(Body::empty())
+                .expect("managed user balance adjustment request should be valid"),
+        )
+        .await
+        .expect("managed user balance adjustment request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn managed_user_deposits_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/admin/users/42/deposit")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"amountMicrousd":1000000,"notes":"manual"}"#))
+                .expect("managed user deposit request should be valid"),
+        )
+        .await
+        .expect("managed user deposit request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn managed_user_refunds_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/admin/users/42/refund")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"amountMicrousd":1000000,"notes":"manual"}"#))
+                .expect("managed user refund request should be valid"),
+        )
+        .await
+        .expect("managed user refund request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
 async fn model_creation_requires_a_bearer_token() {
     let response = test_router()
         .oneshot(

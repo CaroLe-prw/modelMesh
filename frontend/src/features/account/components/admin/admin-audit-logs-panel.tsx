@@ -1,6 +1,7 @@
 import { FileClock } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useManagementDataColumns as useAdminDataColumns } from '@/components/common/use-management-data-columns';
 import {
   Select,
   SelectContent,
@@ -114,13 +115,19 @@ export function AdminAuditLogsPanel() {
       render: (log) => formatMerchantDate(i18n.resolvedLanguage, log.createdAt),
     },
   ];
+  const { columnOptions, isColumnVisible, setColumnVisibility, visibleColumnKeys, visibleColumns } =
+    useAdminDataColumns(columns);
 
   return (
     <div className="grid min-w-0 gap-3">
       <AdminFilterToolbar
+        columnOptions={columnOptions}
+        onColumnVisibilityChange={setColumnVisibility}
         onQueryChange={setQuery}
+        onRefresh={() => undefined}
         placeholder={t('pages.account.sections.admin.auditLogs.search')}
         query={query}
+        visibleColumnKeys={visibleColumnKeys}
       >
         <Select onValueChange={(value) => setOutcome(value as AuditOutcomeFilter)} value={outcome}>
           <SelectTrigger
@@ -140,12 +147,12 @@ export function AdminAuditLogsPanel() {
       </AdminFilterToolbar>
       <AdminDataList
         caption={t('pages.account.sections.admin.auditLogs.caption')}
-        columns={columns}
+        columns={visibleColumns}
         emptyIcon={FileClock}
         emptyText={t('pages.account.sections.admin.auditLogs.empty')}
         getKey={(log) => log.id}
         items={visibleLogs}
-        mobileFields={mobileFields}
+        mobileFields={mobileFields.filter((field) => isColumnVisible(field.key))}
         mobileHeader={(log) => (
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">

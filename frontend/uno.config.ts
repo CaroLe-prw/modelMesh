@@ -2,6 +2,9 @@ import { defineConfig, presetWind4, transformerVariantGroup } from 'unocss';
 
 export default defineConfig({
   safelist: ["[&_svg:not([class*='size-'])]:size-3", "[&_svg:not([class*='size-'])]:size-4"],
+  shortcuts: {
+    'page-shell': 'w-full max-w-[1600px] px-3 sm:px-4 lg:px-6 2xl:px-8',
+  },
   presets: [
     presetWind4({
       dark: {

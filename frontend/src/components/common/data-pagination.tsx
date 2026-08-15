@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { PAGE_SIZE_OPTIONS, paginationEntries, type PaginationMetadata } from '@/lib/pagination';
 
 interface DataPaginationProps {
@@ -42,23 +43,32 @@ export function DataPagination({
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-3 border-t border-border px-4 py-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <span>
+    <div
+      className="flex min-w-0 items-center justify-between gap-2 border-t border-border px-3 py-2.5 text-xs text-muted-foreground sm:px-4 sm:py-3"
+      data-slot="data-pagination"
+    >
+      <div className="flex min-w-0 items-center gap-2 sm:flex-wrap sm:gap-3">
+        <span className="shrink-0 sm:hidden">
+          {t('common.pagination.total', { total: metadata.total.toLocaleString() })}
+        </span>
+        <span className="hidden sm:inline">
           {t('common.pagination.summary', {
             end: lastItem,
             start: firstItem,
             total: metadata.total.toLocaleString(),
           })}
         </span>
-        <span className="flex items-center gap-2">
+        <span className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {t('common.pagination.perPage')}
           <Select
             disabled={disabled}
             onValueChange={(value) => onPageSizeChange(Number(value))}
             value={String(metadata.pageSize)}
           >
-            <SelectTrigger aria-label={t('common.pagination.perPage')} className="h-8 w-20">
+            <SelectTrigger
+              aria-label={t('common.pagination.perPage')}
+              className="h-8 w-16 px-2 text-xs sm:w-20 sm:px-3"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -74,9 +84,9 @@ export function DataPagination({
 
       <Pagination
         aria-label={t('common.pagination.label')}
-        className="mx-0 w-full justify-center sm:w-auto sm:justify-end"
+        className="mx-0 w-auto shrink-0 justify-end"
       >
-        <PaginationContent>
+        <PaginationContent className="gap-0.5 sm:gap-1">
           <PaginationItem>
             <PaginationLink
               aria-disabled={disabled || metadata.page <= 1}
@@ -96,10 +106,17 @@ export function DataPagination({
 
           {entries.map((entry) =>
             typeof entry === 'number' ? (
-              <PaginationItem key={entry}>
+              <PaginationItem
+                className={metadata.page === entry ? undefined : 'hidden sm:list-item'}
+                key={entry}
+              >
                 <PaginationLink
                   aria-disabled={disabled}
-                  className={disabled ? 'pointer-events-none opacity-50' : undefined}
+                  className={cn(
+                    disabled && 'pointer-events-none opacity-50',
+                    metadata.page === entry &&
+                      'border-transparent bg-secondary shadow-none sm:border-input sm:bg-background sm:shadow-xs',
+                  )}
                   href="#"
                   isActive={metadata.page === entry}
                   onClick={(event) => {

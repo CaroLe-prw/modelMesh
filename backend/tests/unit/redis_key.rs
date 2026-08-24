@@ -8,10 +8,10 @@ fn keys_use_the_modelmesh_namespace() {
         access_token("hashed-token"),
         "modelmesh:auth:access-token:hashed-token"
     );
-    assert_eq!(account_routes(42), "modelmesh:account-routes:v7:user:42");
+    assert_eq!(account_routes(42), "modelmesh:account-routes:v8:user:42");
     assert_eq!(
         account_route_matrix(),
-        "modelmesh:account-routes:v7:admin:matrix"
+        "modelmesh:account-routes:v8:admin:matrix"
     );
     assert_eq!(current_user(42), "modelmesh:auth:user:v1:42");
     assert_eq!(current_user_prefix(), "modelmesh:auth:user:v1:");

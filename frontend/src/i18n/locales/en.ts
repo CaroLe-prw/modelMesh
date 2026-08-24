@@ -8,6 +8,24 @@ export const en = {
     brandHome: 'ModelMesh home',
     close: 'Close',
     viewModel: 'View {{model}}',
+    formValidation: {
+      title: 'Check the form',
+      description: 'Form items needing attention: {{count}}. Fix all before submitting.',
+      unknownField: 'This field',
+      issues: {
+        required: '“{{field}}” is required.',
+        email: 'Enter a valid email address for “{{field}}”.',
+        url: 'Enter a full URL beginning with http:// or https:// for “{{field}}”.',
+        tooShort: '“{{field}}” must contain at least {{min}} characters.',
+        tooLong: '“{{field}}” can contain no more than {{max}} characters.',
+        rangeUnderflow: '“{{field}}” cannot be less than {{min}}.',
+        rangeOverflow: '“{{field}}” cannot be greater than {{max}}.',
+        number: 'Enter a valid number for “{{field}}”.',
+        step: '“{{field}}” does not use an allowed numeric precision.',
+        pattern: '“{{field}}” has an invalid format.',
+        invalid: '“{{field}}” does not meet the requirements.',
+      },
+    },
     listActions: {
       refresh: 'Refresh list',
       columns: 'Columns',
@@ -45,6 +63,7 @@ export const en = {
     accountMenu: {
       profile: 'Profile',
       apiKeys: 'API keys',
+      merchantApplication: 'Apply as merchant',
       github: 'GitHub',
       logout: 'Log out',
       roles: {
@@ -296,6 +315,7 @@ export const en = {
         redeem: 'Redeem',
         referrals: 'Referrals',
         profile: 'Profile',
+        merchantApplication: 'Apply as merchant',
         support: 'Support tickets',
         merchantCenter: 'Merchant center',
         channelManagement: 'Channel management',
@@ -602,26 +622,180 @@ export const en = {
             eyebrow: 'MERCHANT MANAGEMENT',
             title: 'Merchants',
             description:
-              'Review merchant status, channel and model counts, balances, and signup data.',
+              'Load merchants, pending or rejected applications, merchant status, withdrawable balances, and request limits from the server.',
             search: 'Search merchant, email, or ID',
             statusFilter: 'Filter by merchant status',
             caption: 'Platform merchants',
             empty: 'No matching merchants',
+            loading: 'Loading merchants from the server…',
+            loadError: 'Merchants could not be loaded. Try again.',
+            retry: 'Try again',
+            statisticsUnavailable: 'Not available',
             manageLabel: 'Manage merchant {{merchant}}',
             statuses: {
               all: 'All statuses',
               active: 'Active',
               pending: 'Awaiting review',
-              suspended: 'Suspended',
+              rejected: 'Rejected',
+              suspended: 'Disabled',
             },
             columns: {
-              merchant: 'Merchant',
+              merchantName: 'Merchant name',
+              merchantEmail: 'Merchant email',
               status: 'Status',
               channels: 'Channels',
               models: 'Models',
-              balance: 'Available balance',
+              balance: 'Withdrawable balance',
               createdAt: 'Signed up',
               actions: 'Actions',
+            },
+            actions: {
+              menu: 'Manage merchant {{merchant}}',
+              create: 'Create merchant',
+              edit: 'Edit',
+              disable: 'Disable',
+              enable: 'Enable',
+              review: 'Review',
+              more: 'More',
+              details: 'View details',
+              channels: 'Channel management',
+              models: 'Model management',
+              usageLogs: 'Model usage ledger',
+              delete: 'Delete',
+              batchEnable: 'Enable selected',
+              batchDisable: 'Disable selected',
+              batchDelete: 'Delete selected',
+            },
+            feedback: {
+              created: 'Merchant {{merchant}} created',
+              updated: 'Merchant details updated',
+              disabled: 'Merchant access disabled',
+              enabled: 'Merchant access enabled',
+              approved: 'Merchant application approved',
+              rejected: 'Merchant application rejected',
+              deleted: 'Merchant access removed',
+              batch: {
+                active: '{{count}} merchants enabled',
+                disabled: '{{count}} merchants disabled',
+              },
+              batchDeleted: 'Merchant access removed for {{count}} users',
+            },
+            errors: {
+              invalidEmail: 'Enter a valid merchant email address.',
+              invalidPassword: 'The password must contain 8 to 128 characters.',
+              emailAlreadyExists: 'That email is already used by another user.',
+              invalid: 'Check the merchant name, email, balance, and request limits.',
+              notFound: 'The merchant no longer exists or has already been processed.',
+              reviewConflict: 'Only pending applications can be reviewed.',
+              general: 'The operation failed. Try again later.',
+            },
+            createDialog: {
+              title: 'Create merchant',
+              description:
+                'Create a merchant account that can sign in immediately, with an initial balance and request limits.',
+              fields: {
+                email: 'Merchant email',
+                password: 'Login password',
+                username: 'Merchant name',
+                balance: 'Initial withdrawable balance (USD)',
+                concurrencyLimit: 'Concurrency limit',
+                rpmLimit: 'Requests per minute (RPM)',
+              },
+              emailPlaceholder: 'Enter the merchant email',
+              emailError: 'Enter a valid merchant email address.',
+              passwordPlaceholder: 'Enter a login password',
+              passwordHint:
+                'Use 8 to 128 characters, or generate a random password with the button.',
+              passwordError: 'The password must contain 8 to 128 characters.',
+              copyPassword: 'Copy password',
+              passwordCopied: 'Password copied',
+              generatePassword: 'Generate a random password',
+              usernamePlaceholder: 'Enter the merchant name',
+              usernameError:
+                'The merchant name must contain 2 to 64 characters and no control characters.',
+              balanceError: 'Enter a valid USD amount of 0 or more with up to 6 decimal places.',
+              concurrencyHint:
+                'Maximum concurrent requests for this merchant. 0 means unlimited and is used only when the assigned group has no concurrency_limit.',
+              rpmHint:
+                'Maximum requests per minute for this merchant. 0 means unlimited and is used only when the assigned group has no rpm_limit.',
+              limitError: 'Enter an integer from 0 to 4,294,967,295.',
+              cancel: 'Cancel',
+              create: 'Create merchant',
+            },
+            editDialog: {
+              title: 'Edit merchant',
+              description: 'Update merchant details, concurrency, and requests-per-minute limits.',
+              name: 'Merchant name',
+              email: 'Merchant email',
+              concurrencyLimit: 'Concurrency limit',
+              rpmLimit: 'Requests per minute (RPM)',
+              nameError: 'Enter a merchant name containing 2 to 120 characters.',
+              emailError: 'Enter a valid email address.',
+              concurrencyHint: '0 means unlimited. Maximum: 4,294,967,295.',
+              rpmHint: '0 means unlimited. Maximum: 4,294,967,295.',
+              limitError: 'Enter an integer from 0 to 4,294,967,295.',
+              cancel: 'Cancel',
+              save: 'Save changes',
+              saving: 'Saving…',
+            },
+            reviewDialog: {
+              title: 'Review merchant application',
+              description:
+                'Review the application from {{merchant}}. Approval grants merchant access.',
+              avatarAlt: 'Merchant avatar for {{merchant}}',
+              avatarUnavailable:
+                'The configured avatar URL could not be loaded as an image, so the default icon is shown.',
+              applicationCode: 'Application ID',
+              submittedAt: 'Submitted',
+              website: 'Website or public profile',
+              businessDescription: 'Business and resources',
+              notProvided: 'Not provided',
+              detailsUnavailable: 'Application details are unavailable. Refresh and try again.',
+              note: 'Review note (optional)',
+              notePlaceholder: 'Add verification details or a rejection reason',
+              noteHint: '{{count}} / {{max}} characters',
+              reject: 'Reject application',
+              approve: 'Approve application',
+            },
+            detailsDialog: {
+              title: 'Merchant details',
+              description:
+                'View account, operating data, and application details for {{merchant}}.',
+              avatarAlt: 'Merchant avatar for {{merchant}}',
+              accountSection: 'Account and operating data',
+              merchantId: 'Merchant ID',
+              createdAt: 'Signed up',
+              balance: 'Withdrawable balance',
+              concurrencyLimit: 'Concurrency limit',
+              rpmLimit: 'RPM limit',
+              unlimited: 'Unlimited',
+              limitsHint: 'Use Edit to adjust the concurrency and RPM limits.',
+              channelsAndModels: 'Channels and models',
+              statistics: '{{channels}} channels · {{models}} models',
+              quickActionsSection: 'Operations shortcuts',
+              channels: 'View channels',
+              models: 'View models',
+              usageLogs: 'Merchant model ledger',
+              applicationSection: 'Application details',
+              applicationCode: 'Application ID',
+              submittedAt: 'Submitted',
+              updatedAt: 'Last updated',
+              website: 'Website or public profile',
+              businessDescription: 'Business and resources',
+              notProvided: 'Not provided',
+              applicationUnavailable:
+                'This merchant was created directly by an administrator and has no application details.',
+            },
+            deleteDialog: {
+              title: 'Remove merchant access?',
+              description:
+                'This removes the application or merchant role for {{merchant}}. The user account and balance are retained.',
+              batchTitle: 'Remove selected merchant access?',
+              batchDescription:
+                'This removes merchant access or applications for {{count}} selected users. Their login accounts and balances are retained.',
+              cancel: 'Cancel',
+              confirm: 'Remove access',
+              batchConfirm: 'Remove selected',
             },
           },
           catalogManagement: {
@@ -1927,6 +2101,123 @@ export const en = {
           feedback: {
             notConnected:
               'This profile feature is not connected to the backend, so changes will not be saved.',
+          },
+        },
+        merchantApplication: {
+          eyebrow: 'MERCHANT ONBOARDING',
+          title: 'Apply to become a merchant',
+          description:
+            'Submit your business details. Once approved, you can connect model channels and access merchant features.',
+          loading: 'Loading your merchant application…',
+          loadError: 'Your merchant application could not be loaded',
+          loadErrorDescription:
+            'Check your connection and try again. Previously submitted details are safe.',
+          retry: 'Try again',
+          form: {
+            title: 'Merchant application details',
+            description:
+              'Provide accurate, verifiable information so the platform can understand your business and channel capabilities.',
+            businessName: 'Business or team name',
+            businessNamePlaceholder: 'For example, Northstar Model Services',
+            avatar: 'Merchant avatar',
+            avatarPreview: 'Merchant avatar preview',
+            avatarChoose: 'Choose image',
+            avatarRemove: 'Remove',
+            avatarPlaceholder: 'https://example.com/avatar.png or data:image/png;base64,...',
+            avatarHint:
+              'Enter an HTTP(S) URL that opens an image directly (not a web page), or choose a PNG, JPEG, or WebP image to convert to Base64. Maximum file size: 2 MiB.',
+            avatarErrors: {
+              unsupported: 'Only PNG, JPEG, and WebP images are supported.',
+              tooLarge: 'The image must be no larger than 2 MiB.',
+              readFailed: 'This image could not be read. Choose it again.',
+            },
+            website: 'Website or public profile',
+            websitePlaceholder: 'https://example.com',
+            optional: '(optional)',
+            details: 'Business and resource details',
+            detailsPlaceholder:
+              'Describe the model channels you plan to provide, your customers, expected scale, and relevant operating experience.',
+            detailsHint:
+              'Use 20–2,000 characters. Never include secrets, access tokens, or other sensitive information.',
+            submitHint:
+              'After submission, your details enter platform review and cannot be submitted again while pending.',
+            submit: 'Submit application',
+            submitting: 'Submitting…',
+          },
+          validation: {
+            title: 'Check your application',
+            description: '{{count}} items need attention. Fix all of them before submitting.',
+            issues: {
+              businessName: 'The business or team name must contain 2–120 characters.',
+              avatarInvalid:
+                'The merchant avatar must be a directly loadable HTTP(S) image URL (not a web page) or a PNG, JPEG, or WebP Base64 Data URL.',
+              avatarUnsupported: 'The merchant avatar must be a PNG, JPEG, or WebP image.',
+              avatarTooLarge: 'The merchant avatar must be no larger than 2 MiB.',
+              avatarReadFailed: 'The merchant avatar could not be read. Choose the image again.',
+              website:
+                'The website or public profile must be a complete URL beginning with http:// or https://.',
+              description: 'The business and resource details must contain 20–2,000 characters.',
+            },
+          },
+          statuses: {
+            pending: 'Pending review',
+            approved: 'Approved',
+            disabled: 'Disabled',
+            rejected: 'Not approved',
+          },
+          status: {
+            title: 'Current application status',
+            descriptions: {
+              pending: 'Your application is in the review queue. The result will appear here.',
+              approved:
+                'Your application is approved and your account can access merchant features.',
+              disabled:
+                'Your application remains approved, but merchant access is currently disabled. You can still sign in and use personal features.',
+              rejected:
+                'This application was not approved. Update the details using the review feedback and submit again.',
+            },
+            reviewNote: 'Review feedback',
+          },
+          summary: {
+            businessName: 'Applicant',
+            avatar: 'Merchant avatar',
+            avatarAlt: '{{name}} merchant avatar',
+            avatarUnavailable: 'The configured URL is not a directly displayable image.',
+            applicationId: 'Application ID',
+            submittedAt: 'Submitted',
+          },
+          guide: {
+            title: 'Application process',
+            description:
+              'These are the usual steps from submitting details to activating merchant access.',
+            steps: {
+              submit: {
+                title: 'Step {{number}} · Submit details',
+                description:
+                  'Provide merchant information and explain your model channels and service use case.',
+              },
+              review: {
+                title: 'Step {{number}} · Platform review',
+                description:
+                  'The platform verifies the application and may request more information through a support ticket.',
+              },
+              activate: {
+                title: 'Step {{number}} · Merchant access',
+                description:
+                  'Once approved, manage channels, list models, and request settlements.',
+              },
+            },
+          },
+          feedback: {
+            submitted: 'Merchant application submitted',
+          },
+          errors: {
+            title: 'Could not submit',
+            invalid:
+              'Check that the name, merchant avatar, website, and business details meet the requirements.',
+            alreadyExists:
+              'A pending or approved application already exists. Refresh to see its latest status.',
+            general: 'Your application could not be submitted. Try again later.',
           },
         },
         support: {

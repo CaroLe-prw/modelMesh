@@ -1,8 +1,8 @@
 use crate::domain::UserId;
 
 const ACCESS_TOKEN_PREFIX: &str = "modelmesh:auth:access-token:";
-const ACCOUNT_ROUTE_MATRIX_KEY: &str = "modelmesh:account-routes:v7:admin:matrix";
-const ACCOUNT_ROUTES_PREFIX: &str = "modelmesh:account-routes:v7:user:";
+const ACCOUNT_ROUTE_MATRIX_KEY: &str = "modelmesh:account-routes:v8:admin:matrix";
+const ACCOUNT_ROUTES_PREFIX: &str = "modelmesh:account-routes:v8:user:";
 const CURRENT_USER_PREFIX: &str = "modelmesh:auth:user:v1:";
 
 pub mod ttl {

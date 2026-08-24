@@ -4,12 +4,14 @@ use crate::{
     clients::RedisClient,
     repository::{
         AccessTokenRepository, ApiKeyRepository, AppRouteCacheRepository, AppRouteRepository,
-        AuthRepository, BrandPresetRepository, BrandRepository, ModelCatalogRepository,
-        ModelRepository, UserCacheRepository, UserManagementRepository,
+        AuthRepository, BrandPresetRepository, BrandRepository, MerchantApplicationRepository,
+        MerchantManagementRepository, ModelCatalogRepository, ModelRepository, UserCacheRepository,
+        UserManagementRepository,
     },
     services::{
         ApiKeyService, AppRouteService, AuthService, BrandPresetService, BrandService,
-        ModelCatalogService, ModelService, UserManagementService,
+        MerchantApplicationService, MerchantManagementService, ModelCatalogService, ModelService,
+        UserManagementService,
     },
 };
 
@@ -20,6 +22,8 @@ pub struct AppState {
     pub app_route_service: AppRouteService,
     pub brand_service: BrandService,
     pub brand_preset_service: BrandPresetService,
+    pub merchant_application_service: MerchantApplicationService,
+    pub merchant_management_service: MerchantManagementService,
     pub model_catalog_service: ModelCatalogService,
     pub model_service: ModelService,
     pub user_management_service: UserManagementService,
@@ -57,6 +61,13 @@ impl AppState {
             brand_preset_service: BrandPresetService::new(BrandPresetRepository::new(
                 database.clone(),
             )),
+            merchant_application_service: MerchantApplicationService::new(
+                MerchantApplicationRepository::new(database.clone()),
+            ),
+            merchant_management_service: MerchantManagementService::new(
+                MerchantManagementRepository::new(database.clone()),
+                auth_service.clone(),
+            ),
             model_catalog_service: ModelCatalogService::new(ModelCatalogRepository::new(
                 database.clone(),
             )),

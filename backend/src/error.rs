@@ -7,7 +7,8 @@ use serde::Serialize;
 
 use crate::services::{
     ApiKeyServiceError, AppRouteServiceError, AuthServiceError, BrandPresetServiceError,
-    BrandServiceError, ModelCatalogServiceError, ModelServiceError, UserManagementServiceError,
+    BrandServiceError, MerchantApplicationServiceError, MerchantManagementServiceError,
+    ModelCatalogServiceError, ModelServiceError, UserManagementServiceError,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -39,6 +40,11 @@ pub enum ErrorCode {
     ManagedUserNotFound = 17_002,
     InvalidBalanceAdjustment = 17_003,
     ManagedUserDeleteConflict = 17_004,
+    InvalidMerchantApplication = 18_001,
+    MerchantApplicationAlreadyExists = 18_002,
+    InvalidManagedMerchant = 18_003,
+    ManagedMerchantNotFound = 18_004,
+    MerchantReviewConflict = 18_005,
     DependencyUnavailable = 90_001,
     Internal = 99_999,
 }
@@ -77,6 +83,11 @@ pub enum AppError {
     ManagedUserNotFound,
     InvalidBalanceAdjustment,
     ManagedUserDeleteConflict,
+    InvalidMerchantApplication,
+    MerchantApplicationAlreadyExists,
+    InvalidManagedMerchant,
+    ManagedMerchantNotFound,
+    MerchantReviewConflict,
     DependencyUnavailable,
     Internal,
 }
@@ -190,6 +201,32 @@ impl From<UserManagementServiceError> for AppError {
     }
 }
 
+impl From<MerchantApplicationServiceError> for AppError {
+    fn from(error: MerchantApplicationServiceError) -> Self {
+        match error {
+            MerchantApplicationServiceError::Forbidden => Self::Forbidden,
+            MerchantApplicationServiceError::InvalidInput => Self::InvalidMerchantApplication,
+            MerchantApplicationServiceError::AlreadyExists => {
+                Self::MerchantApplicationAlreadyExists
+            }
+            MerchantApplicationServiceError::Internal => Self::Internal,
+        }
+    }
+}
+
+impl From<MerchantManagementServiceError> for AppError {
+    fn from(error: MerchantManagementServiceError) -> Self {
+        match error {
+            MerchantManagementServiceError::Forbidden => Self::Forbidden,
+            MerchantManagementServiceError::InvalidInput => Self::InvalidManagedMerchant,
+            MerchantManagementServiceError::EmailAlreadyExists => Self::EmailAlreadyExists,
+            MerchantManagementServiceError::NotFound => Self::ManagedMerchantNotFound,
+            MerchantManagementServiceError::InvalidState => Self::MerchantReviewConflict,
+            MerchantManagementServiceError::Internal => Self::Internal,
+        }
+    }
+}
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, code) = match self {
@@ -231,6 +268,23 @@ impl IntoResponse for AppError {
             }
             Self::ManagedUserDeleteConflict => {
                 (StatusCode::CONFLICT, ErrorCode::ManagedUserDeleteConflict)
+            }
+            Self::InvalidMerchantApplication => (
+                StatusCode::BAD_REQUEST,
+                ErrorCode::InvalidMerchantApplication,
+            ),
+            Self::MerchantApplicationAlreadyExists => (
+                StatusCode::CONFLICT,
+                ErrorCode::MerchantApplicationAlreadyExists,
+            ),
+            Self::InvalidManagedMerchant => {
+                (StatusCode::BAD_REQUEST, ErrorCode::InvalidManagedMerchant)
+            }
+            Self::ManagedMerchantNotFound => {
+                (StatusCode::NOT_FOUND, ErrorCode::ManagedMerchantNotFound)
+            }
+            Self::MerchantReviewConflict => {
+                (StatusCode::CONFLICT, ErrorCode::MerchantReviewConflict)
             }
             Self::DependencyUnavailable => (
                 StatusCode::SERVICE_UNAVAILABLE,

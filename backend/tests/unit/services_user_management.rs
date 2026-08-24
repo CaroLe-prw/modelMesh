@@ -1,8 +1,9 @@
 use crate::domain::{AccountRole, AccountStatus};
+use crate::services::management_search::{ManagementSearch, management_search};
 
 use super::{
-    CreateManagedUser, UpdateManagedUser, UserManagementServiceError, build_search,
-    validate_balance_adjustment, validate_create, validate_delete_user_ids, validate_update,
+    CreateManagedUser, UpdateManagedUser, UserManagementServiceError, validate_balance_adjustment,
+    validate_create, validate_delete_user_ids, validate_update,
 };
 
 fn valid_create() -> CreateManagedUser {
@@ -33,17 +34,27 @@ fn valid_update() -> UpdateManagedUser {
 #[test]
 fn search_is_bounded_escaped_and_recognizes_display_user_ids() {
     assert_eq!(
-        build_search(Some(" user_42 ".to_owned())),
-        Ok((Some("%user\\_42%".to_owned()), Some(42)))
+        management_search(Some(" user_42 ".to_owned())),
+        Ok(ManagementSearch {
+            exact_user_id: Some(42),
+            pattern: Some("%user\\_42%".to_owned()),
+        })
     );
     assert_eq!(
-        build_search(Some("100%_admin".to_owned())),
-        Ok((Some("%100\\%\\_admin%".to_owned()), None))
+        management_search(Some("100%_admin".to_owned())),
+        Ok(ManagementSearch {
+            exact_user_id: None,
+            pattern: Some("%100\\%\\_admin%".to_owned()),
+        })
     );
     assert_eq!(
-        build_search(Some("x".repeat(257))),
-        Err(UserManagementServiceError::InvalidInput)
+        management_search(Some("merchant_47".to_owned())),
+        Ok(ManagementSearch {
+            exact_user_id: Some(47),
+            pattern: Some("%merchant\\_47%".to_owned()),
+        })
     );
+    assert_eq!(management_search(Some("x".repeat(257))), Err(()));
 }
 
 #[test]

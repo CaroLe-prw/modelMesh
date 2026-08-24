@@ -6,7 +6,7 @@ use sea_orm::{
 };
 
 use crate::{
-    domain::{AccountRole, AccountStatus, User, UserId},
+    domain::{AccountRole, AccountStatus, MerchantAccessStatus, User, UserId},
     entity::user,
 };
 
@@ -64,7 +64,7 @@ impl AuthRepository {
                 id: user.id,
                 email: user.email,
                 password_hash: user.password_hash,
-                role: parse_role(&user.role)?,
+                role: parse_session_role(&user.role, &user.merchant_status)?,
                 status: parse_status(&user.status)?,
             })
         })
@@ -143,7 +143,7 @@ fn user_from_model(user: user::Model) -> Result<User, RepositoryError> {
     Ok(User {
         id: user.id,
         email: user.email,
-        role: parse_role(&user.role)?,
+        role: parse_session_role(&user.role, &user.merchant_status)?,
         status: parse_status(&user.status)?,
     })
 }
@@ -158,6 +158,25 @@ fn parse_role(value: &str) -> Result<AccountRole, RepositoryError> {
         .ok_or_else(|| RepositoryError::InvalidData(format!("unknown user role `{value}`")))
 }
 
+fn parse_session_role(role: &str, merchant_status: &str) -> Result<AccountRole, RepositoryError> {
+    let role = parse_role(role)?;
+    let merchant_status =
+        MerchantAccessStatus::from_database(merchant_status).ok_or_else(|| {
+            RepositoryError::InvalidData(format!(
+                "unknown merchant access status `{merchant_status}`"
+            ))
+        })?;
+
+    Ok(session_role(role, merchant_status))
+}
+
+const fn session_role(role: AccountRole, merchant_status: MerchantAccessStatus) -> AccountRole {
+    match (role, merchant_status) {
+        (AccountRole::Merchant, MerchantAccessStatus::Disabled) => AccountRole::Personal,
+        _ => role,
+    }
+}
+
 fn map_create_user_error(error: DbErr) -> RepositoryError {
     if database_constraint(&error) == Some("users_email_key") {
         return RepositoryError::Conflict(RepositoryConflict::UserEmail);
@@ -165,3 +184,7 @@ fn map_create_user_error(error: DbErr) -> RepositoryError {
 
     RepositoryError::Database(error)
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/repository_auth.rs"]
+mod tests;

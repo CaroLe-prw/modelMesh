@@ -23,6 +23,12 @@ mod m0022_add_user_activity;
 mod m0023_repair_user_request_limits;
 mod m0024_add_user_profile_fields;
 mod m0025_create_user_balance_adjustments;
+mod m0026_create_merchant_applications;
+mod m0027_repair_merchant_application_avatar;
+mod m0028_drop_obsolete_merchant_business_type;
+mod m0029_add_merchant_application_code;
+mod m0030_simplify_merchant_application_code;
+mod m0031_separate_merchant_status;
 
 use sea_orm_migration::prelude::*;
 
@@ -57,6 +63,12 @@ impl MigratorTrait for Migrator {
             Box::new(m0023_repair_user_request_limits::Migration),
             Box::new(m0024_add_user_profile_fields::Migration),
             Box::new(m0025_create_user_balance_adjustments::Migration),
+            Box::new(m0026_create_merchant_applications::Migration),
+            Box::new(m0027_repair_merchant_application_avatar::Migration),
+            Box::new(m0028_drop_obsolete_merchant_business_type::Migration),
+            Box::new(m0029_add_merchant_application_code::Migration),
+            Box::new(m0030_simplify_merchant_application_code::Migration),
+            Box::new(m0031_separate_merchant_status::Migration),
         ]
     }
 }

@@ -14,9 +14,9 @@ use super::{
     AuthService,
     auth::{default_username, normalize_email, validate_password},
     authorization::require_admin,
+    management_search::management_search,
 };
 
-const MAX_SEARCH_QUERY_LENGTH: usize = 256;
 const MAX_SAFE_JSON_INTEGER: i64 = 9_007_199_254_740_991;
 const MAX_USER_REQUEST_LIMIT: i64 = u32::MAX as i64;
 const MAX_USERNAME_LENGTH: usize = 64;
@@ -82,13 +82,14 @@ impl UserManagementService {
         sort: ManagedUserSort,
     ) -> Result<Page<ManagedUser>, UserManagementServiceError> {
         require_admin(requester_role, UserManagementServiceError::Forbidden)?;
-        let (pattern, exact_user_id) = build_search(query)?;
+        let search =
+            management_search(query).map_err(|()| UserManagementServiceError::InvalidInput)?;
 
         self.repository
             .list(
                 &UserSearch {
-                    exact_user_id,
-                    pattern,
+                    exact_user_id: search.exact_user_id,
+                    pattern: search.pattern,
                     role,
                     status,
                 },
@@ -343,43 +344,6 @@ fn validate_create(create: &CreateManagedUser) -> Result<(), UserManagementServi
     }
 
     Ok(())
-}
-
-fn build_search(
-    query: Option<String>,
-) -> Result<(Option<String>, Option<UserId>), UserManagementServiceError> {
-    let Some(query) = query else {
-        return Ok((None, None));
-    };
-    let query = query.trim();
-    if query.is_empty() {
-        return Ok((None, None));
-    }
-    if query.chars().count() > MAX_SEARCH_QUERY_LENGTH || query.chars().any(char::is_control) {
-        return Err(UserManagementServiceError::InvalidInput);
-    }
-
-    let id_candidate = query.strip_prefix("user_").unwrap_or(query);
-    let exact_user_id = id_candidate
-        .parse::<UserId>()
-        .ok()
-        .filter(|user_id| *user_id > 0);
-
-    Ok((
-        Some(format!("%{}%", escape_like_pattern(query))),
-        exact_user_id,
-    ))
-}
-
-fn escape_like_pattern(value: &str) -> String {
-    let mut escaped = String::with_capacity(value.len());
-    for character in value.chars() {
-        if matches!(character, '\\' | '%' | '_') {
-            escaped.push('\\');
-        }
-        escaped.push(character);
-    }
-    escaped
 }
 
 fn validate_update(

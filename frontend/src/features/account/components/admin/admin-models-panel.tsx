@@ -340,7 +340,6 @@ export function AdminModelsPanel() {
           </span>
         </div>
       ),
-      sticky: 'left',
     },
     {
       key: 'brand',
@@ -414,7 +413,6 @@ export function AdminModelsPanel() {
           onToggle={toggleModel}
         />
       ),
-      sticky: 'right',
     },
   ];
   const mobileFields: AdminMobileField<ModelItem>[] = [

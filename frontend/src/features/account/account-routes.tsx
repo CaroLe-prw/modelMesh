@@ -41,6 +41,7 @@ import { AdminUsersSection } from '@/features/account/components/sections/admin-
 import { AdminWithdrawalsSection } from '@/features/account/components/sections/admin-withdrawals-section';
 import { AccountApiKeysSection } from '@/features/account/components/sections/account-api-keys-section';
 import { AccountBillingSection } from '@/features/account/components/sections/account-billing-section';
+import { AccountMerchantApplicationSection } from '@/features/account/components/sections/account-merchant-application-section';
 import { AccountOrdersSection } from '@/features/account/components/sections/account-orders-section';
 import { AccountProfileSection } from '@/features/account/components/sections/account-profile-section';
 import { AccountRedeemSection } from '@/features/account/components/sections/account-redeem-section';
@@ -64,6 +65,7 @@ const routeElements: Readonly<Record<string, ReactElement>> = {
   'account.redeem': <AccountRedeemSection />,
   'account.referrals': <AccountReferralsSection />,
   'account.profile': <AccountProfileSection />,
+  'account.merchant-application': <AccountMerchantApplicationSection />,
   'account.support': <AccountSupportSection audience="personal" />,
   'merchant.dashboard': <MerchantDashboardSection />,
   'merchant.channels': <MerchantChannelsSection />,

@@ -37,6 +37,12 @@ fn migrations_are_registered_in_schema_order() {
             "m0023_repair_user_request_limits",
             "m0024_add_user_profile_fields",
             "m0025_create_user_balance_adjustments",
+            "m0026_create_merchant_applications",
+            "m0027_repair_merchant_application_avatar",
+            "m0028_drop_obsolete_merchant_business_type",
+            "m0029_add_merchant_application_code",
+            "m0030_simplify_merchant_application_code",
+            "m0031_separate_merchant_status",
         ]
     );
 }

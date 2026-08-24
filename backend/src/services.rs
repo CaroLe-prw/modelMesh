@@ -5,6 +5,10 @@ mod auth_session_cache;
 mod authorization;
 mod brand;
 mod brand_preset;
+mod image_source;
+mod management_search;
+mod merchant_application;
+mod merchant_management;
 mod model;
 mod model_catalog;
 mod user_activity_tracker;
@@ -15,6 +19,13 @@ pub use app_route::{AppRouteService, AppRouteServiceError};
 pub use auth::{AuthService, AuthServiceError};
 pub use brand::{BrandService, BrandServiceError, CreateBrand, UpdateBrand};
 pub use brand_preset::{BrandPresetService, BrandPresetServiceError};
+pub use merchant_application::{
+    MerchantApplicationService, MerchantApplicationServiceError, SubmitMerchantApplication,
+};
+pub use merchant_management::{
+    MerchantManagementService, MerchantManagementServiceError, ReviewManagedMerchant,
+    UpdateManagedMerchant,
+};
 pub use model::{
     CreateCatalogModels, CreateModel, ModelPriceGroupInput, ModelPriceOverrideInput, ModelService,
     ModelServiceError, UpdateModelPricing,

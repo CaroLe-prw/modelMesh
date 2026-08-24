@@ -5,6 +5,8 @@ mod app_route_cache;
 mod auth;
 mod brand;
 mod brand_preset;
+mod merchant_application;
+mod merchant_management;
 mod model;
 mod model_catalog;
 mod user_cache;
@@ -21,6 +23,11 @@ pub use app_route_cache::AppRouteCacheRepository;
 pub use auth::{AuthRepository, NewUserRecord};
 pub use brand::{BrandRepository, BrandSearch, NewBrandRecord, UpdateBrandRecord};
 pub use brand_preset::BrandPresetRepository;
+pub use merchant_application::{MerchantApplicationRepository, NewMerchantApplicationRecord};
+pub use merchant_management::{
+    ManagedMerchantReviewResult, MerchantManagementRepository, MerchantSearch,
+    ReviewManagedMerchantRecord, UpdateManagedMerchantRecord,
+};
 pub use model::{ModelRepository, ModelSearch, NewModelRecord, UpdateModelPricingRecord};
 pub use model_catalog::{ModelCatalogRepository, NewModelCatalogEntry};
 pub use user_cache::UserCacheRepository;
@@ -36,6 +43,7 @@ pub enum RepositoryConflict {
     BrandIdentifier,
     BrandPreset,
     ModelIdentifier,
+    MerchantApplication,
     UserEmail,
 }
 

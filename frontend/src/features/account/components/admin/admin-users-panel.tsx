@@ -396,7 +396,6 @@ export function AdminUsersPanel() {
       className: 'w-56 min-w-56 max-w-56 px-4',
       key: 'user',
       label: t('pages.account.sections.admin.users.columns.user'),
-      sticky: 'left',
       render: (user) => (
         <div className="min-w-0">
           <strong className="block truncate text-sm">{adminUsername(user)}</strong>
@@ -491,7 +490,6 @@ export function AdminUsersPanel() {
       hideable: false,
       key: 'actions',
       label: t('pages.account.sections.admin.users.columns.actions'),
-      sticky: 'right',
       render: (user) => (
         <UserActions
           deleteDisabled={user.id === currentUserId || user.role === 'admin'}

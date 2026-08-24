@@ -1,4 +1,4 @@
-import { Check, Clipboard, LoaderCircle, RefreshCw, UserCog, UserPlus } from 'lucide-react';
+import { Check, Clipboard, LoaderCircle, RefreshCw, Store, UserCog, UserPlus } from 'lucide-react';
 import { useEffect, useId, useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ import {
   type AdminUserUpdate,
 } from '@/features/account/api/admin-users';
 import { usdInputToMicrousd } from '@/features/account/components/admin/admin-money';
+import { isEmailInputValid } from '@/lib/input-validation';
 
 const roles: AdminUserRole[] = ['personal', 'merchant', 'admin'];
 const statuses: AdminUserStatus[] = ['active', 'disabled'];
@@ -36,7 +37,9 @@ const MAX_USERNAME_LENGTH = 64;
 const MAX_NOTES_LENGTH = 1_000;
 
 export type AdminUserDialogTarget =
-  { kind: 'create' } | { currentUserId: number | null; kind: 'edit'; user: AdminUser };
+  | { kind: 'create' }
+  | { kind: 'createMerchant' }
+  | { currentUserId: number | null; kind: 'edit'; user: AdminUser };
 
 export type AdminUserDialogSubmission =
   { kind: 'create'; value: AdminUserCreate } | { kind: 'edit'; value: AdminUserUpdate };
@@ -72,8 +75,11 @@ export function AdminUserDialog({
   const [rpmLimit, setRpmLimit] = useState('0');
   const [rpmLimitInvalid, setRpmLimitInvalid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isCreate = target?.kind === 'create';
-  const translationPath = `pages.account.sections.admin.users.${isCreate ? 'createDialog' : 'editDialog'}`;
+  const isMerchantCreate = target?.kind === 'createMerchant';
+  const isCreate = target?.kind === 'create' || isMerchantCreate;
+  const translationPath = isMerchantCreate
+    ? 'pages.account.sections.admin.merchants.createDialog'
+    : `pages.account.sections.admin.users.${isCreate ? 'createDialog' : 'editDialog'}`;
   const isCurrentUser = target?.kind === 'edit' && target.user.id === target.currentUserId;
 
   useEffect(() => {
@@ -89,7 +95,7 @@ export function AdminUserDialog({
     setUsernameInvalid(false);
     setNotes(user?.notes ?? '');
     setNotesInvalid(false);
-    setRole(user?.role ?? 'personal');
+    setRole(user?.role ?? (target.kind === 'createMerchant' ? 'merchant' : 'personal'));
     setStatus(user?.status ?? 'active');
     setBalance('0');
     setBalanceInvalid(false);
@@ -123,6 +129,7 @@ export function AdminUserDialog({
       : passwordLength > 0 && (passwordLength < 8 || passwordLength > 128);
     const usernameLength = normalizedUsername.length;
     const nextUsernameInvalid =
+      (isMerchantCreate && usernameLength < 2) ||
       (!isCreate && usernameLength === 0) ||
       usernameLength > MAX_USERNAME_LENGTH ||
       usernameHasControlCharacter(username);
@@ -210,7 +217,9 @@ export function AdminUserDialog({
         <DialogHeader className="border-b border-border px-5 py-5 pr-12 text-left sm:px-7 sm:py-6 sm:pr-14">
           <div className="flex items-start gap-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-              {isCreate ? (
+              {isMerchantCreate ? (
+                <Store aria-hidden="true" className="size-5" />
+              ) : isCreate ? (
                 <UserPlus aria-hidden="true" className="size-5" />
               ) : (
                 <UserCog aria-hidden="true" className="size-5" />
@@ -338,31 +347,33 @@ export function AdminUserDialog({
               placeholder={isCreate ? t(`${translationPath}.usernamePlaceholder`) : undefined}
             />
 
-            {isCreate && !usernameInvalid && (
+            {isCreate && !isMerchantCreate && !usernameInvalid && (
               <p className="-mt-3 text-xs text-muted-foreground">
                 {t(`${translationPath}.usernameHint`)}
               </p>
             )}
 
-            <div className="grid gap-2">
-              <Label htmlFor={`${fieldId}-role`}>{t(`${translationPath}.fields.role`)}</Label>
-              <Select
-                disabled={isCurrentUser}
-                onValueChange={(value) => setRole(value as AdminUserRole)}
-                value={role}
-              >
-                <SelectTrigger className="w-full" id={`${fieldId}-role`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {t(`pages.account.sections.admin.users.roles.${value}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!isMerchantCreate && (
+              <div className="grid gap-2">
+                <Label htmlFor={`${fieldId}-role`}>{t(`${translationPath}.fields.role`)}</Label>
+                <Select
+                  disabled={isCurrentUser}
+                  onValueChange={(value) => setRole(value as AdminUserRole)}
+                  value={role}
+                >
+                  <SelectTrigger className="w-full" id={`${fieldId}-role`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {t(`pages.account.sections.admin.users.roles.${value}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {!isCreate && (
               <div className="grid gap-2">
@@ -644,16 +655,6 @@ function secureRandomIndex(length: number): number {
   const random = new Uint32Array(1);
   globalThis.crypto.getRandomValues(random);
   return (random[0] ?? 0) % length;
-}
-
-function isEmailInputValid(value: string): boolean {
-  if (value.length === 0 || value.length > 254 || /\s/.test(value)) return false;
-  const separator = value.indexOf('@');
-  if (separator <= 0 || separator !== value.lastIndexOf('@')) return false;
-  const domain = value.slice(separator + 1);
-  return (
-    domain.length > 0 && domain.includes('.') && !domain.startsWith('.') && !domain.endsWith('.')
-  );
 }
 
 function usernameHasControlCharacter(value: string): boolean {

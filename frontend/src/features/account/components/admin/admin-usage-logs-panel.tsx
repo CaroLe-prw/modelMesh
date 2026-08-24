@@ -1,6 +1,7 @@
 import { ScrollText } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { useManagementDataColumns as useAdminDataColumns } from '@/components/common/use-management-data-columns';
 import {
   Select,
@@ -31,7 +32,8 @@ const usageStatuses: UsageStatusFilter[] = ['all', 'succeeded', 'failed'];
 
 export function AdminUsageLogsPanel() {
   const { i18n, t } = useTranslation();
-  const [query, setQuery] = useState('');
+  const [searchParams] = useSearchParams();
+  const [query, setQuery] = useState(() => searchParams.get('merchant') ?? '');
   const [status, setStatus] = useState<UsageStatusFilter>('all');
   const visibleLogs = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();

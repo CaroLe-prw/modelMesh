@@ -4,6 +4,8 @@ mod auth;
 mod brand;
 mod brand_preset;
 mod health;
+mod merchant_application;
+mod merchant_management;
 mod model;
 mod model_catalog;
 mod user_management;
@@ -43,6 +45,8 @@ fn api_router() -> Router<AppState> {
         .merge(health::router())
         .merge(model_catalog::router())
         .merge(model::router())
+        .merge(merchant_application::router())
+        .merge(merchant_management::router())
         .merge(user_management::router())
 }
 

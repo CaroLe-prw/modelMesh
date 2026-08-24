@@ -3,6 +3,7 @@ pub mod app_route;
 pub mod app_route_role;
 pub mod brand;
 pub mod brand_preset;
+pub mod merchant_application;
 pub mod model;
 pub mod model_catalog_entry;
 pub mod model_catalog_sync_state;

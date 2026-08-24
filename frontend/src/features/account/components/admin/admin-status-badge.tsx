@@ -34,7 +34,7 @@ const statusClasses: Record<AdminStatus, string> = {
   rejected: 'border-destructive/25 bg-destructive/10 text-destructive',
   resolved: 'border-success/25 bg-success/10 text-success',
   succeeded: 'border-success/25 bg-success/10 text-success',
-  suspended: 'border-destructive/25 bg-destructive/10 text-destructive',
+  suspended: 'border-border bg-secondary text-muted-foreground',
 };
 
 export function AdminStatusBadge({

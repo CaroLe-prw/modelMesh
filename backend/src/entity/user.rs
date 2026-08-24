@@ -11,6 +11,7 @@ pub struct Model {
     pub notes: String,
     pub role: String,
     pub status: String,
+    pub merchant_status: String,
     pub balance_microusd: i64,
     pub concurrency_limit: i64,
     pub rpm_limit: i64,
@@ -25,11 +26,19 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::api_key::Entity")]
     ApiKeys,
+    #[sea_orm(has_one = "super::merchant_application::Entity")]
+    MerchantApplication,
 }
 
 impl Related<super::api_key::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::ApiKeys.def()
+    }
+}
+
+impl Related<super::merchant_application::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::MerchantApplication.def()
     }
 }
 

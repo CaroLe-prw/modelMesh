@@ -28,9 +28,9 @@ fn permission_change_invalidates_matrix_and_affected_users() {
     assert_eq!(
         permission_change_keys(&[7, 42]),
         [
-            "modelmesh:account-routes:v7:admin:matrix",
-            "modelmesh:account-routes:v7:user:7",
-            "modelmesh:account-routes:v7:user:42",
+            "modelmesh:account-routes:v8:admin:matrix",
+            "modelmesh:account-routes:v8:user:7",
+            "modelmesh:account-routes:v8:user:42",
         ]
     );
 }

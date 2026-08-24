@@ -1,4 +1,4 @@
-import { ChevronDown, KeyRound, LoaderCircle, LogOut, UserRound } from 'lucide-react';
+import { ChevronDown, KeyRound, LoaderCircle, LogOut, Store, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { SiGithub } from 'react-icons/si';
 import { Link } from 'react-router-dom';
@@ -106,6 +106,14 @@ export function HeaderAccountActions() {
                 {t('nav.accountMenu.github')}
               </a>
             </DropdownMenuItem>
+            {state.user.role === 'personal' ? (
+              <DropdownMenuItem asChild className="gap-2.5 px-2.5 py-2">
+                <Link to="/account/merchant-application">
+                  <Store aria-hidden="true" className="size-4" />
+                  {t('nav.accountMenu.merchantApplication')}
+                </Link>
+              </DropdownMenuItem>
+            ) : null}
           </div>
           <DropdownMenuSeparator className="m-0" />
           <div className="p-1">

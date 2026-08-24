@@ -286,7 +286,6 @@ export function AdminBrandsPanel() {
           </div>
         </div>
       ),
-      sticky: 'left',
     },
     {
       key: 'models',
@@ -332,7 +331,6 @@ export function AdminBrandsPanel() {
           onToggle={toggleBrand}
         />
       ),
-      sticky: 'right',
     },
   ];
   const mobileFields: AdminMobileField<BrandItem>[] = [

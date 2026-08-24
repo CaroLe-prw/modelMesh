@@ -87,7 +87,6 @@ export function ApiKeyList({
       key: 'name',
       label: t('pages.account.sections.apiKeys.columns.name'),
       render: (apiKey) => apiKey.name,
-      sticky: 'left',
     },
   ];
 
@@ -221,7 +220,6 @@ export function ApiKeyList({
         onToggleStatus={onToggleStatus}
       />
     ),
-    sticky: 'right',
   });
 
   const mobileFields: ManagementMobileField<ApiKeyItem>[] = [];

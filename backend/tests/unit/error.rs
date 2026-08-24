@@ -31,6 +31,11 @@ fn public_error_codes_are_stable_and_unique() {
         (ErrorCode::ManagedUserNotFound, 17_002),
         (ErrorCode::InvalidBalanceAdjustment, 17_003),
         (ErrorCode::ManagedUserDeleteConflict, 17_004),
+        (ErrorCode::InvalidMerchantApplication, 18_001),
+        (ErrorCode::MerchantApplicationAlreadyExists, 18_002),
+        (ErrorCode::InvalidManagedMerchant, 18_003),
+        (ErrorCode::ManagedMerchantNotFound, 18_004),
+        (ErrorCode::MerchantReviewConflict, 18_005),
         (ErrorCode::DependencyUnavailable, 90_001),
         (ErrorCode::Internal, 99_999),
     ];

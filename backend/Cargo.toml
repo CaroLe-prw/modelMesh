@@ -19,9 +19,9 @@ axum = "0.8.9"
 deadpool-redis = "0.23.0"
 dotenvy = "0.15.7"
 jiff = { version = "0.2.24", features = ["serde"] }
-log = "0.4.33"
+log = "0.4.34"
 password-hash = { version = "0.5.0", features = ["getrandom"] }
-sea-orm = { version = "2.0.0", default-features = false, features = [
+sea-orm = { version = "2.0.2", default-features = false, features = [
   "macros",
   "runtime-tokio-rustls",
   "sqlx-postgres",
@@ -29,11 +29,14 @@ sea-orm = { version = "2.0.0", default-features = false, features = [
   "with-time",
   "with-uuid",
 ] }
-sea-orm-migration = { version = "2.0.0", default-features = false, features = [
+sea-orm-migration = { version = "2.0.2", default-features = false, features = [
   "runtime-tokio-rustls",
   "sqlx-postgres",
 ] }
-reqwest = { version = "0.13.3", default-features = false, features = ["json", "rustls"] }
+reqwest = { version = "0.13.3", default-features = false, features = [
+  "json",
+  "rustls",
+] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.149"
 sha2 = "0.11"
@@ -49,7 +52,7 @@ tower-http = { version = "0.7", features = ["trace"] }
 tracing = "0.1.44"
 tracing-appender = "0.2.5"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
-uuid = { version = "1.23.1", features = ["v4"] }
+uuid = { version = "1.25.0", features = ["v4"] }
 
 [dev-dependencies]
 tower = { version = "0.5.3", features = ["util"] }

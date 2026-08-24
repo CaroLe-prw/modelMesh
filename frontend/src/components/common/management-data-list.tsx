@@ -43,7 +43,6 @@ export interface ManagementDataColumn<T> {
     label: string;
     onChange: () => void;
   };
-  sticky?: 'left' | 'right';
 }
 
 export interface ManagementMobileField<T> {
@@ -341,12 +340,7 @@ export function ManagementDataList<T>({
       )}
 
       <Card className="hidden gap-0 overflow-hidden py-0 shadow-sm md:flex">
-        <Table
-          className={tableClassName}
-          selectable
-          stickyEdges={columns.some((column) => column.sticky !== undefined)}
-          style={tableStyle}
-        >
+        <Table className={tableClassName} selectable style={tableStyle}>
           <TableCaption className="sr-only">{caption}</TableCaption>
           <TableHeader className="bg-secondary/55">
             <TableRow className="hover:bg-secondary/55">

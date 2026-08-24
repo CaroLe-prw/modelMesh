@@ -6,9 +6,8 @@ use crate::{
     },
 };
 
-use super::authorization::require_admin;
+use super::{authorization::require_admin, image_source::is_valid_raster_image_data_url};
 
-const MAX_AVATAR_DATA_URL_LENGTH: usize = 2_796_300;
 const MAX_SEARCH_QUERY_LENGTH: usize = 256;
 
 #[derive(Clone)]
@@ -211,21 +210,7 @@ fn validate_sort_order(sort_order: i32) -> Result<(), BrandServiceError> {
 
 fn validate_avatar_data_url(value: String) -> Result<String, BrandServiceError> {
     let value = value.trim().to_owned();
-    let payload = [
-        "data:image/png;base64,",
-        "data:image/jpeg;base64,",
-        "data:image/webp;base64,",
-    ]
-    .into_iter()
-    .find_map(|prefix| value.strip_prefix(prefix));
-    let valid_payload = payload.is_some_and(|payload| {
-        !payload.is_empty()
-            && payload
-                .bytes()
-                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'+' | b'/' | b'='))
-    });
-
-    (value.len() <= MAX_AVATAR_DATA_URL_LENGTH && valid_payload)
+    is_valid_raster_image_data_url(&value)
         .then_some(value)
         .ok_or(BrandServiceError::InvalidInput)
 }

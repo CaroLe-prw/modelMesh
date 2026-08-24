@@ -4,6 +4,8 @@ mod auth;
 mod brand;
 mod brand_preset;
 mod health;
+mod merchant_application;
+mod merchant_management;
 mod model;
 mod model_catalog;
 mod pagination;
@@ -20,6 +22,13 @@ pub use brand::{
 };
 pub use brand_preset::BrandPresetResponse;
 pub use health::{DependencyStatus, HealthResponse, ReadinessResponse};
+pub use merchant_application::{MerchantApplicationResponse, SubmitMerchantApplicationRequest};
+pub use merchant_management::{
+    BatchDeleteManagedMerchantsRequest, BatchDeleteManagedMerchantsResponse,
+    BatchUpdateManagedMerchantStatusRequest, BatchUpdateManagedMerchantStatusResponse,
+    ListManagedMerchantsQuery, ManagedMerchantResponse, ReviewManagedMerchantRequest,
+    UpdateManagedMerchantRequest, UpdateManagedMerchantStatusRequest,
+};
 pub use model::{
     BatchCreateModelsRequest, CreateModelRequest, ListModelsQuery, ModelPriceGroupRequest,
     ModelPriceOverrideRequest, ModelResponse, ModelStatusRequest, UpdateModelPricingRequest,

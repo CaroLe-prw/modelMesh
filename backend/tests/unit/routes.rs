@@ -86,6 +86,22 @@ async fn account_routes_require_a_bearer_token() {
 }
 
 #[tokio::test]
+async fn merchant_application_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/merchant-application")
+                .body(Body::empty())
+                .expect("merchant application request should be valid"),
+        )
+        .await
+        .expect("merchant application request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
 async fn brand_presets_require_a_bearer_token() {
     let response = test_router()
         .oneshot(
@@ -176,6 +192,133 @@ async fn managed_users_require_a_bearer_token() {
         )
         .await
         .expect("managed users request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn managed_merchants_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/admin/merchants?page=1&pageSize=20")
+                .body(Body::empty())
+                .expect("managed merchants request should be valid"),
+        )
+        .await
+        .expect("managed merchants request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn managed_merchant_update_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri("/api/admin/merchants/47")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"name":"Northstar AI","email":"ops@northstar.example"}"#,
+                ))
+                .expect("managed merchant update request should be valid"),
+        )
+        .await
+        .expect("managed merchant update request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn managed_merchant_review_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/admin/merchants/47/review")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"decision":"approved","reviewNote":"verified"}"#,
+                ))
+                .expect("managed merchant review request should be valid"),
+        )
+        .await
+        .expect("managed merchant review request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn managed_merchant_status_update_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri("/api/admin/merchants/47/status")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"status":"disabled"}"#))
+                .expect("managed merchant status request should be valid"),
+        )
+        .await
+        .expect("managed merchant status request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn managed_merchant_batch_status_update_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri("/api/admin/merchants/batch-status")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"userIds":[47,48],"status":"disabled"}"#))
+                .expect("managed merchant batch status request should be valid"),
+        )
+        .await
+        .expect("managed merchant batch status request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn managed_merchant_batch_removal_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/admin/merchants/batch-delete")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"userIds":[47,48]}"#))
+                .expect("managed merchant batch removal request should be valid"),
+        )
+        .await
+        .expect("managed merchant batch removal request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn managed_merchant_removal_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri("/api/admin/merchants/47")
+                .body(Body::empty())
+                .expect("managed merchant removal request should be valid"),
+        )
+        .await
+        .expect("managed merchant removal request should complete");
 
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);

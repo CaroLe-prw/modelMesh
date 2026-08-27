@@ -7,8 +7,9 @@ use serde::Serialize;
 
 use crate::services::{
     ApiKeyServiceError, AppRouteServiceError, AuthServiceError, BrandPresetServiceError,
-    BrandServiceError, MerchantApplicationServiceError, MerchantManagementServiceError,
-    ModelCatalogServiceError, ModelServiceError, UserManagementServiceError,
+    BrandServiceError, MerchantApplicationServiceError, MerchantChannelServiceError,
+    MerchantManagementServiceError, ModelCatalogServiceError, ModelServiceError,
+    UserManagementServiceError,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -45,6 +46,9 @@ pub enum ErrorCode {
     InvalidManagedMerchant = 18_003,
     ManagedMerchantNotFound = 18_004,
     MerchantReviewConflict = 18_005,
+    InvalidMerchantChannel = 19_001,
+    MerchantChannelNameAlreadyExists = 19_002,
+    MerchantChannelNotFound = 19_003,
     DependencyUnavailable = 90_001,
     Internal = 99_999,
 }
@@ -88,6 +92,9 @@ pub enum AppError {
     InvalidManagedMerchant,
     ManagedMerchantNotFound,
     MerchantReviewConflict,
+    InvalidMerchantChannel,
+    MerchantChannelNameAlreadyExists,
+    MerchantChannelNotFound,
     DependencyUnavailable,
     Internal,
 }
@@ -227,6 +234,20 @@ impl From<MerchantManagementServiceError> for AppError {
     }
 }
 
+impl From<MerchantChannelServiceError> for AppError {
+    fn from(error: MerchantChannelServiceError) -> Self {
+        match error {
+            MerchantChannelServiceError::Forbidden => Self::Forbidden,
+            MerchantChannelServiceError::InvalidInput => Self::InvalidMerchantChannel,
+            MerchantChannelServiceError::NameAlreadyExists => {
+                Self::MerchantChannelNameAlreadyExists
+            }
+            MerchantChannelServiceError::NotFound => Self::MerchantChannelNotFound,
+            MerchantChannelServiceError::Internal => Self::Internal,
+        }
+    }
+}
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, code) = match self {
@@ -285,6 +306,16 @@ impl IntoResponse for AppError {
             }
             Self::MerchantReviewConflict => {
                 (StatusCode::CONFLICT, ErrorCode::MerchantReviewConflict)
+            }
+            Self::InvalidMerchantChannel => {
+                (StatusCode::BAD_REQUEST, ErrorCode::InvalidMerchantChannel)
+            }
+            Self::MerchantChannelNameAlreadyExists => (
+                StatusCode::CONFLICT,
+                ErrorCode::MerchantChannelNameAlreadyExists,
+            ),
+            Self::MerchantChannelNotFound => {
+                (StatusCode::NOT_FOUND, ErrorCode::MerchantChannelNotFound)
             }
             Self::DependencyUnavailable => (
                 StatusCode::SERVICE_UNAVAILABLE,

@@ -3,6 +3,7 @@ mod app_route;
 mod brand;
 mod brand_preset;
 mod merchant_application;
+mod merchant_channel;
 mod merchant_management;
 mod model;
 mod model_catalog;
@@ -15,6 +16,7 @@ pub use app_route::{AppRoute, AppRouteGroup};
 pub use brand::{Brand, BrandStatus};
 pub use brand_preset::BrandPreset;
 pub use merchant_application::{MerchantApplication, MerchantApplicationStatus};
+pub use merchant_channel::{MerchantChannel, MerchantChannelStatus};
 pub use merchant_management::{
     ManagedMerchant, ManagedMerchantApplication, ManagedMerchantStatus, MerchantAccessStatus,
     MerchantReviewDecision,

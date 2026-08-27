@@ -118,6 +118,7 @@ ModelMesh 是一个开源的 AI 模型渠道发现、比较、路由与状态监
 - 组件外观变体统一使用明确的 variant 配置；适合时使用 `class-variance-authority`，并通过 `cn()` 合并 class。
 - 公共组件必须通过 Props 接收数据和行为，不得隐式依赖某个页面的局部状态、固定文案或固定接口。
 - 列表项、表格行、筛选器、工具栏、表单字段和弹层内容应分别组件化，保证后续页面可以组合复用。
+- 分页列表必须优先复用 `src/components/common/management-data-list.tsx` 中的 `ManagementFilterToolbar`、`ManagementListActions`、`ManagementDataList`，配合 `src/components/common/data-pagination.tsx` 中的 `DataPagination` 和 `src/components/common/use-management-data-columns.ts`，不得在业务页面重复实现搜索栏、刷新按钮、列设置、分页器或列表骨架。除非需求明确排除，带列数据的分页列表工具栏默认必须提供“刷新”和“列设置”；主要信息列与操作列保持固定显示，可选列的显隐状态必须同时作用于桌面表格和移动端卡片，并保留一致的中英文文案、加载反馈、分页行为和响应式布局。非分页的小型列表不强制套用该组合，应按实际交互需求选择公共组件。
 - loading、error、empty 和 success 状态应优先复用统一组件，不在每个页面重复实现不同版本。
 - 只有排版用途且没有独立语义、逻辑或复用价值的简单 DOM 包装不必单独建组件，避免产生无意义的碎片文件。
 - 状态尽量靠近使用位置；只有真正跨页面共享的数据才进入全局状态。

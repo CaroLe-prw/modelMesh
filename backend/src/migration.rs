@@ -29,6 +29,8 @@ mod m0028_drop_obsolete_merchant_business_type;
 mod m0029_add_merchant_application_code;
 mod m0030_simplify_merchant_application_code;
 mod m0031_separate_merchant_status;
+mod m0032_create_merchant_channels;
+mod m0033_link_merchant_channels_to_brands;
 
 use sea_orm_migration::prelude::*;
 
@@ -69,6 +71,8 @@ impl MigratorTrait for Migrator {
             Box::new(m0029_add_merchant_application_code::Migration),
             Box::new(m0030_simplify_merchant_application_code::Migration),
             Box::new(m0031_separate_merchant_status::Migration),
+            Box::new(m0032_create_merchant_channels::Migration),
+            Box::new(m0033_link_merchant_channels_to_brands::Migration),
         ]
     }
 }

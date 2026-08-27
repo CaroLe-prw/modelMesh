@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
+import type { MerchantChannelStatus } from '@/features/account/api/merchant-channels';
 import type {
-  MerchantChannelStatus,
   MerchantModelStatus,
   MerchantRequestStatus,
   MerchantUsageStatus,

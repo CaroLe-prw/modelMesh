@@ -6,7 +6,10 @@ use crate::{
     },
 };
 
-use super::{authorization::require_admin, image_source::is_valid_raster_image_data_url};
+use super::{
+    authorization::{require_admin, require_merchant},
+    image_source::is_valid_raster_image_data_url,
+};
 
 const MAX_SEARCH_QUERY_LENGTH: usize = 256;
 
@@ -62,6 +65,22 @@ impl BrandService {
 
         self.repository.list(&search).await.map_err(|error| {
             tracing::error!(error = %error, "brand list failed");
+            BrandServiceError::Internal
+        })
+    }
+
+    pub async fn list_channel_providers(
+        &self,
+        requester_role: AccountRole,
+    ) -> Result<Vec<Brand>, BrandServiceError> {
+        require_merchant(requester_role, BrandServiceError::Forbidden)?;
+        let search = BrandSearch {
+            pattern: None,
+            status: Some(BrandStatus::Active),
+        };
+
+        self.repository.list(&search).await.map_err(|error| {
+            tracing::error!(error = %error, "merchant channel provider list failed");
             BrandServiceError::Internal
         })
     }

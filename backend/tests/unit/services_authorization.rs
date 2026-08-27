@@ -1,6 +1,6 @@
 use crate::domain::AccountRole;
 
-use super::require_admin;
+use super::{require_admin, require_merchant};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum TestError {
@@ -23,4 +23,19 @@ fn non_administrators_receive_the_callers_forbidden_error() {
             Err(TestError::Forbidden)
         );
     }
+}
+
+#[test]
+fn merchants_and_administrators_satisfy_merchant_policy() {
+    for role in [AccountRole::Merchant, AccountRole::Admin] {
+        assert_eq!(require_merchant(role, TestError::Forbidden), Ok(()));
+    }
+}
+
+#[test]
+fn personal_accounts_cannot_use_merchant_operations() {
+    assert_eq!(
+        require_merchant(AccountRole::Personal, TestError::Forbidden),
+        Err(TestError::Forbidden)
+    );
 }

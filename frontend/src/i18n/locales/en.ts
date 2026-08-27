@@ -1443,8 +1443,21 @@ export const en = {
             statusFilter: 'Filter by channel status',
             add: 'Add channel',
             caption: 'Merchant model channels',
-            manageLabel: 'Manage channel {{name}}',
+            actions: {
+              enable: 'Enable {{name}}',
+              offline: 'Take {{name}} offline',
+              edit: 'Edit {{name}}',
+              delete: 'Delete {{name}}',
+            },
+            actionLabels: {
+              enable: 'Enable',
+              offline: 'Offline',
+              edit: 'Edit',
+              delete: 'Delete',
+            },
             empty: 'No matching channels',
+            notice:
+              'Channel settings are stored by the backend. Model count, success rate, and latency will be updated from runtime data.',
             statuses: {
               all: 'All statuses',
               active: 'Healthy',
@@ -1453,12 +1466,88 @@ export const en = {
             },
             columns: {
               channel: 'Channel',
+              provider: 'Model provider',
               status: 'Status',
               models: 'Models',
               successRate: 'Success rate',
               latency: 'Average latency',
               updatedAt: 'Updated',
               actions: 'Actions',
+            },
+            dialog: {
+              createTitle: 'Add channel',
+              createDescription:
+                'Create a model provider channel. It will appear in the channel list immediately.',
+              editTitle: 'Edit channel',
+              editDescription: 'Update the channel details and operating status.',
+              fields: {
+                name: {
+                  label: 'Channel name',
+                  placeholder: 'For example, Northstar Global',
+                  hint: 'Use a name that distinguishes the region, provider pool, or connection.',
+                },
+                provider: {
+                  label: 'Model provider',
+                  placeholder: 'Select a model provider',
+                  searchPlaceholder: 'Search provider name or ID',
+                  empty: 'No providers have been enabled by an administrator',
+                  loading: 'Loading administrator-configured providers…',
+                  loadError: 'Unable to load provider configuration',
+                  retry: 'Reload',
+                  hint: 'Providers are managed by administrators; only enabled providers can be selected.',
+                },
+                status: {
+                  label: 'Channel status',
+                  hint: 'This only enables or takes the channel offline. Health checks determine degradation.',
+                  options: {
+                    active: 'Enabled',
+                    offline: 'Offline',
+                  },
+                },
+              },
+              health: {
+                title: 'Current health data',
+                models: 'Models',
+                successRate: 'Success rate',
+                latency: 'Average latency',
+              },
+              errors: {
+                name: {
+                  duplicate: 'A channel with this name already exists.',
+                  required: 'Enter a channel name.',
+                },
+                provider: {
+                  required: 'Select a model provider.',
+                },
+              },
+              cancel: 'Cancel',
+              create: 'Add channel',
+              save: 'Save changes',
+              delete: {
+                title: 'Delete this channel?',
+                description:
+                  '“{{name}}” and its channel configuration will be permanently deleted. This action cannot be undone.',
+                cancel: 'Cancel',
+                confirm: 'Delete channel',
+              },
+            },
+            feedback: {
+              created: 'Channel added',
+              updated: 'Channel updated',
+              enabled: 'Channel enabled',
+              offline: 'Channel taken offline',
+              deleted: 'Channel deleted',
+              loading: 'Loading channels…',
+              loadError: 'Unable to load channels',
+              retry: 'Reload',
+              invalid: 'Check the channel details and try again.',
+              duplicate: 'A channel with this name already exists.',
+              notFound: 'The channel no longer exists.',
+              createError: 'Unable to add the channel. Try again later.',
+              updateError: 'Unable to update the channel. Try again later.',
+              enableError: 'Unable to enable the channel. Try again later.',
+              offlineError: 'Unable to take the channel offline. Try again later.',
+              deleteError: 'Unable to delete the channel. Try again later.',
             },
           },
           models: {

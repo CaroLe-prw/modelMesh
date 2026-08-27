@@ -5,6 +5,7 @@ mod brand;
 mod brand_preset;
 mod health;
 mod merchant_application;
+mod merchant_channel;
 mod merchant_management;
 mod model;
 mod model_catalog;
@@ -23,6 +24,10 @@ pub use brand::{
 pub use brand_preset::BrandPresetResponse;
 pub use health::{DependencyStatus, HealthResponse, ReadinessResponse};
 pub use merchant_application::{MerchantApplicationResponse, SubmitMerchantApplicationRequest};
+pub use merchant_channel::{
+    CreateMerchantChannelRequest, MerchantChannelProviderResponse, MerchantChannelResponse,
+    UpdateMerchantChannelRequest,
+};
 pub use merchant_management::{
     BatchDeleteManagedMerchantsRequest, BatchDeleteManagedMerchantsResponse,
     BatchUpdateManagedMerchantStatusRequest, BatchUpdateManagedMerchantStatusResponse,

@@ -69,6 +69,15 @@ impl BrandRepository {
             .collect()
     }
 
+    pub async fn is_active_identifier(&self, identifier: &str) -> Result<bool, RepositoryError> {
+        Ok(brand::Entity::find()
+            .filter(brand::Column::Identifier.eq(identifier))
+            .filter(brand::Column::Status.eq(BrandStatus::Active.as_str()))
+            .one(&self.database)
+            .await?
+            .is_some())
+    }
+
     pub async fn create(&self, record: NewBrandRecord) -> Result<Brand, RepositoryError> {
         let identifier = record.identifier.clone();
         brand::ActiveModel {

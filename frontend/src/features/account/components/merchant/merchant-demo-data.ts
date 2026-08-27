@@ -1,4 +1,5 @@
-export type MerchantChannelStatus = 'active' | 'degraded' | 'offline';
+import type { MerchantChannel } from '@/features/account/api/merchant-channels';
+
 export type MerchantModelStatus = 'draft' | 'published' | 'review';
 export type MerchantRequestStatus = 'approved' | 'changesRequested' | 'pending';
 export type MerchantRequestType = 'channelAccess' | 'modelReview' | 'quotaAdjustment';
@@ -6,17 +7,6 @@ export type MerchantSettlementCurrency = 'USD' | 'USDT';
 export type MerchantSettlementMethod = 'bank' | 'usdt';
 export type MerchantUsageStatus = 'failed' | 'succeeded';
 export type MerchantWithdrawalStatus = 'paid' | 'processing' | 'rejected';
-
-export interface MerchantChannel {
-  id: string;
-  latencyMs: number;
-  modelCount: number;
-  name: string;
-  provider: string;
-  status: MerchantChannelStatus;
-  successRate: number;
-  updatedAt: string;
-}
 
 export interface MerchantModel {
   channel: string;
@@ -68,41 +58,49 @@ export interface MerchantSettlementAccount {
 
 export const merchantChannels: MerchantChannel[] = [
   {
+    createdAt: '2026-08-09T04:20:00Z',
     id: 'channel-northstar',
     latencyMs: 842,
     modelCount: 8,
     name: 'Northstar Global',
     provider: 'OpenAI',
+    providerId: 'openai',
     status: 'active',
     successRate: 99.96,
     updatedAt: '2026-08-09T04:26:00Z',
   },
   {
+    createdAt: '2026-08-09T04:10:00Z',
     id: 'channel-vertex',
     latencyMs: 1_180,
     modelCount: 5,
     name: 'Vertex APAC',
     provider: 'Google Vertex AI',
+    providerId: 'google',
     status: 'degraded',
     successRate: 97.82,
     updatedAt: '2026-08-09T04:18:00Z',
   },
   {
+    createdAt: '2026-08-09T04:00:00Z',
     id: 'channel-anthropic',
     latencyMs: 934,
     modelCount: 4,
     name: 'Anthropic Direct',
     provider: 'Anthropic',
+    providerId: 'anthropic',
     status: 'active',
     successRate: 99.71,
     updatedAt: '2026-08-09T04:12:00Z',
   },
   {
+    createdAt: '2026-08-09T03:30:00Z',
     id: 'channel-backup',
     latencyMs: 0,
     modelCount: 3,
     name: 'Backup Pool',
     provider: 'OpenAI Compatible',
+    providerId: 'openai',
     status: 'offline',
     successRate: 0,
     updatedAt: '2026-08-09T03:45:00Z',

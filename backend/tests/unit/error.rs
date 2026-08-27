@@ -36,6 +36,9 @@ fn public_error_codes_are_stable_and_unique() {
         (ErrorCode::InvalidManagedMerchant, 18_003),
         (ErrorCode::ManagedMerchantNotFound, 18_004),
         (ErrorCode::MerchantReviewConflict, 18_005),
+        (ErrorCode::InvalidMerchantChannel, 19_001),
+        (ErrorCode::MerchantChannelNameAlreadyExists, 19_002),
+        (ErrorCode::MerchantChannelNotFound, 19_003),
         (ErrorCode::DependencyUnavailable, 90_001),
         (ErrorCode::Internal, 99_999),
     ];

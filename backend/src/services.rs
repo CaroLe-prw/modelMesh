@@ -8,6 +8,7 @@ mod brand_preset;
 mod image_source;
 mod management_search;
 mod merchant_application;
+mod merchant_channel;
 mod merchant_management;
 mod model;
 mod model_catalog;
@@ -21,6 +22,10 @@ pub use brand::{BrandService, BrandServiceError, CreateBrand, UpdateBrand};
 pub use brand_preset::{BrandPresetService, BrandPresetServiceError};
 pub use merchant_application::{
     MerchantApplicationService, MerchantApplicationServiceError, SubmitMerchantApplication,
+};
+pub use merchant_channel::{
+    CreateMerchantChannel, MerchantChannelService, MerchantChannelServiceError,
+    UpdateMerchantChannel,
 };
 pub use merchant_management::{
     MerchantManagementService, MerchantManagementServiceError, ReviewManagedMerchant,

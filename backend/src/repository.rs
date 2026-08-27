@@ -6,6 +6,7 @@ mod auth;
 mod brand;
 mod brand_preset;
 mod merchant_application;
+mod merchant_channel;
 mod merchant_management;
 mod model;
 mod model_catalog;
@@ -24,6 +25,9 @@ pub use auth::{AuthRepository, NewUserRecord};
 pub use brand::{BrandRepository, BrandSearch, NewBrandRecord, UpdateBrandRecord};
 pub use brand_preset::BrandPresetRepository;
 pub use merchant_application::{MerchantApplicationRepository, NewMerchantApplicationRecord};
+pub use merchant_channel::{
+    MerchantChannelRepository, NewMerchantChannelRecord, UpdateMerchantChannelRecord,
+};
 pub use merchant_management::{
     ManagedMerchantReviewResult, MerchantManagementRepository, MerchantSearch,
     ReviewManagedMerchantRecord, UpdateManagedMerchantRecord,
@@ -44,6 +48,7 @@ pub enum RepositoryConflict {
     BrandPreset,
     ModelIdentifier,
     MerchantApplication,
+    MerchantChannelName,
     UserEmail,
 }
 

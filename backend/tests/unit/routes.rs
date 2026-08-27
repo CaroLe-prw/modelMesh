@@ -102,6 +102,38 @@ async fn merchant_application_requires_a_bearer_token() {
 }
 
 #[tokio::test]
+async fn merchant_channels_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/merchant/channels")
+                .body(Body::empty())
+                .expect("merchant channel request should be valid"),
+        )
+        .await
+        .expect("merchant channel request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn merchant_channel_providers_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/merchant/channel-providers")
+                .body(Body::empty())
+                .expect("merchant channel provider request should be valid"),
+        )
+        .await
+        .expect("merchant channel provider request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
 async fn brand_presets_require_a_bearer_token() {
     let response = test_router()
         .oneshot(

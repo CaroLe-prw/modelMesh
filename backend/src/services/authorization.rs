@@ -8,6 +8,17 @@ pub(super) fn require_admin<Error>(role: AccountRole, forbidden_error: Error) ->
     }
 }
 
+pub(super) fn require_merchant<Error>(
+    role: AccountRole,
+    forbidden_error: Error,
+) -> Result<(), Error> {
+    if matches!(role, AccountRole::Merchant | AccountRole::Admin) {
+        Ok(())
+    } else {
+        Err(forbidden_error)
+    }
+}
+
 #[cfg(test)]
 #[path = "../../tests/unit/services_authorization.rs"]
 mod tests;

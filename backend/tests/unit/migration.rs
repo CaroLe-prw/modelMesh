@@ -43,6 +43,8 @@ fn migrations_are_registered_in_schema_order() {
             "m0029_add_merchant_application_code",
             "m0030_simplify_merchant_application_code",
             "m0031_separate_merchant_status",
+            "m0032_create_merchant_channels",
+            "m0033_link_merchant_channels_to_brands",
         ]
     );
 }

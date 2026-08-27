@@ -92,9 +92,25 @@ operation.
 
 Merchant and administrator accounts also receive database-controlled merchant routes for the
 operations dashboard, channels, model listings, usage logs, withdrawal requests, business
-requests, merchant profile, and support tickets. These screens currently provide responsive UI
-preview data; their write actions remain non-persistent until the corresponding business APIs are
-connected.
+requests, merchant profile, and support tickets. Channel management is persisted in PostgreSQL and
+scoped to the authenticated merchant account; the remaining merchant screens currently provide
+responsive UI preview data.
+
+Merchant channels are managed through:
+
+- `GET /api/merchant/channel-providers`
+- `GET /api/merchant/channels`
+- `POST /api/merchant/channels`
+- `PUT /api/merchant/channels/{channel_id}`
+- `DELETE /api/merchant/channels/{channel_id}`
+
+Channel names are unique per merchant, ignoring case. The provider picker is sourced from active
+brands configured by an administrator, and create/update requests reference the selected
+`providerId`; arbitrary provider names are rejected. Existing channels keep their provider
+association when an administrator hides that brand, so merchants can still take them offline or
+delete them. Merchant writes can set a channel to `active` or `offline`; `degraded` is reserved for
+health-check output. Provider credentials are not accepted by this contract and must not be stored
+by the frontend.
 
 Administrator accounts receive additional database-controlled routes for the operations overview,
 user and merchant management, marketplace brand and model catalog management, platform-wide usage
@@ -144,6 +160,9 @@ The initial error-code ranges are:
 | `14000-14999` | Brand management errors       |
 | `15000-15999` | Model catalog lookup errors   |
 | `16000-16999` | Model management errors       |
+| `17000-17999` | User management errors        |
+| `18000-18999` | Merchant management errors    |
+| `19000-19999` | Merchant channel errors       |
 | `90000-99998` | Infrastructure errors         |
 | `99999`       | Unknown internal server error |
 

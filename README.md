@@ -185,11 +185,13 @@ Merchant profiles and settlement accounts are managed through:
 - `PUT /api/merchant/settlement-accounts/{id}/default`
 - `DELETE /api/merchant/settlement-accounts/{id}`
 
-Administrators configure which settlement methods and USDT networks may be used for new accounts
-through `GET /api/admin/settlement-settings` and `PUT /api/admin/settlement-settings`. The system
-settings page persists those switches in PostgreSQL. Disabling an option removes it from the
-merchant account form and is checked again transactionally when the account is created; existing
-settlement accounts remain available and are not deleted.
+Administrators manage registration, financial policy, settlement methods, and USDT networks through
+`GET /api/admin/system-settings` and `PUT /api/admin/system-settings`. These general settings share
+one PostgreSQL `system_settings` singleton row. Amounts are stored as integer micro-USD and rates as
+basis points. Disabling registration makes the public registration endpoint return a stable error;
+disabling a settlement option removes it from the merchant form and is checked again transactionally
+when an account is created. Existing settlement accounts are not deleted. Multi-row price currencies
+and exchange rates remain in their specialized price-settings tables.
 
 The profile is created during migration or lazily on first access and receives a stable merchant
 number. A merchant can configure up to ten settlement accounts. Supported methods are bank cards,
@@ -311,6 +313,7 @@ The initial error-code ranges are:
 | `22000-22999` | Catalog review errors            |
 | `23000-23999` | Merchant business request errors |
 | `24000-24999` | Merchant profile errors          |
+| `25000-25999` | System settings errors           |
 | `90000-99998` | Infrastructure errors            |
 | `99999`       | Unknown internal server error    |
 

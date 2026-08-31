@@ -12,8 +12,7 @@ use crate::{
         MerchantSettlementCurrency, MerchantSettlementMethod, MerchantSettlementNetwork, UserId,
     },
     entity::{
-        merchant_application, merchant_profile, merchant_settlement_account,
-        merchant_settlement_method_setting, merchant_settlement_network_setting, user,
+        merchant_application, merchant_profile, merchant_settlement_account, system_setting, user,
     },
 };
 
@@ -117,26 +116,27 @@ impl MerchantProfileRepository {
             .await
             .map_err(|_| MerchantSettlementAccountWriteError::Repository)?
             .ok_or(MerchantSettlementAccountWriteError::Repository)?;
-        let method_enabled =
-            merchant_settlement_method_setting::Entity::find_by_id(record.method.as_str())
-                .filter(merchant_settlement_method_setting::Column::IsEnabled.eq(true))
-                .lock_shared()
-                .one(&transaction)
-                .await
-                .map_err(|_| MerchantSettlementAccountWriteError::Repository)?
-                .is_some();
+        let settings = system_setting::Entity::find_by_id(1_i16)
+            .lock_shared()
+            .one(&transaction)
+            .await
+            .map_err(|_| MerchantSettlementAccountWriteError::Repository)?
+            .ok_or(MerchantSettlementAccountWriteError::Repository)?;
+        let method_enabled = match record.method {
+            MerchantSettlementMethod::Bank => settings.bank_enabled,
+            MerchantSettlementMethod::Alipay => settings.alipay_enabled,
+            MerchantSettlementMethod::Usdt => settings.usdt_enabled,
+        };
         if !method_enabled {
             return Err(MerchantSettlementAccountWriteError::DisabledOption);
         }
         if let Some(network) = record.network {
-            let network_enabled =
-                merchant_settlement_network_setting::Entity::find_by_id(network.as_str())
-                    .filter(merchant_settlement_network_setting::Column::IsEnabled.eq(true))
-                    .lock_shared()
-                    .one(&transaction)
-                    .await
-                    .map_err(|_| MerchantSettlementAccountWriteError::Repository)?
-                    .is_some();
+            let network_enabled = match network {
+                MerchantSettlementNetwork::Trc20 => settings.trc20_enabled,
+                MerchantSettlementNetwork::Erc20 => settings.erc20_enabled,
+                MerchantSettlementNetwork::Bep20 => settings.bep20_enabled,
+                MerchantSettlementNetwork::Polygon => settings.polygon_enabled,
+            };
             if !network_enabled {
                 return Err(MerchantSettlementAccountWriteError::DisabledOption);
             }

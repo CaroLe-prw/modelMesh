@@ -9,9 +9,9 @@ use crate::services::{
     ApiKeyServiceError, AppRouteServiceError, AuthServiceError, BrandPresetServiceError,
     BrandServiceError, CatalogReviewServiceError, MerchantApplicationServiceError,
     MerchantChannelServiceError, MerchantManagementServiceError, MerchantModelServiceError,
-    MerchantProfileServiceError, MerchantRequestServiceError,
-    MerchantSettlementSettingsServiceError, ModelCatalogServiceError, ModelServiceError,
-    PriceSettingsServiceError, UserManagementServiceError,
+    MerchantProfileServiceError, MerchantRequestServiceError, ModelCatalogServiceError,
+    ModelServiceError, PriceSettingsServiceError, SystemSettingsServiceError,
+    UserManagementServiceError,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -24,6 +24,7 @@ pub enum ErrorCode {
     InvalidCredentials = 11_004,
     Unauthenticated = 11_005,
     Forbidden = 11_006,
+    RegistrationDisabled = 11_007,
     InvalidApiKey = 12_001,
     ApiKeyNameAlreadyExists = 12_002,
     ApiKeyAlreadyExists = 12_003,
@@ -70,7 +71,7 @@ pub enum ErrorCode {
     MerchantSettlementAccountLimit = 24_002,
     MerchantSettlementAccountNotFound = 24_003,
     MerchantSettlementOptionDisabled = 24_004,
-    InvalidMerchantSettlementSettings = 24_005,
+    InvalidSystemSettings = 25_001,
     DependencyUnavailable = 90_001,
     Internal = 99_999,
 }
@@ -90,6 +91,7 @@ pub enum AppError {
     InvalidCredentials,
     Unauthenticated,
     Forbidden,
+    RegistrationDisabled,
     InvalidApiKey,
     ApiKeyNameAlreadyExists,
     ApiKeyAlreadyExists,
@@ -136,7 +138,7 @@ pub enum AppError {
     MerchantSettlementAccountLimit,
     MerchantSettlementAccountNotFound,
     MerchantSettlementOptionDisabled,
-    InvalidMerchantSettlementSettings,
+    InvalidSystemSettings,
     DependencyUnavailable,
     Internal,
 }
@@ -159,6 +161,7 @@ impl From<AuthServiceError> for AppError {
             AuthServiceError::EmailAlreadyExists => Self::EmailAlreadyExists,
             AuthServiceError::InvalidCredentials => Self::InvalidCredentials,
             AuthServiceError::Unauthenticated => Self::Unauthenticated,
+            AuthServiceError::RegistrationDisabled => Self::RegistrationDisabled,
             AuthServiceError::Internal => Self::Internal,
         }
     }
@@ -346,14 +349,12 @@ impl From<MerchantProfileServiceError> for AppError {
     }
 }
 
-impl From<MerchantSettlementSettingsServiceError> for AppError {
-    fn from(error: MerchantSettlementSettingsServiceError) -> Self {
+impl From<SystemSettingsServiceError> for AppError {
+    fn from(error: SystemSettingsServiceError) -> Self {
         match error {
-            MerchantSettlementSettingsServiceError::Forbidden => Self::Forbidden,
-            MerchantSettlementSettingsServiceError::InvalidInput => {
-                Self::InvalidMerchantSettlementSettings
-            }
-            MerchantSettlementSettingsServiceError::Internal => Self::Internal,
+            SystemSettingsServiceError::Forbidden => Self::Forbidden,
+            SystemSettingsServiceError::InvalidInput => Self::InvalidSystemSettings,
+            SystemSettingsServiceError::Internal => Self::Internal,
         }
     }
 }
@@ -395,6 +396,7 @@ impl IntoResponse for AppError {
             Self::InvalidCredentials => (StatusCode::UNAUTHORIZED, ErrorCode::InvalidCredentials),
             Self::Unauthenticated => (StatusCode::UNAUTHORIZED, ErrorCode::Unauthenticated),
             Self::Forbidden => (StatusCode::FORBIDDEN, ErrorCode::Forbidden),
+            Self::RegistrationDisabled => (StatusCode::FORBIDDEN, ErrorCode::RegistrationDisabled),
             Self::InvalidApiKey => (StatusCode::BAD_REQUEST, ErrorCode::InvalidApiKey),
             Self::ApiKeyNameAlreadyExists => {
                 (StatusCode::CONFLICT, ErrorCode::ApiKeyNameAlreadyExists)
@@ -519,10 +521,9 @@ impl IntoResponse for AppError {
                 StatusCode::CONFLICT,
                 ErrorCode::MerchantSettlementOptionDisabled,
             ),
-            Self::InvalidMerchantSettlementSettings => (
-                StatusCode::BAD_REQUEST,
-                ErrorCode::InvalidMerchantSettlementSettings,
-            ),
+            Self::InvalidSystemSettings => {
+                (StatusCode::BAD_REQUEST, ErrorCode::InvalidSystemSettings)
+            }
             Self::DependencyUnavailable => (
                 StatusCode::SERVICE_UNAVAILABLE,
                 ErrorCode::DependencyUnavailable,

@@ -37,7 +37,7 @@ import type {
   MerchantSettlementMethod,
   MerchantSettlementNetwork,
 } from '@/features/account/api/merchant-profile';
-import type { MerchantSettlementSettings } from '@/features/account/api/settlement-settings';
+import type { MerchantSettlementSettings } from '@/features/account/api/system-settings';
 import { fixedSettlementCurrency } from '@/features/account/components/merchant/merchant-settlement-form';
 
 const settlementMethodIcons: Record<MerchantSettlementMethod, LucideIcon> = {

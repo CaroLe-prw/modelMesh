@@ -57,6 +57,7 @@ mod m0056_expand_merchant_settlement_methods;
 mod m0057_create_merchant_settlement_settings;
 mod m0058_remove_wechat_settlement_option;
 mod m0059_remove_wechat_settlement_schema;
+mod m0060_consolidate_system_settings;
 
 use sea_orm_migration::prelude::*;
 
@@ -125,6 +126,7 @@ impl MigratorTrait for Migrator {
             Box::new(m0057_create_merchant_settlement_settings::Migration),
             Box::new(m0058_remove_wechat_settlement_option::Migration),
             Box::new(m0059_remove_wechat_settlement_schema::Migration),
+            Box::new(m0060_consolidate_system_settings::Migration),
         ]
     }
 }

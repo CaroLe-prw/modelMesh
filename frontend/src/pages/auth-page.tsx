@@ -25,6 +25,7 @@ const authErrorKeys = new Map<number, string>([
   [API_ERROR_CODE.INVALID_PASSWORD, 'auth.errors.invalidPassword'],
   [API_ERROR_CODE.EMAIL_ALREADY_EXISTS, 'auth.errors.emailAlreadyExists'],
   [API_ERROR_CODE.INVALID_CREDENTIALS, 'auth.errors.invalidCredentials'],
+  [API_ERROR_CODE.REGISTRATION_DISABLED, 'auth.errors.registrationDisabled'],
 ]);
 
 const AUTH_FEEDBACK_TOAST_ID = 'auth-feedback';

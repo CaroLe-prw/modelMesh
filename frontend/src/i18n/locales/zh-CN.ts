@@ -1541,6 +1541,14 @@ export const zhCN = {
             title: '系统配置',
             description: '配置价格换算、注册策略、提现门槛、手续费和平台服务费率。',
             save: '保存配置',
+            feedback: {
+              loading: '正在读取系统配置…',
+              loadError: '系统配置加载失败',
+              retry: '重新加载',
+              saved: '注册、结算和财务策略已保存。',
+              invalid: '系统配置无效，请检查金额、费率和结算选项。',
+              saveError: '系统配置保存失败，请稍后重试。',
+            },
             tabs: {
               pricing: '价格管理',
               general: '基础配置',
@@ -2929,6 +2937,7 @@ export const zhCN = {
       invalidPassword: '密码长度需要在 8 到 128 个字符之间。',
       emailAlreadyExists: '该邮箱已经注册，请直接登录。',
       invalidCredentials: '邮箱或密码不正确，或账户已被禁用。',
+      registrationDisabled: '平台当前已关闭新用户注册。',
       unavailable: '无法连接到后端服务，请稍后重试。',
       general: '操作失败，请稍后重试。',
     },

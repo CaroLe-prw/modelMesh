@@ -12,6 +12,7 @@ fn public_error_codes_are_stable_and_unique() {
         (ErrorCode::InvalidCredentials, 11_004),
         (ErrorCode::Unauthenticated, 11_005),
         (ErrorCode::Forbidden, 11_006),
+        (ErrorCode::RegistrationDisabled, 11_007),
         (ErrorCode::InvalidApiKey, 12_001),
         (ErrorCode::ApiKeyNameAlreadyExists, 12_002),
         (ErrorCode::ApiKeyAlreadyExists, 12_003),
@@ -58,7 +59,7 @@ fn public_error_codes_are_stable_and_unique() {
         (ErrorCode::MerchantSettlementAccountLimit, 24_002),
         (ErrorCode::MerchantSettlementAccountNotFound, 24_003),
         (ErrorCode::MerchantSettlementOptionDisabled, 24_004),
-        (ErrorCode::InvalidMerchantSettlementSettings, 24_005),
+        (ErrorCode::InvalidSystemSettings, 25_001),
         (ErrorCode::DependencyUnavailable, 90_001),
         (ErrorCode::Internal, 99_999),
     ];

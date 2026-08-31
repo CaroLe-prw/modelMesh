@@ -14,7 +14,7 @@ mod merchant_request;
 mod model;
 mod model_catalog;
 mod price_settings;
-mod settlement_settings;
+mod system_settings;
 mod user_management;
 
 use axum::{Router, http::Request};
@@ -60,7 +60,7 @@ fn api_router() -> Router<AppState> {
         .merge(merchant_profile::router())
         .merge(merchant_request::router())
         .merge(price_settings::router())
-        .merge(settlement_settings::router())
+        .merge(system_settings::router())
         .merge(user_management::router())
 }
 

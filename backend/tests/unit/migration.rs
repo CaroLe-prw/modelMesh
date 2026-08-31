@@ -71,6 +71,7 @@ fn migrations_are_registered_in_schema_order() {
             "m0057_create_merchant_settlement_settings",
             "m0058_remove_wechat_settlement_option",
             "m0059_remove_wechat_settlement_schema",
+            "m0060_consolidate_system_settings",
         ]
     );
 }

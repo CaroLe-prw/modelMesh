@@ -1,12 +1,21 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-#[sea_orm(table_name = "merchant_settlement_method_settings")]
+#[sea_orm(table_name = "system_settings")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    pub method: String,
-    pub is_enabled: bool,
-    pub sort_order: i16,
+    pub id: i16,
+    pub registration_enabled: bool,
+    pub withdrawal_minimum_microusd: i64,
+    pub withdrawal_fee_bps: i32,
+    pub platform_fee_bps: i32,
+    pub bank_enabled: bool,
+    pub alipay_enabled: bool,
+    pub usdt_enabled: bool,
+    pub trc20_enabled: bool,
+    pub erc20_enabled: bool,
+    pub bep20_enabled: bool,
+    pub polygon_enabled: bool,
     pub updated_by: Option<i64>,
     pub updated_at: TimeDateTimeWithTimeZone,
 }

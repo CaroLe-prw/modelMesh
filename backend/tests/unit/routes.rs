@@ -205,7 +205,7 @@ async fn merchant_profile_requires_a_bearer_token() {
 async fn merchant_settlement_settings_require_a_bearer_token() {
     for uri in [
         "/api/merchant/settlement-settings",
-        "/api/admin/settlement-settings",
+        "/api/admin/system-settings",
     ] {
         let response = test_router()
             .oneshot(

@@ -15,7 +15,7 @@ mod merchant_request;
 mod model;
 mod model_catalog;
 mod price_settings;
-mod settlement_settings;
+mod system_settings;
 mod user_cache;
 mod user_management;
 
@@ -53,7 +53,7 @@ pub use merchant_request::{
 pub use model::{ModelRepository, ModelSearch, NewModelRecord, UpdateModelPricingRecord};
 pub use model_catalog::{ModelCatalogRepository, NewModelCatalogEntry};
 pub use price_settings::PriceSettingsRepository;
-pub use settlement_settings::MerchantSettlementSettingsRepository;
+pub use system_settings::{SystemSettingsRepository, UpdateSystemSettingsRecord};
 pub use user_cache::UserCacheRepository;
 pub use user_management::{
     CreateManagedUserRecord, ManagedUserBalanceAdjustmentResult, ManagedUserDeletionResult,

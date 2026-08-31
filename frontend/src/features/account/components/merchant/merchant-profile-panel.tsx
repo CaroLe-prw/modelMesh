@@ -26,7 +26,7 @@ import {
 import {
   getMerchantSettlementSettings,
   type MerchantSettlementSettings,
-} from '@/features/account/api/settlement-settings';
+} from '@/features/account/api/system-settings';
 import { MerchantSettlementAccounts } from '@/features/account/components/merchant/merchant-settlement-accounts';
 import { useAuth } from '@/features/auth/context/auth-context';
 import { API_ERROR_CODE } from '@/lib/api-error-codes';

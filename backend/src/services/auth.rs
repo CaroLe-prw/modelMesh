@@ -8,7 +8,7 @@ use crate::{
     domain::{AccountStatus, User, UserId},
     repository::{
         AccessTokenRepository, AuthRepository, NewUserRecord, RepositoryConflict, RepositoryError,
-        UserCacheRepository,
+        SystemSettingsRepository, UserCacheRepository,
     },
     security::hash_secret,
 };
@@ -27,6 +27,7 @@ pub struct AuthService {
     local_sessions: AuthSessionCache,
     password_hash_slots: Arc<Semaphore>,
     repository: AuthRepository,
+    system_settings: SystemSettingsRepository,
     user_cache: UserCacheRepository,
 }
 
@@ -42,6 +43,7 @@ pub enum AuthServiceError {
     EmailAlreadyExists,
     InvalidCredentials,
     Unauthenticated,
+    RegistrationDisabled,
     Internal,
 }
 
@@ -50,6 +52,7 @@ impl AuthService {
         repository: AuthRepository,
         access_tokens: AccessTokenRepository,
         user_cache: UserCacheRepository,
+        system_settings: SystemSettingsRepository,
         access_token_ttl: Duration,
     ) -> Self {
         Self {
@@ -58,6 +61,7 @@ impl AuthService {
             local_sessions: AuthSessionCache::with_defaults(access_token_ttl),
             password_hash_slots: Arc::new(Semaphore::new(PASSWORD_HASH_CONCURRENCY)),
             repository,
+            system_settings,
             user_cache,
         }
     }
@@ -67,6 +71,18 @@ impl AuthService {
         email: String,
         password: String,
     ) -> Result<User, AuthServiceError> {
+        let registration_enabled = self
+            .system_settings
+            .get()
+            .await
+            .map_err(|error| {
+                tracing::error!(%error, "registration settings lookup failed");
+                AuthServiceError::Internal
+            })?
+            .registration_enabled;
+        if !registration_enabled {
+            return Err(AuthServiceError::RegistrationDisabled);
+        }
         let email = normalize_email(&email).ok_or(AuthServiceError::InvalidEmail)?;
         validate_password(&password)?;
         let password_hash = self.hash_password(password).await?;

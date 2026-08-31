@@ -15,7 +15,7 @@ mod model;
 mod model_catalog;
 mod pagination;
 mod price_settings;
-mod settlement_settings;
+mod system_settings;
 mod user_management;
 
 pub use api_key::{
@@ -66,8 +66,8 @@ pub use model_catalog::{
 };
 pub use pagination::{PaginatedResponse, PaginationQuery, PaginationResponse};
 pub use price_settings::{PriceSettingsResponse, UpdatePriceSettingsRequest};
-pub use settlement_settings::{
-    MerchantSettlementSettingsResponse, UpdateMerchantSettlementSettingsRequest,
+pub use system_settings::{
+    MerchantSettlementSettingsResponse, SystemSettingsResponse, UpdateSystemSettingsRequest,
 };
 pub use user_management::{
     AdjustManagedUserBalanceRequest, BatchDeleteManagedUsersRequest,

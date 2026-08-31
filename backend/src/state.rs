@@ -9,16 +9,16 @@ use crate::{
         AuthRepository, BrandPresetRepository, BrandRepository, CatalogReviewRepository,
         MerchantApplicationRepository, MerchantChannelRepository, MerchantManagementRepository,
         MerchantModelRepository, MerchantProfileRepository, MerchantRequestRepository,
-        MerchantSettlementSettingsRepository, ModelCatalogRepository, ModelRepository,
-        PriceSettingsRepository, UserCacheRepository, UserManagementRepository,
+        ModelCatalogRepository, ModelRepository, PriceSettingsRepository, SystemSettingsRepository,
+        UserCacheRepository, UserManagementRepository,
     },
     security::CredentialCipher,
     services::{
         ApiKeyService, AppRouteService, AuthService, BrandPresetService, BrandService,
         CatalogReviewService, MerchantApplicationService, MerchantChannelService,
         MerchantManagementService, MerchantModelService, MerchantProfileService,
-        MerchantRequestService, MerchantSettlementSettingsService, ModelCatalogService,
-        ModelService, PriceSettingsService, UserManagementService,
+        MerchantRequestService, ModelCatalogService, ModelService, PriceSettingsService,
+        SystemSettingsService, UserManagementService,
     },
 };
 
@@ -36,7 +36,7 @@ pub struct AppState {
     pub merchant_model_service: MerchantModelService,
     pub merchant_profile_service: MerchantProfileService,
     pub merchant_request_service: MerchantRequestService,
-    pub merchant_settlement_settings_service: MerchantSettlementSettingsService,
+    pub system_settings_service: SystemSettingsService,
     pub model_catalog_service: ModelCatalogService,
     pub model_service: ModelService,
     pub price_settings_service: PriceSettingsService,
@@ -59,6 +59,7 @@ impl AppState {
         let merchant_channel_repository = MerchantChannelRepository::new(database.clone());
         let model_repository = ModelRepository::new(database.clone());
         let price_settings_repository = PriceSettingsRepository::new(database.clone());
+        let system_settings_repository = SystemSettingsRepository::new(database.clone());
         let credential_cipher = CredentialCipher::new(provider_credential_key);
         let upstream_models_client =
             UpstreamModelsClient::new(Duration::from_secs(5), Duration::from_secs(20));
@@ -68,6 +69,7 @@ impl AppState {
             auth_repository.clone(),
             AccessTokenRepository::new(redis.clone(), access_token_ttl_seconds),
             UserCacheRepository::with_default_ttl(redis.clone()),
+            system_settings_repository.clone(),
             std::time::Duration::from_secs(access_token_ttl_seconds),
         );
 
@@ -117,9 +119,7 @@ impl AppState {
             merchant_request_service: MerchantRequestService::new(MerchantRequestRepository::new(
                 database.clone(),
             )),
-            merchant_settlement_settings_service: MerchantSettlementSettingsService::new(
-                MerchantSettlementSettingsRepository::new(database.clone()),
-            ),
+            system_settings_service: SystemSettingsService::new(system_settings_repository),
             model_catalog_service: ModelCatalogService::new(ModelCatalogRepository::new(
                 database.clone(),
             )),

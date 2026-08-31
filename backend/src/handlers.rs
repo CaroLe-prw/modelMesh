@@ -14,5 +14,5 @@ pub mod merchant_request;
 pub mod model;
 pub mod model_catalog;
 pub mod price_settings;
-pub mod settlement_settings;
+pub mod system_settings;
 pub mod user_management;

@@ -1596,6 +1596,14 @@ export const en = {
             description:
               'Configure price conversion, registration, withdrawal thresholds, fees, and the platform service rate.',
             save: 'Save settings',
+            feedback: {
+              loading: 'Loading system settings…',
+              loadError: 'Unable to load system settings',
+              retry: 'Reload',
+              saved: 'Registration, settlement, and financial policies were saved.',
+              invalid: 'Check the amounts, rates, and settlement options.',
+              saveError: 'Unable to save system settings. Try again later.',
+            },
             tabs: {
               pricing: 'Pricing management',
               general: 'General settings',
@@ -3052,6 +3060,7 @@ export const en = {
       invalidPassword: 'Your password must be between 8 and 128 characters.',
       emailAlreadyExists: 'An account already exists for this email. Log in instead.',
       invalidCredentials: 'The email or password is incorrect, or the account has been disabled.',
+      registrationDisabled: 'New account registration is currently disabled.',
       unavailable: 'The backend service is unavailable. Try again shortly.',
       general: 'The operation failed. Please try again.',
     },

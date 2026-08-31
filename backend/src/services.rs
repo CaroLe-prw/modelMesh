@@ -17,7 +17,7 @@ mod merchant_request;
 mod model;
 mod model_catalog;
 mod price_settings;
-mod settlement_settings;
+mod system_settings;
 mod user_activity_tracker;
 mod user_management;
 
@@ -57,8 +57,8 @@ pub use model_catalog::{ModelCatalogService, ModelCatalogServiceError, ModelCata
 pub use price_settings::{
     PriceReviewPolicyInput, PriceSettingInput, PriceSettingsService, PriceSettingsServiceError,
 };
-pub use settlement_settings::{
-    MerchantSettlementSettingsService, MerchantSettlementSettingsServiceError,
+pub use system_settings::{
+    SystemSettingsService, SystemSettingsServiceError, UpdateSystemSettings,
 };
 pub use user_management::{
     CreateManagedUser, UpdateManagedUser, UserManagementService, UserManagementServiceError,

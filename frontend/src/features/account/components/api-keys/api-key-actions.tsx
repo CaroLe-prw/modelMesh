@@ -38,7 +38,7 @@ export function ApiKeyActions({
   const isActive = apiKey.status === 'active';
 
   return (
-    <div className="flex items-center justify-end gap-0.5">
+    <div className="flex items-center justify-end gap-0.5 md:justify-center">
       <Button
         aria-label={t('pages.account.sections.apiKeys.actions.edit', {
           name: apiKey.name,

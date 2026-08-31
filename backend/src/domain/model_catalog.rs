@@ -17,3 +17,9 @@ pub struct ModelCatalogEntry {
     pub source_data: Value,
     pub source_synced_at: Timestamp,
 }
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ModelCatalogOption {
+    pub model_id: String,
+    pub model_name: String,
+}

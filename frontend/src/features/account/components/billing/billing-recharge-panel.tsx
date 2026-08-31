@@ -2,10 +2,12 @@ import { useMemo, useState } from 'react';
 import type { IconType } from 'react-icons';
 import { SiAlipay, SiTether, SiWechat } from 'react-icons/si';
 import { useTranslation } from 'react-i18next';
+import { RadioCardItem } from '@/components/common/radio-card-item';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup } from '@/components/ui/radio-group';
 import { demoAccountSummary } from '@/features/account/account-demo-data';
 import { useAuth } from '@/features/auth/context/auth-context';
 import { cn } from '@/lib/utils';
@@ -75,31 +77,23 @@ export function BillingRechargePanel() {
           <Label className="text-sm font-semibold" id="quick-amount-label">
             {t('pages.account.sections.billing.recharge.quickAmount')}
           </Label>
-          <div
+          <RadioGroup
             aria-labelledby="quick-amount-label"
             className="mt-3 grid grid-cols-3 gap-2.5"
-            role="group"
+            onValueChange={handleAmountChange}
+            value={amount}
           >
-            {quickAmounts.map((quickAmount) => {
-              const isSelected = Number(amount) === quickAmount;
-
-              return (
-                <Button
-                  aria-pressed={isSelected}
-                  className={cn(
-                    'h-12 font-mono text-sm tabular-nums sm:text-base',
-                    isSelected && 'border-primary bg-primary/10 text-primary hover:bg-primary/15',
-                  )}
-                  key={quickAmount}
-                  onClick={() => handleAmountChange(String(quickAmount))}
-                  type="button"
-                  variant="outline"
-                >
-                  {quickAmount}
-                </Button>
-              );
-            })}
-          </div>
+            {quickAmounts.map((quickAmount) => (
+              <RadioCardItem
+                className="h-12 justify-center font-mono text-sm tabular-nums peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 peer-data-[state=checked]:text-primary peer-data-[state=checked]:hover:bg-primary/15 sm:text-base"
+                id={`billing-quick-amount-${quickAmount}`}
+                key={quickAmount}
+                value={String(quickAmount)}
+              >
+                {quickAmount}
+              </RadioCardItem>
+            ))}
+          </RadioGroup>
 
           <div className="mt-5 grid gap-2">
             <Label htmlFor="billing-custom-amount">
@@ -133,37 +127,33 @@ export function BillingRechargePanel() {
           <Label className="text-sm font-semibold" id="payment-method-label">
             {t('pages.account.sections.billing.recharge.paymentMethod')}
           </Label>
-          <div
+          <RadioGroup
             aria-labelledby="payment-method-label"
             className="mt-3 grid gap-2.5 sm:grid-cols-3"
-            role="group"
+            onValueChange={(value) => {
+              const method = paymentMethods.find((item) => item.id === value);
+              if (!method) return;
+              setPaymentMethod(method.id);
+              setShowFeedback(false);
+            }}
+            value={paymentMethod}
           >
             {paymentMethods.map((method) => {
               const Icon = method.icon;
-              const isSelected = paymentMethod === method.id;
 
               return (
-                <Button
-                  aria-pressed={isSelected}
-                  className={cn(
-                    'h-14 justify-center text-sm sm:text-base',
-                    isSelected &&
-                      'border-primary bg-primary/10 text-foreground hover:bg-primary/15',
-                  )}
+                <RadioCardItem
+                  className="h-14 justify-center text-sm peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 peer-data-[state=checked]:text-foreground peer-data-[state=checked]:hover:bg-primary/15 sm:text-base"
+                  id={`billing-payment-method-${method.id}`}
                   key={method.id}
-                  onClick={() => {
-                    setPaymentMethod(method.id);
-                    setShowFeedback(false);
-                  }}
-                  type="button"
-                  variant="outline"
+                  value={method.id}
                 >
                   <Icon aria-hidden="true" className={cn('size-5', method.iconClassName)} />
                   {t(`pages.account.sections.billing.recharge.methods.${method.id}`)}
-                </Button>
+                </RadioCardItem>
               );
             })}
-          </div>
+          </RadioGroup>
         </div>
       </Card>
 

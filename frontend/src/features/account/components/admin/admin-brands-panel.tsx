@@ -278,7 +278,7 @@ export function AdminBrandsPanel() {
       key: 'brand',
       label: t('pages.account.sections.admin.catalogManagement.brands.columns.brand'),
       render: (brand) => (
-        <div className="flex items-center gap-3">
+        <div className="grid w-48 max-w-full grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-3 text-left">
           <BrandAvatar src={brand.avatarUrl} svg={brand.avatarSvg} />
           <div className="min-w-0">
             <strong className="block truncate text-sm">{brand.name}</strong>
@@ -318,7 +318,7 @@ export function AdminBrandsPanel() {
       ),
     },
     {
-      className: 'min-w-48',
+      className: 'w-48 min-w-48 max-w-48',
       hideable: false,
       key: 'actions',
       label: t('pages.account.sections.admin.catalogManagement.brands.columns.actions'),
@@ -500,7 +500,7 @@ function BrandActions({
   );
 
   return (
-    <div className="flex flex-nowrap justify-start gap-0.5">
+    <div className="flex flex-nowrap justify-start gap-0.5 md:justify-center">
       <Button
         aria-label={t('pages.account.sections.admin.catalogManagement.brands.actions.manage', {
           name: brand.name,

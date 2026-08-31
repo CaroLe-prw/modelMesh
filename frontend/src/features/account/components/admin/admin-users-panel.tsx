@@ -734,7 +734,7 @@ export function AdminUsersPanel() {
           )}
           notice={null}
           selectionDisabled={isMutating}
-          tableClassName="min-w-[82rem] table-fixed"
+          tableClassName="table-fixed"
         />
       )}
 
@@ -872,7 +872,7 @@ function UserActions({
   const nextStatus = status === 'active' ? 'disable' : 'enable';
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1 md:justify-center">
       <ActionButton
         disabled={disabled}
         icon={Pencil}

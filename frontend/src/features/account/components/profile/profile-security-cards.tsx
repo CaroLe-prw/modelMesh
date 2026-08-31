@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Toggle } from '@/components/ui/toggle';
 
 const securityToastId = 'profile-security-feedback';
 
@@ -156,21 +157,19 @@ function PasswordField({ autoComplete, label, name }: PasswordFieldProps) {
           required
           type={visible ? 'text' : 'password'}
         />
-        <Button
+        <Toggle
           aria-label={visible ? t('auth.fields.hidePassword') : t('auth.fields.showPassword')}
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-          onClick={() => setVisible((current) => !current)}
-          size="icon-sm"
+          className="absolute right-1.5 top-1/2 size-8 -translate-y-1/2 p-0 text-muted-foreground"
+          onPressedChange={setVisible}
+          pressed={visible}
           title={visible ? t('auth.fields.hidePassword') : t('auth.fields.showPassword')}
-          type="button"
-          variant="ghost"
         >
           {visible ? (
             <EyeOff aria-hidden="true" className="size-4" />
           ) : (
             <Eye aria-hidden="true" className="size-4" />
           )}
-        </Button>
+        </Toggle>
       </div>
     </div>
   );

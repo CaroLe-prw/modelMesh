@@ -140,7 +140,7 @@ export function SupportTicketsPanel({ audience }: SupportTicketsPanelProps) {
                   <TableHead className="min-w-44">
                     {t('pages.account.sections.support.columns.updatedAt')}
                   </TableHead>
-                  <TableHead className="w-20 text-right">
+                  <TableHead className="w-20 text-center">
                     {t('pages.account.sections.support.columns.actions')}
                   </TableHead>
                 </TableRow>
@@ -199,7 +199,7 @@ function SupportTicketTableRow({ ticket }: { ticket: SupportTicket }) {
       <TableCell className="font-mono text-xs text-muted-foreground">
         {formatSupportTicketDate(i18n.resolvedLanguage, ticket.updatedAt)}
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="text-center">
         <SupportTicketDetailsDialog ticket={ticket} />
       </TableCell>
     </TableRow>

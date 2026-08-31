@@ -98,6 +98,58 @@ fn catalog_normalization_drops_zero_context_and_keeps_free_prices() {
 }
 
 #[test]
+fn catalog_normalization_derives_fast_mode_context_tiers() {
+    let entries = normalize_catalog(vec![ModelsDevCatalogEntry {
+        provider_id: "openai".to_owned(),
+        model_id: "gpt-5.6-sol".to_owned(),
+        model_name: "GPT-5.6 Sol".to_owned(),
+        context_window: Some(1_050_000),
+        cache_read_price_usd_per_million: Some(0.4),
+        cache_write_price_usd_per_million: Some(5.0),
+        input_price_usd_per_million: Some(4.0),
+        output_price_usd_per_million: Some(20.0),
+        raw_cost: Some(json!({
+            "input": 4,
+            "cache_read": 0.4,
+            "cache_write": 5,
+            "output": 20,
+            "tiers": [{
+                "input": 8,
+                "cache_read": 0.8,
+                "cache_write": 10,
+                "output": 30,
+                "tier": { "type": "context", "size": 272000 }
+            }]
+        })),
+        source_data: json!({
+            "id": "gpt-5.6-sol",
+            "name": "GPT-5.6 Sol",
+            "experimental": {
+                "modes": {
+                    "fast": {
+                        "cost": {
+                            "input": 8,
+                            "cache_read": 0.8,
+                            "cache_write": 10,
+                            "output": 40
+                        }
+                    }
+                }
+            }
+        }),
+    }])
+    .expect("catalog should derive fast long-context prices");
+
+    let fast_tier = &entries[0].pricing_nano_usd.experimental_mode_tiers["fast"][0];
+    assert_eq!(fast_tier.tier_type, "context");
+    assert_eq!(fast_tier.size, 272_000);
+    assert_eq!(fast_tier.rates["input"], 1_600_000_000);
+    assert_eq!(fast_tier.rates["cache_read"], 160_000_000);
+    assert_eq!(fast_tier.rates["cache_write"], 2_000_000_000);
+    assert_eq!(fast_tier.rates["output"], 6_000_000_000);
+}
+
+#[test]
 fn catalog_normalization_keeps_legacy_context_price_only_without_tiers() {
     let entries = normalize_catalog(vec![ModelsDevCatalogEntry {
         provider_id: "anthropic".to_owned(),

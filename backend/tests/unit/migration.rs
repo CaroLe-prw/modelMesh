@@ -45,6 +45,23 @@ fn migrations_are_registered_in_schema_order() {
             "m0031_separate_merchant_status",
             "m0032_create_merchant_channels",
             "m0033_link_merchant_channels_to_brands",
+            "m0034_create_merchant_model_listings",
+            "m0035_add_merchant_model_pricing",
+            "m0036_add_merchant_model_price_currency",
+            "m0037_add_model_price_exchange_rate",
+            "m0038_create_price_settings",
+            "m0039_expand_price_settings",
+            "m0040_ensure_default_usd_price_setting",
+            "m0041_add_catalog_review_workflow",
+            "m0042_require_channel_approval_before_activation",
+            "m0043_add_catalog_review_notes",
+            "m0044_add_merchant_channel_connection",
+            "m0045_add_merchant_channel_public_id",
+            "m0046_add_merchant_channel_available_models",
+            "m0047_unify_merchant_channel_status",
+            "m0048_add_merchant_model_rejected_status",
+            "m0049_add_merchant_model_offline_status",
+            "m0050_separate_model_review_and_price_effective_state",
         ]
     );
 }

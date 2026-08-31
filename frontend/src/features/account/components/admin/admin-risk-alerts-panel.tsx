@@ -123,7 +123,7 @@ export function AdminRiskAlertsPanel() {
       ),
     },
     {
-      className: 'min-w-24 text-right',
+      className: 'min-w-24 text-center',
       hideable: false,
       key: 'actions',
       label: t('pages.account.sections.admin.riskAlerts.columns.actions'),
@@ -246,7 +246,7 @@ function RiskActions({ onAct, resolved }: { onAct: () => void; resolved: boolean
   const { t } = useTranslation();
 
   return (
-    <div className="flex justify-end gap-1">
+    <div className="flex justify-end gap-1 md:justify-center">
       <Button
         aria-label={t('pages.account.sections.admin.riskAlerts.actions.inspect')}
         onClick={onAct}

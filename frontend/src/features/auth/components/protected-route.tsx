@@ -4,10 +4,10 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { resolvePostLoginPath, type AuthLocationState } from '@/features/auth/auth-navigation';
 import { useAuth } from '@/features/auth/context/auth-context';
 
 export function ProtectedRoute({ renderOutletWhileLoading = false }: ProtectedRouteProps) {
-  const { t } = useTranslation();
   const location = useLocation();
   const { retry, state } = useAuth();
 
@@ -22,24 +22,31 @@ export function ProtectedRoute({ renderOutletWhileLoading = false }: ProtectedRo
       return <Outlet />;
     }
 
-    return (
-      <RouteStatus>
-        <LoaderCircle aria-hidden="true" className="mx-auto size-7 animate-spin text-primary" />
-        <p className="mt-4 text-xs text-muted-foreground">{t('auth.session.checking')}</p>
-      </RouteStatus>
-    );
+    return <SessionLoading />;
   }
 
   if (state.status === 'error') {
-    return (
-      <RouteStatus>
-        <p className="text-sm font-semibold">{t('auth.session.loadError')}</p>
-        <Button className="mt-5" variant="outline" onClick={retry}>
-          <RefreshCw aria-hidden="true" className="size-4" />
-          {t('auth.session.retry')}
-        </Button>
-      </RouteStatus>
-    );
+    return <SessionError onRetry={retry} />;
+  }
+
+  return <Outlet />;
+}
+
+export function GuestOnlyRoute() {
+  const location = useLocation();
+  const { retry, state } = useAuth();
+
+  if (state.status === 'loading') {
+    return <SessionLoading />;
+  }
+
+  if (state.status === 'error') {
+    return <SessionError onRetry={retry} />;
+  }
+
+  if (state.status === 'authenticated') {
+    const requestedPath = (location.state as AuthLocationState | null)?.from;
+    return <Navigate replace to={resolvePostLoginPath(requestedPath)} />;
   }
 
   return <Outlet />;
@@ -47,6 +54,31 @@ export function ProtectedRoute({ renderOutletWhileLoading = false }: ProtectedRo
 
 interface ProtectedRouteProps {
   renderOutletWhileLoading?: boolean;
+}
+
+function SessionLoading() {
+  const { t } = useTranslation();
+
+  return (
+    <RouteStatus>
+      <LoaderCircle aria-hidden="true" className="mx-auto size-7 animate-spin text-primary" />
+      <p className="mt-4 text-xs text-muted-foreground">{t('auth.session.checking')}</p>
+    </RouteStatus>
+  );
+}
+
+function SessionError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation();
+
+  return (
+    <RouteStatus>
+      <p className="text-sm font-semibold">{t('auth.session.loadError')}</p>
+      <Button className="mt-5" variant="outline" onClick={onRetry}>
+        <RefreshCw aria-hidden="true" className="size-4" />
+        {t('auth.session.retry')}
+      </Button>
+    </RouteStatus>
+  );
 }
 
 function RouteStatus({ children }: { children: ReactNode }) {

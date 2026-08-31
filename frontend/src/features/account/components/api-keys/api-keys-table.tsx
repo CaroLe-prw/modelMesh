@@ -105,7 +105,7 @@ export function ApiKeysTable({
               </TableHead>
             )}
             {visibleColumns.has('concurrency') && (
-              <TableHead className="h-11 min-w-[100px] text-center text-xs text-muted-foreground">
+              <TableHead className="h-11 min-w-[100px] text-xs text-muted-foreground">
                 {t('pages.account.sections.apiKeys.columns.concurrency')}
               </TableHead>
             )}
@@ -154,7 +154,7 @@ export function ApiKeysTable({
                 {t('pages.account.sections.apiKeys.columns.createdAt')}
               </TableHead>
             )}
-            <TableHead className="h-11 w-[168px] min-w-[168px] bg-card pr-4 text-center text-xs text-muted-foreground">
+            <TableHead className="h-11 w-[168px] min-w-[168px] bg-card pr-4 text-xs text-muted-foreground">
               {t('pages.account.sections.apiKeys.columns.actions')}
             </TableHead>
           </TableRow>

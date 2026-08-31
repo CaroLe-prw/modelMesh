@@ -1,6 +1,6 @@
 use std::{env, io, net::SocketAddr, path::PathBuf};
 
-use crate::redis_key;
+use crate::{redis_key, security::derive_credential_key};
 
 const DEFAULT_BIND_ADDRESS: &str = "127.0.0.1:3000";
 const DEFAULT_DATABASE_ACQUIRE_TIMEOUT_SECONDS: u64 = 5;
@@ -16,6 +16,8 @@ const DEFAULT_MODELS_DEV_RETRY_DELAY_SECONDS: u64 = 2;
 const DEFAULT_MODELS_DEV_SYNC_INTERVAL_HOURS: u64 = 24;
 const DEFAULT_REDIS_MAX_CONNECTIONS: usize = 10;
 const DEFAULT_REDIS_WAIT_TIMEOUT_SECONDS: u64 = 5;
+const DEFAULT_DEVELOPMENT_PROVIDER_CREDENTIAL_SECRET: &str =
+    "modelmesh-development-only-provider-credential-key";
 const BIND_ADDRESS_ENV: &str = "MODELMESH_BIND_ADDRESS";
 const ACCESS_TOKEN_TTL_SECONDS_ENV: &str = "MODELMESH_ACCESS_TOKEN_TTL_SECONDS";
 const DATABASE_ACQUIRE_TIMEOUT_SECONDS_ENV: &str = "MODELMESH_DATABASE_ACQUIRE_TIMEOUT_SECONDS";
@@ -33,6 +35,7 @@ const MODELS_DEV_SYNC_INTERVAL_HOURS_ENV: &str = "MODELMESH_MODELS_DEV_SYNC_INTE
 const REDIS_MAX_CONNECTIONS_ENV: &str = "MODELMESH_REDIS_MAX_CONNECTIONS";
 const REDIS_URL_ENV: &str = "REDIS_URL";
 const REDIS_WAIT_TIMEOUT_SECONDS_ENV: &str = "MODELMESH_REDIS_WAIT_TIMEOUT_SECONDS";
+const PROVIDER_CREDENTIAL_SECRET_ENV: &str = "MODELMESH_PROVIDER_CREDENTIAL_SECRET";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AppEnvironment {
@@ -75,6 +78,8 @@ pub struct AppConfig {
     pub models_dev_request_timeout_seconds: u64,
     pub models_dev_retry_delay_seconds: u64,
     pub models_dev_sync_interval_seconds: u64,
+    pub provider_credential_key: [u8; 32],
+    pub provider_credential_key_is_default: bool,
     pub redis_max_connections: usize,
     pub redis_url: String,
     pub redis_wait_timeout_seconds: u64,
@@ -103,6 +108,11 @@ impl AppConfig {
             ENVIRONMENT_ENV,
             &env::var(ENVIRONMENT_ENV).unwrap_or_else(|_| DEFAULT_ENVIRONMENT.to_owned()),
         )?;
+        let (provider_credential_key, provider_credential_key_is_default) =
+            parse_provider_credential_secret(
+                environment,
+                env::var(PROVIDER_CREDENTIAL_SECRET_ENV).ok().as_deref(),
+            )?;
         let log_directory = PathBuf::from(
             env::var(LOG_DIRECTORY_ENV).unwrap_or_else(|_| DEFAULT_LOG_DIRECTORY.to_owned()),
         );
@@ -178,11 +188,39 @@ impl AppConfig {
             models_dev_request_timeout_seconds,
             models_dev_retry_delay_seconds,
             models_dev_sync_interval_seconds,
+            provider_credential_key,
+            provider_credential_key_is_default,
             redis_max_connections,
             redis_url,
             redis_wait_timeout_seconds,
         })
     }
+}
+
+fn parse_provider_credential_secret(
+    environment: AppEnvironment,
+    value: Option<&str>,
+) -> io::Result<([u8; 32], bool)> {
+    let (value, is_default) = match value.map(str::trim).filter(|value| !value.is_empty()) {
+        Some(value) => (value, false),
+        None if environment != AppEnvironment::Production => {
+            (DEFAULT_DEVELOPMENT_PROVIDER_CREDENTIAL_SECRET, true)
+        }
+        None => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("{PROVIDER_CREDENTIAL_SECRET_ENV} is required in production"),
+            ));
+        }
+    };
+    if value.chars().count() < 32 || value.chars().any(char::is_control) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("{PROVIDER_CREDENTIAL_SECRET_ENV} must contain at least 32 characters"),
+        ));
+    }
+
+    Ok((derive_credential_key(value), is_default))
 }
 
 fn required_env(name: &str) -> io::Result<String> {

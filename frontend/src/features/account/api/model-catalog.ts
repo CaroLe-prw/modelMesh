@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api-client';
+import type { BrandItem } from '@/features/account/api/brands';
 
 export type ModelPriceRates = Record<string, number>;
 
@@ -12,6 +13,7 @@ export interface ModelPricing {
   base?: ModelPriceRates;
   contextOver200k?: ModelPriceRates;
   experimentalModes?: Record<string, ModelPriceRates>;
+  experimentalModeTiers?: Record<string, ModelPriceTier[]>;
   serviceTiers?: Record<string, ModelPriceRates>;
   tiers?: ModelPriceTier[];
 }
@@ -28,6 +30,22 @@ export interface ModelCatalogEntry {
   providerId: string;
   source: 'models.dev';
   syncedAt: string;
+}
+
+export interface ModelCatalogOption {
+  modelId: string;
+  name: string;
+}
+
+export interface ModelCatalogOptionsResponse {
+  brands: BrandItem[];
+  modelsByBrand: Record<string, ModelCatalogOption[]>;
+}
+
+export function listModelCatalogOptions(
+  signal?: AbortSignal,
+): Promise<ModelCatalogOptionsResponse> {
+  return apiClient.get<ModelCatalogOptionsResponse>('/admin/model-catalog/options', { signal });
 }
 
 export function lookupModelCatalog(

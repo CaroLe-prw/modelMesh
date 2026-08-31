@@ -48,7 +48,7 @@ export function OrdersTable({ orders }: { orders: RechargeOrder[] }) {
             <TableHead className="min-w-44">
               {t('pages.account.sections.orders.columns.createdAt')}
             </TableHead>
-            <TableHead className="w-20 text-right">
+            <TableHead className="w-20 text-center">
               {t('pages.account.sections.orders.columns.actions')}
             </TableHead>
           </TableRow>
@@ -76,7 +76,7 @@ export function OrdersTable({ orders }: { orders: RechargeOrder[] }) {
               <TableCell className="font-mono text-xs text-muted-foreground">
                 {formatOrderDate(i18n.resolvedLanguage, order.createdAt)}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-center">
                 <OrderDetailsDialog order={order} />
               </TableCell>
             </TableRow>

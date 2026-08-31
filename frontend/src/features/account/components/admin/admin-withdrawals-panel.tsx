@@ -101,7 +101,7 @@ export function AdminWithdrawalsPanel() {
       ),
     },
     {
-      className: 'min-w-24 text-right',
+      className: 'min-w-24 text-center',
       hideable: false,
       key: 'actions',
       label: t('pages.account.sections.admin.withdrawals.columns.actions'),
@@ -195,7 +195,7 @@ function WithdrawalActions({ onAct, pending }: { onAct: () => void; pending: boo
   const { t } = useTranslation();
 
   return (
-    <div className="flex justify-end gap-1">
+    <div className="flex justify-end gap-1 md:justify-center">
       <Button
         aria-label={t('pages.account.sections.admin.withdrawals.actions.approve')}
         disabled={!pending}

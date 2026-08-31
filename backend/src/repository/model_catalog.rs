@@ -1,14 +1,16 @@
+use std::collections::{BTreeMap, HashMap};
+
 use jiff::Timestamp;
 use sea_orm::{
     ColumnTrait, ConnectionTrait, DatabaseBackend, DatabaseConnection, EntityTrait, QueryFilter,
-    QueryOrder, Select, Statement, TransactionTrait,
+    QueryOrder, QuerySelect, Select, Statement, TransactionTrait,
     sea_query::{Expr, ExprTrait, Func},
 };
 use serde::Serialize;
 use time::OffsetDateTime;
 
 use crate::{
-    domain::{ModelCatalogEntry, ModelPricing},
+    domain::{ModelCatalogEntry, ModelCatalogOption, ModelPricing},
     entity::{brand, brand_preset, model_catalog_entry, model_catalog_sync_state},
 };
 
@@ -200,6 +202,70 @@ impl ModelCatalogRepository {
             .into_iter()
             .map(model_catalog_from_model)
             .collect()
+    }
+
+    pub async fn list_options_by_brands(
+        &self,
+        brand_identifiers: &[String],
+    ) -> Result<BTreeMap<String, Vec<ModelCatalogOption>>, RepositoryError> {
+        let mut options_by_brand = brand_identifiers
+            .iter()
+            .cloned()
+            .map(|identifier| (identifier, Vec::new()))
+            .collect::<BTreeMap<_, _>>();
+        if options_by_brand.is_empty() {
+            return Ok(options_by_brand);
+        }
+
+        let brands = brand::Entity::find()
+            .filter(brand::Column::Identifier.is_in(brand_identifiers.iter().cloned()))
+            .find_also_related(brand_preset::Entity)
+            .all(&self.database)
+            .await?;
+        let mut brands_by_provider = HashMap::<String, Vec<String>>::new();
+        for (brand, preset) in brands {
+            let Some(provider_id) = preset.and_then(|preset| preset.models_dev_provider_id) else {
+                continue;
+            };
+            brands_by_provider
+                .entry(provider_id)
+                .or_default()
+                .push(brand.identifier);
+        }
+        if brands_by_provider.is_empty() {
+            return Ok(options_by_brand);
+        }
+
+        let provider_ids = brands_by_provider.keys().cloned().collect::<Vec<_>>();
+        let options = model_catalog_entry::Entity::find()
+            .select_only()
+            .column(model_catalog_entry::Column::ProviderId)
+            .column(model_catalog_entry::Column::ModelId)
+            .column(model_catalog_entry::Column::ModelName)
+            .filter(model_catalog_entry::Column::Source.eq(MODELS_DEV_SOURCE))
+            .filter(model_catalog_entry::Column::ProviderId.is_in(provider_ids))
+            .order_by_asc(model_catalog_entry::Column::ProviderId)
+            .order_by_asc(model_catalog_entry::Column::ModelName)
+            .order_by_asc(model_catalog_entry::Column::ModelId)
+            .into_tuple::<(String, String, String)>()
+            .all(&self.database)
+            .await?;
+
+        for (provider_id, model_id, model_name) in options {
+            let Some(brand_identifiers) = brands_by_provider.get(&provider_id) else {
+                continue;
+            };
+            for brand_identifier in brand_identifiers {
+                if let Some(brand_options) = options_by_brand.get_mut(brand_identifier) {
+                    brand_options.push(ModelCatalogOption {
+                        model_id: model_id.clone(),
+                        model_name: model_name.clone(),
+                    });
+                }
+            }
+        }
+
+        Ok(options_by_brand)
     }
 
     pub async fn is_models_dev_sync_due(

@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap},
     fmt,
     time::Duration,
 };
@@ -9,8 +9,8 @@ use serde_json::{Map, Number, Value};
 use crate::{
     clients::{ModelsDevCatalogEntry, ModelsDevClient, ModelsDevClientError},
     domain::{
-        AccountRole, ModelCatalogEntry, ModelPriceRates, ModelPriceTier, ModelPricing,
-        usd_per_million_to_nano,
+        AccountRole, ModelCatalogEntry, ModelCatalogOption, ModelPriceRates, ModelPriceTier,
+        ModelPricing, usd_per_million_to_nano,
     },
     repository::{ModelCatalogRepository, NewModelCatalogEntry, RepositoryError},
 };
@@ -98,6 +98,28 @@ impl ModelCatalogService {
                 ModelCatalogServiceError::Internal
             })?
             .ok_or(ModelCatalogServiceError::NotFound)
+    }
+
+    pub async fn list_options(
+        &self,
+        requester_role: AccountRole,
+        brand_identifiers: Vec<String>,
+    ) -> Result<BTreeMap<String, Vec<ModelCatalogOption>>, ModelCatalogServiceError> {
+        require_admin(requester_role, ModelCatalogServiceError::Forbidden)?;
+        let brand_identifiers = brand_identifiers
+            .into_iter()
+            .map(normalize_identifier)
+            .collect::<Result<BTreeSet<_>, _>>()?
+            .into_iter()
+            .collect::<Vec<_>>();
+
+        self.repository
+            .list_options_by_brands(&brand_identifiers)
+            .await
+            .map_err(|error| {
+                tracing::error!(error = %error, "model catalog option list failed");
+                ModelCatalogServiceError::Internal
+            })
     }
 }
 
@@ -304,13 +326,75 @@ fn normalize_model_pricing(
             let cost = cost
                 .as_object()
                 .ok_or(ModelCatalogSyncError::InvalidCatalog)?;
-            pricing
-                .experimental_modes
-                .insert(mode.clone(), price_rates(cost, &[])?);
+            let mode_rates = price_rates(cost, &["context_over_200k", "tiers"])?;
+            let mut mode_tiers = cost
+                .get("tiers")
+                .map(normalize_price_tiers)
+                .transpose()?
+                .unwrap_or_default();
+            if mode_tiers.is_empty() {
+                mode_tiers = derive_mode_price_tiers(&pricing.base, &pricing.tiers, &mode_rates)?;
+            }
+            pricing.experimental_modes.insert(mode.clone(), mode_rates);
+            if !mode_tiers.is_empty() {
+                pricing
+                    .experimental_mode_tiers
+                    .insert(mode.clone(), mode_tiers);
+            }
         }
     }
 
     Ok(pricing)
+}
+
+fn derive_mode_price_tiers(
+    standard_rates: &ModelPriceRates,
+    standard_tiers: &[ModelPriceTier],
+    mode_rates: &ModelPriceRates,
+) -> Result<Vec<ModelPriceTier>, ModelCatalogSyncError> {
+    let mut derived_tiers = Vec::with_capacity(standard_tiers.len());
+    for standard_tier in standard_tiers {
+        let mut rates = ModelPriceRates::new();
+        for (rate, mode_price) in mode_rates {
+            let (Some(standard_price), Some(tier_price)) = (
+                standard_rates.get(rate).copied(),
+                standard_tier.rates.get(rate).copied(),
+            ) else {
+                continue;
+            };
+            let derived = if standard_price == 0 {
+                (tier_price == 0).then_some(*mode_price)
+            } else {
+                multiply_price_ratio(*mode_price, tier_price, standard_price)?
+            };
+            if let Some(derived) = derived {
+                rates.insert(rate.clone(), derived);
+            }
+        }
+        if !rates.is_empty() {
+            derived_tiers.push(ModelPriceTier {
+                tier_type: standard_tier.tier_type.clone(),
+                size: standard_tier.size,
+                rates,
+            });
+        }
+    }
+    Ok(derived_tiers)
+}
+
+fn multiply_price_ratio(
+    value: i64,
+    numerator: i64,
+    denominator: i64,
+) -> Result<Option<i64>, ModelCatalogSyncError> {
+    let scaled = i128::from(value)
+        .checked_mul(i128::from(numerator))
+        .and_then(|product| product.checked_add(i128::from(denominator) / 2))
+        .ok_or(ModelCatalogSyncError::InvalidCatalog)?
+        / i128::from(denominator);
+    i64::try_from(scaled)
+        .map(Some)
+        .map_err(|_| ModelCatalogSyncError::InvalidCatalog)
 }
 
 fn normalize_price_tiers(value: &Value) -> Result<Vec<ModelPriceTier>, ModelCatalogSyncError> {

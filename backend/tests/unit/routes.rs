@@ -134,6 +134,144 @@ async fn merchant_channel_providers_require_a_bearer_token() {
 }
 
 #[tokio::test]
+async fn merchant_channel_model_discovery_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/merchant/channels/discover-models")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"baseUrl":"https://api.example.com/v1","providerId":"openai","apiKey":"secret"}"#,
+                ))
+                .expect("merchant channel discovery request should be valid"),
+        )
+        .await
+        .expect("merchant channel discovery request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn merchant_models_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/merchant/models")
+                .body(Body::empty())
+                .expect("merchant model request should be valid"),
+        )
+        .await
+        .expect("merchant model request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn merchant_model_status_updates_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("PUT")
+                .uri("/api/merchant/models/00000000-0000-4000-8000-000000000001/status")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"status":"offline"}"#))
+                .expect("merchant model status request should be valid"),
+        )
+        .await
+        .expect("merchant model status request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn merchant_model_options_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/merchant/model-options?channelId=00000000-0000-4000-8000-000000000001")
+                .body(Body::empty())
+                .expect("merchant model option request should be valid"),
+        )
+        .await
+        .expect("merchant model option request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn price_settings_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/admin/price-settings")
+                .body(Body::empty())
+                .expect("price settings request should be valid"),
+        )
+        .await
+        .expect("price settings request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn catalog_reviews_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/admin/catalog-reviews?kind=channel")
+                .body(Body::empty())
+                .expect("catalog review request should be valid"),
+        )
+        .await
+        .expect("catalog review request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn catalog_review_connection_test_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(
+                    "/api/admin/catalog-reviews/00000000-0000-4000-8000-000000000001/test-connection",
+                )
+                .body(Body::empty())
+                .expect("catalog review connection request should be valid"),
+        )
+        .await
+        .expect("catalog review connection request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn catalog_review_model_test_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/admin/catalog-reviews/00000000-0000-4000-8000-000000000001/test-model")
+                .body(Body::empty())
+                .expect("catalog review model test request should be valid"),
+        )
+        .await
+        .expect("catalog review model test request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
 async fn brand_presets_require_a_bearer_token() {
     let response = test_router()
         .oneshot(
@@ -192,6 +330,22 @@ async fn model_catalog_list_requires_a_bearer_token() {
         )
         .await
         .expect("model catalog list request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn model_catalog_options_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/admin/model-catalog/options")
+                .body(Body::empty())
+                .expect("model catalog option request should be valid"),
+        )
+        .await
+        .expect("model catalog option request should complete");
 
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);

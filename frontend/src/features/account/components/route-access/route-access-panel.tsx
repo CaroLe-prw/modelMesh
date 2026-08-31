@@ -104,7 +104,7 @@ export function RouteAccessPanel() {
                 {t('pages.account.sections.routeAccess.columns.path')}
               </TableHead>
               {roles.map((role) => (
-                <TableHead className="w-28 text-center" key={role}>
+                <TableHead className="w-28" key={role}>
                   {t(`pages.account.sections.routeAccess.roles.${role}`)}
                 </TableHead>
               ))}

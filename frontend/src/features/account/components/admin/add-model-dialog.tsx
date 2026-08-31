@@ -19,7 +19,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import type { BrandItem } from '@/features/account/api/brands';
-import { listModelCatalog, type ModelCatalogEntry } from '@/features/account/api/model-catalog';
+import {
+  lookupModelCatalog,
+  type ModelCatalogEntry,
+  type ModelCatalogOption,
+} from '@/features/account/api/model-catalog';
 import type { ModelPriceOverride } from '@/features/account/api/models';
 import { BrandAvatar } from '@/features/account/components/admin/brand-avatar';
 import {
@@ -59,8 +63,10 @@ interface ModelFormState {
 
 const MAX_MODELS_PER_BATCH = 100;
 
-type CatalogListState =
-  { status: 'error' | 'idle' | 'loading' } | { entries: ModelCatalogEntry[]; status: 'ready' };
+type CatalogDetailState =
+  | { status: 'idle' }
+  | { brandId: string; modelId: string; status: 'error' | 'loading' }
+  | { brandId: string; entry: ModelCatalogEntry; modelId: string; status: 'ready' };
 
 function createInitialForm(): ModelFormState {
   return {
@@ -77,12 +83,14 @@ export function AddModelDialog({
   brandStatus,
   brands,
   existingModelKeys,
+  modelCatalogOptions,
   onBrandRetry,
   onCreate,
 }: {
   brandStatus: 'error' | 'loading' | 'ready';
   brands: BrandItem[];
   existingModelKeys: string[];
+  modelCatalogOptions: Record<string, ModelCatalogOption[]>;
   onBrandRetry: () => void;
   onCreate: (drafts: NewModelDraft[]) => Promise<void>;
 }) {
@@ -90,9 +98,9 @@ export function AddModelDialog({
   const { setGuest } = useAuth();
   const fieldId = useId();
   const nextCustomTierId = useRef(0);
-  const catalogListController = useRef<AbortController | null>(null);
-  const [catalogList, setCatalogList] = useState<CatalogListState>({ status: 'idle' });
-  const [catalogRefreshVersion, setCatalogRefreshVersion] = useState(0);
+  const catalogDetailController = useRef<AbortController | null>(null);
+  const [catalogDetail, setCatalogDetail] = useState<CatalogDetailState>({ status: 'idle' });
+  const [catalogDetailRefreshVersion, setCatalogDetailRefreshVersion] = useState(0);
   const [errors, setErrors] = useState<ModelFormErrors>({});
   const [customTierErrors, setCustomTierErrors] = useState<CustomPriceTierErrors>({});
   const [priceErrors, setPriceErrors] = useState<Set<string>>(new Set());
@@ -106,19 +114,39 @@ export function AddModelDialog({
     label: brand.name,
     value: brand.id,
   }));
-  const catalogEntries = catalogList.status === 'ready' ? catalogList.entries : [];
-  const catalogOptions = catalogEntries.map((entry) => ({
+  const catalogEntries = form.brandId ? modelCatalogOptions[form.brandId] : undefined;
+  const availableCatalogEntries = catalogEntries ?? [];
+  const catalogOptions = availableCatalogEntries.map((entry) => ({
     description: entry.modelId,
     label: entry.name,
     value: entry.modelId,
   }));
-  const hasOfficialModels = catalogEntries.length > 0;
-  const isCustomPricing = catalogList.status === 'ready' && !hasOfficialModels;
+  const hasOfficialModels = availableCatalogEntries.length > 0;
+  const isCatalogLoading =
+    Boolean(form.brandId) && catalogEntries === undefined && brandStatus === 'loading';
+  const showsCatalogSelector =
+    Boolean(form.brandId) && (catalogEntries === undefined || hasOfficialModels);
+  const isCustomPricing =
+    Boolean(form.brandId) &&
+    brandStatus === 'ready' &&
+    catalogEntries !== undefined &&
+    !hasOfficialModels;
   const selectedCatalogEntries = form.ids
-    .map((id) => catalogEntries.find((entry) => entry.modelId === id))
-    .filter((entry): entry is ModelCatalogEntry => entry !== undefined);
+    .map((id) => availableCatalogEntries.find((entry) => entry.modelId === id))
+    .filter((entry): entry is ModelCatalogOption => entry !== undefined);
+  const selectedModelId = form.ids.length === 1 ? form.ids[0] : undefined;
   const selectedCatalogEntry =
-    selectedCatalogEntries.length === 1 ? selectedCatalogEntries[0] : undefined;
+    catalogDetail.status === 'ready' &&
+    catalogDetail.brandId === form.brandId &&
+    catalogDetail.modelId === selectedModelId
+      ? catalogDetail.entry
+      : undefined;
+  const isCatalogDetailError =
+    catalogDetail.status === 'error' &&
+    catalogDetail.brandId === form.brandId &&
+    catalogDetail.modelId === selectedModelId;
+  const isCatalogDetailPending =
+    Boolean(selectedModelId) && selectedCatalogEntry === undefined && !isCatalogDetailError;
   const usesSharedCatalogPricing = selectedCatalogEntries.length > 1;
   const supportsCustomContextTiers = isCustomPricing || usesSharedCatalogPricing;
   const priceGroups = modelPriceGroups(
@@ -127,45 +155,50 @@ export function AddModelDialog({
   );
   const modelNameHint = hasOfficialModels
     ? 'catalogHint'
-    : catalogList.status === 'ready'
+    : brandStatus === 'ready' && catalogEntries !== undefined
       ? 'manualHint'
       : 'selectHint';
 
   useEffect(() => {
-    if (!open || !form.brandId) {
-      catalogListController.current?.abort();
-      catalogListController.current = null;
-      setCatalogList({ status: 'idle' });
+    if (!open || !form.brandId || !selectedModelId) {
+      catalogDetailController.current?.abort();
+      catalogDetailController.current = null;
+      setCatalogDetail({ status: 'idle' });
       return;
     }
 
     const controller = new AbortController();
-    catalogListController.current?.abort();
-    catalogListController.current = controller;
-    setCatalogList({ status: 'loading' });
+    catalogDetailController.current?.abort();
+    catalogDetailController.current = controller;
+    setCatalogDetail({ brandId: form.brandId, modelId: selectedModelId, status: 'loading' });
 
-    void listModelCatalog(form.brandId, controller.signal)
-      .then((entries) => {
-        if (catalogListController.current !== controller) return;
-        setCatalogList({ entries, status: 'ready' });
+    void lookupModelCatalog(form.brandId, selectedModelId, controller.signal)
+      .then((entry) => {
+        if (catalogDetailController.current !== controller) return;
+        setCatalogDetail({
+          brandId: form.brandId,
+          entry,
+          modelId: selectedModelId,
+          status: 'ready',
+        });
       })
       .catch((error: unknown) => {
-        if (controller.signal.aborted || catalogListController.current !== controller) return;
+        if (controller.signal.aborted || catalogDetailController.current !== controller) return;
         if (error instanceof ApiError && error.status === 401) {
           setGuest();
           setOpen(false);
           return;
         }
-        setCatalogList({ status: 'error' });
+        setCatalogDetail({ brandId: form.brandId, modelId: selectedModelId, status: 'error' });
       })
       .finally(() => {
-        if (catalogListController.current === controller) {
-          catalogListController.current = null;
+        if (catalogDetailController.current === controller) {
+          catalogDetailController.current = null;
         }
       });
 
     return () => controller.abort();
-  }, [catalogRefreshVersion, form.brandId, open, setGuest]);
+  }, [catalogDetailRefreshVersion, form.brandId, open, selectedModelId, setGuest]);
 
   function handleOpenChange(nextOpen: boolean) {
     if (isSubmitting) return;
@@ -174,10 +207,10 @@ export function AddModelDialog({
       setErrors({});
       setCustomTierErrors({});
       setPriceErrors(new Set());
-      setCatalogList({ status: 'idle' });
+      setCatalogDetail({ status: 'idle' });
     } else {
-      catalogListController.current?.abort();
-      catalogListController.current = null;
+      catalogDetailController.current?.abort();
+      catalogDetailController.current = null;
     }
     setOpen(nextOpen);
   }
@@ -192,7 +225,9 @@ export function AddModelDialog({
         : { ...current, [field]: value },
     );
     if (field === 'brandId') {
-      setCatalogList({ status: 'idle' });
+      catalogDetailController.current?.abort();
+      catalogDetailController.current = null;
+      setCatalogDetail({ status: 'idle' });
       setCustomTierErrors({});
       setPriceErrors(new Set());
     }
@@ -458,9 +493,13 @@ export function AddModelDialog({
               <SearchableSelect
                 aria-describedby={errors.brandId ? `${fieldId}-brand-error` : undefined}
                 aria-invalid={errors.brandId ? true : undefined}
-                disabled={brandStatus !== 'ready' || brands.length === 0}
+                disabled={
+                  brandStatus === 'error' || (brandStatus === 'ready' && brands.length === 0)
+                }
                 emptyText={t(`${translationPath}.fields.brand.empty`)}
                 id={`${fieldId}-brand-trigger`}
+                loading={brandStatus === 'loading'}
+                loadingText={t(`${translationPath}.fields.brand.loading`)}
                 name="brandId"
                 onValueChange={(value) => updateField('brandId', value)}
                 options={brandOptions}
@@ -495,15 +534,18 @@ export function AddModelDialog({
               <div className="grid content-start gap-2">
                 <Label htmlFor={`${fieldId}-name`}>
                   {t(
-                    `${translationPath}.fields.name.${hasOfficialModels ? 'batchLabel' : 'label'}`,
+                    `${translationPath}.fields.name.${showsCatalogSelector ? 'batchLabel' : 'label'}`,
                   )}
                 </Label>
-                {catalogList.status === 'ready' && hasOfficialModels ? (
+                {showsCatalogSelector ? (
                   <SearchableMultiSelect
                     aria-describedby={`${fieldId}-name-hint${errors.name ? ` ${fieldId}-name-error` : ''}`}
                     aria-invalid={errors.name ? true : undefined}
+                    disabled={brandStatus === 'error'}
                     emptyText={t(`${translationPath}.catalog.empty`)}
                     id={`${fieldId}-name`}
+                    loading={isCatalogLoading}
+                    loadingText={t(`${translationPath}.catalog.loading`)}
                     maxSelected={MAX_MODELS_PER_BATCH}
                     onValueChange={selectCatalogModels}
                     options={catalogOptions}
@@ -520,16 +562,14 @@ export function AddModelDialog({
                     aria-invalid={errors.name ? true : undefined}
                     autoComplete="off"
                     disabled={
-                      !form.brandId ||
-                      catalogList.status === 'loading' ||
-                      catalogList.status === 'error'
+                      !form.brandId || brandStatus !== 'ready' || catalogEntries === undefined
                     }
                     id={`${fieldId}-name`}
                     maxLength={200}
                     name="name"
                     onChange={(event) => updateField('name', event.target.value)}
                     placeholder={
-                      catalogList.status === 'loading'
+                      isCatalogLoading
                         ? t(`${translationPath}.catalog.loading`)
                         : t(`${translationPath}.fields.name.placeholder`)
                     }
@@ -539,21 +579,6 @@ export function AddModelDialog({
                 <p className="text-xs leading-5 text-muted-foreground" id={`${fieldId}-name-hint`}>
                   {t(`${translationPath}.fields.name.${modelNameHint}`)}
                 </p>
-                {catalogList.status === 'error' && (
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-warning">
-                    <AlertCircle aria-hidden="true" className="size-3.5" />
-                    <span>{t(`${translationPath}.catalog.loadError`)}</span>
-                    <Button
-                      onClick={() => setCatalogRefreshVersion((version) => version + 1)}
-                      size="xs"
-                      type="button"
-                      variant="outline"
-                    >
-                      <RefreshCw aria-hidden="true" />
-                      {t(`${translationPath}.catalog.retry`)}
-                    </Button>
-                  </div>
-                )}
                 {errors.name && (
                   <p className="text-xs text-destructive" id={`${fieldId}-name-error`} role="alert">
                     {errorMessage('name')}
@@ -562,49 +587,80 @@ export function AddModelDialog({
               </div>
             </div>
 
-            <div className="grid gap-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="text-sm font-semibold">{t(`${translationPath}.pricing.title`)}</h3>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    {t(
-                      `${translationPath}.fields.${isCustomPricing ? 'customPriceHint' : usesSharedCatalogPricing ? 'batchPriceHint' : 'priceHint'}`,
-                    )}
-                  </p>
+            {(isCustomPricing || selectedCatalogEntries.length > 0) && (
+              <div className="grid gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold">
+                      {t(`${translationPath}.pricing.title`)}
+                    </h3>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      {t(
+                        `${translationPath}.fields.${isCustomPricing ? 'customPriceHint' : usesSharedCatalogPricing ? 'batchPriceHint' : 'priceHint'}`,
+                      )}
+                    </p>
+                  </div>
+                  {supportsCustomContextTiers && (
+                    <Button onClick={addCustomPriceTier} size="sm" type="button" variant="outline">
+                      <Plus aria-hidden="true" />
+                      {t(`${translationPath}.pricing.addContextTier`)}
+                    </Button>
+                  )}
                 </div>
-                {supportsCustomContextTiers && (
-                  <Button onClick={addCustomPriceTier} size="sm" type="button" variant="outline">
-                    <Plus aria-hidden="true" />
-                    {t(`${translationPath}.pricing.addContextTier`)}
-                  </Button>
+
+                {isCatalogDetailPending ? (
+                  <div
+                    aria-live="polite"
+                    className="flex min-h-24 items-center justify-center gap-2 rounded-xl border border-border text-sm text-muted-foreground"
+                    role="status"
+                  >
+                    <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+                    <span>{t(`${translationPath}.pricing.loading`)}</span>
+                  </div>
+                ) : isCatalogDetailError ? (
+                  <div className="flex min-h-24 flex-wrap items-center justify-center gap-2 rounded-xl border border-border px-4 text-sm text-warning">
+                    <AlertCircle aria-hidden="true" className="size-4" />
+                    <span>{t(`${translationPath}.pricing.loadError`)}</span>
+                    <Button
+                      onClick={() => setCatalogDetailRefreshVersion((version) => version + 1)}
+                      size="xs"
+                      type="button"
+                      variant="outline"
+                    >
+                      <RefreshCw aria-hidden="true" />
+                      {t(`${translationPath}.pricing.retry`)}
+                    </Button>
+                  </div>
+                ) : (
+                  priceGroups.map((priceGroup) => (
+                    <PriceGroupFields
+                      customTierError={
+                        priceGroup.customTierId === undefined
+                          ? undefined
+                          : customTierErrors[priceGroup.customTierId]
+                      }
+                      defaultPricePlaceholder={
+                        usesSharedCatalogPricing
+                          ? t(`${translationPath}.pricing.eachModelDefault`)
+                          : undefined
+                      }
+                      fieldId={fieldId}
+                      group={priceGroup}
+                      key={priceGroup.id}
+                      onChange={updatePriceOverride}
+                      onRemoveCustomTier={removeCustomPriceTier}
+                      onUpdateCustomTier={updateCustomPriceTier}
+                      priceErrors={priceErrors}
+                      currencySymbol="$"
+                      priceUnitLabel={t(`${translationPath}.pricing.perMillion`)}
+                      t={t}
+                      translationPath={translationPath}
+                      values={form.priceOverrides}
+                    />
+                  ))
                 )}
               </div>
-
-              {priceGroups.map((priceGroup) => (
-                <PriceGroupFields
-                  customTierError={
-                    priceGroup.customTierId === undefined
-                      ? undefined
-                      : customTierErrors[priceGroup.customTierId]
-                  }
-                  defaultPricePlaceholder={
-                    usesSharedCatalogPricing
-                      ? t(`${translationPath}.pricing.eachModelDefault`)
-                      : undefined
-                  }
-                  fieldId={fieldId}
-                  group={priceGroup}
-                  key={priceGroup.id}
-                  onChange={updatePriceOverride}
-                  onRemoveCustomTier={removeCustomPriceTier}
-                  onUpdateCustomTier={updateCustomPriceTier}
-                  priceErrors={priceErrors}
-                  t={t}
-                  translationPath={translationPath}
-                  values={form.priceOverrides}
-                />
-              ))}
-            </div>
+            )}
 
             <div className="flex items-center justify-between gap-4 rounded-xl border border-border p-4">
               <div className="min-w-0">
@@ -634,12 +690,7 @@ export function AddModelDialog({
               {t(`${translationPath}.cancel`)}
             </Button>
             <Button
-              disabled={
-                isSubmitting ||
-                catalogList.status === 'loading' ||
-                brandStatus !== 'ready' ||
-                brands.length === 0
-              }
+              disabled={isSubmitting || brandStatus !== 'ready' || brands.length === 0}
               type="submit"
             >
               {isSubmitting ? (
@@ -659,8 +710,10 @@ export function AddModelDialog({
 }
 
 function PriceField({
+  currencySymbol = '$',
   defaultPrice,
   defaultPricePlaceholder,
+  disabled,
   error,
   fieldId,
   label,
@@ -668,8 +721,10 @@ function PriceField({
   onChange,
   value,
 }: {
+  currencySymbol?: string;
   defaultPrice?: number;
   defaultPricePlaceholder?: string;
+  disabled?: boolean;
   error?: string;
   fieldId: string;
   label: string;
@@ -682,12 +737,13 @@ function PriceField({
       <Label htmlFor={fieldId}>{label}</Label>
       <div className="relative">
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-muted-foreground">
-          $
+          {currencySymbol}
         </span>
         <Input
           aria-describedby={error ? `${fieldId}-error` : undefined}
           aria-invalid={error ? true : undefined}
-          className="pl-7 font-mono"
+          className={currencySymbol.length > 1 ? 'pl-11 font-mono' : 'pl-7 font-mono'}
+          disabled={disabled}
           id={fieldId}
           inputMode="decimal"
           min="0"
@@ -696,7 +752,7 @@ function PriceField({
           placeholder={
             defaultPricePlaceholder ?? (defaultPrice === undefined ? '0' : String(defaultPrice))
           }
-          step="0.000001"
+          step="0.00000001"
           type="number"
           value={value}
         />
@@ -711,26 +767,32 @@ function PriceField({
 }
 
 export function PriceGroupFields({
+  currencySymbol,
   customTierError,
   defaultPricePlaceholder,
+  disabled,
   fieldId,
   group,
   onChange,
   onRemoveCustomTier,
   onUpdateCustomTier,
   priceErrors,
+  priceUnitLabel,
   t,
   translationPath,
   values,
 }: {
+  currencySymbol?: string;
   customTierError?: CustomPriceTierError;
   defaultPricePlaceholder?: string;
+  disabled?: boolean;
   fieldId: string;
   group: PriceGroupView;
   onChange: (key: string, value: string) => void;
   onRemoveCustomTier: (id: number) => void;
   onUpdateCustomTier: (id: number, threshold: string) => void;
   priceErrors: Set<string>;
+  priceUnitLabel?: string;
   t: TFunction;
   translationPath: string;
   values: Record<string, string>;
@@ -744,11 +806,14 @@ export function PriceGroupFields({
         <strong className="text-sm">{priceGroupTitle(group, t, translationPath)}</strong>
         <div className="flex items-center gap-2">
           {group.group.type !== 'base' && (
-            <Badge variant="secondary">{t(`${translationPath}.pricing.perMillion`)}</Badge>
+            <Badge variant="secondary">
+              {priceUnitLabel ?? t(`${translationPath}.pricing.perMillion`)}
+            </Badge>
           )}
           {customTierId !== undefined && (
             <Button
               aria-label={t(`${translationPath}.pricing.removeContextTier`)}
+              disabled={disabled}
               onClick={() => onRemoveCustomTier(customTierId)}
               size="icon"
               type="button"
@@ -773,6 +838,7 @@ export function PriceGroupFields({
               }
               aria-invalid={customTierError ? true : undefined}
               className="pr-16 font-mono"
+              disabled={disabled}
               id={thresholdFieldId}
               inputMode="numeric"
               min="1"
@@ -804,8 +870,10 @@ export function PriceGroupFields({
             : undefined;
           return (
             <PriceField
+              currencySymbol={currencySymbol}
               defaultPrice={group.rates[rate]}
               defaultPricePlaceholder={defaultPricePlaceholder}
+              disabled={disabled}
               error={error}
               fieldId={priceFieldId(fieldId, key)}
               key={key}
@@ -877,7 +945,24 @@ function priceGroupTitle(groupView: PriceGroupView, t: TFunction, translationPat
         type: group.tierType,
       });
     case 'experimentalMode':
+      if (maximumInclusive !== undefined) {
+        return t(`${translationPath}.pricing.groups.experimentalModeUntil`, {
+          maximum: formatTokenThreshold(maximumInclusive),
+          mode: group.mode,
+        });
+      }
       return t(`${translationPath}.pricing.groups.experimentalMode`, { mode: group.mode });
+    case 'experimentalModeTier':
+      return maximumInclusive === undefined
+        ? t(`${translationPath}.pricing.groups.experimentalModeTier`, {
+            minimum: formatTokenThreshold(group.size),
+            mode: group.mode,
+          })
+        : t(`${translationPath}.pricing.groups.experimentalModeRange`, {
+            maximum: formatTokenThreshold(maximumInclusive),
+            minimum: formatTokenThreshold(group.size),
+            mode: group.mode,
+          });
     case 'serviceTier':
       return t(`${translationPath}.pricing.groups.serviceTier`, { tier: group.tier });
   }

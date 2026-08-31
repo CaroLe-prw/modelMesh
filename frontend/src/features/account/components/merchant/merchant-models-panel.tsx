@@ -1,10 +1,13 @@
-import { Boxes, Plus, Search, SlidersHorizontal } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Boxes, PauseCircle, PlayCircle, Plus, SlidersHorizontal } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import {
+  ManagementList,
+  type ManagementListColumn,
+  type ManagementListState,
+} from '@/components/common/management-list';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -13,224 +16,556 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  listMerchantChannels,
+  type MerchantChannel,
+} from '@/features/account/api/merchant-channels';
 import {
-  formatMerchantDate,
-  formatUsd,
-  merchantModels,
+  clearMerchantModelOptionsCache,
+  createMerchantModel,
+  deleteMerchantModel,
+  listMerchantModels,
+  preloadMerchantModelOptions,
+  updateMerchantModel,
+  updateMerchantModelStatus,
   type MerchantModel,
+  type MerchantModelDraft,
+  type MerchantModelReviewStatus,
   type MerchantModelStatus,
+} from '@/features/account/api/merchant-models';
+import { MerchantModelDialog } from '@/features/account/components/merchant/merchant-model-dialog';
+import {
+  formatMerchantCurrency,
+  formatMerchantDate,
 } from '@/features/account/components/merchant/merchant-demo-data';
 import { MerchantStatusBadge } from '@/features/account/components/merchant/merchant-status-badge';
+import { useAuth } from '@/features/auth/context/auth-context';
+import { ApiError } from '@/lib/api-client';
+import { API_ERROR_CODE } from '@/lib/api-error-codes';
 
 type ModelStatusFilter = 'all' | MerchantModelStatus;
-const modelStatusFilters: ModelStatusFilter[] = ['all', 'published', 'review', 'draft'];
+type ModelReviewStatusFilter = 'all' | MerchantModelReviewStatus;
+const modelStatusFilters: ModelStatusFilter[] = ['all', 'published', 'offline'];
+const modelReviewStatusFilters: ModelReviewStatusFilter[] = [
+  'all',
+  'pending',
+  'approved',
+  'rejected',
+];
+
+function merchantModelErrorKey(error: unknown, fallback: string): string {
+  if (!(error instanceof ApiError)) return fallback;
+
+  switch (error.code) {
+    case API_ERROR_CODE.INVALID_MERCHANT_MODEL:
+      return 'pages.account.sections.merchant.models.feedback.invalid';
+    case API_ERROR_CODE.MERCHANT_MODEL_ALREADY_EXISTS:
+      return 'pages.account.sections.merchant.models.feedback.duplicate';
+    case API_ERROR_CODE.MERCHANT_MODEL_NOT_FOUND:
+      return 'pages.account.sections.merchant.models.feedback.notFound';
+    case API_ERROR_CODE.MERCHANT_MODEL_PROVIDER_MISMATCH:
+      return 'pages.account.sections.merchant.models.feedback.providerMismatch';
+    case API_ERROR_CODE.MERCHANT_MODEL_PRICE_SETTINGS_CHANGED:
+      return 'pages.account.sections.merchant.models.feedback.priceSettingsChanged';
+    case API_ERROR_CODE.MERCHANT_CHANNEL_NOT_FOUND:
+      return 'pages.account.sections.merchant.models.feedback.channelNotFound';
+    case API_ERROR_CODE.MERCHANT_CHANNEL_PENDING_REVIEW:
+      return 'pages.account.sections.merchant.models.feedback.channelPendingReview';
+    case API_ERROR_CODE.MODEL_NOT_FOUND:
+      return 'pages.account.sections.merchant.models.feedback.modelNotFound';
+    default:
+      return fallback;
+  }
+}
 
 export function MerchantModelsPanel() {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
+  const { setGuest } = useAuth();
+  const [models, setModels] = useState<MerchantModel[]>([]);
+  const [channels, setChannels] = useState<MerchantChannel[]>([]);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<ModelStatusFilter>('all');
+  const [reviewStatus, setReviewStatus] = useState<ModelReviewStatusFilter>('all');
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [isMutating, setIsMutating] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingModel, setEditingModel] = useState<MerchantModel | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    setIsLoading(true);
+    setLoadError(false);
+    const channelsRequest = listMerchantChannels(controller.signal).then((channelItems) => {
+      const approvedChannels = channelItems.filter(
+        (channel) => channel.status === 'active' || channel.status === 'offline',
+      );
+      preloadMerchantModelOptions(approvedChannels.map((channel) => channel.id));
+      return approvedChannels;
+    });
+    void Promise.all([listMerchantModels(controller.signal), channelsRequest])
+      .then(([modelItems, channelItems]) => {
+        if (!active) return;
+        setModels(modelItems);
+        setChannels(channelItems);
+      })
+      .catch((error: unknown) => {
+        if (!active || (error instanceof DOMException && error.name === 'AbortError')) return;
+        if (error instanceof ApiError && error.status === 401) {
+          setGuest();
+          return;
+        }
+        setLoadError(true);
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [refreshVersion, setGuest]);
+
+  useEffect(() => {
+    if (channels.length === 0) return;
+    preloadMerchantModelOptions(channels.map((channel) => channel.id));
+  }, [channels]);
+
   const visibleModels = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
-
-    return merchantModels.filter((model) => {
+    return models.filter((model) => {
       const matchesQuery =
         normalizedQuery.length === 0 ||
-        model.model.toLocaleLowerCase().includes(normalizedQuery) ||
-        model.channel.toLocaleLowerCase().includes(normalizedQuery);
-      return matchesQuery && (status === 'all' || model.status === status);
+        model.modelIdentifier.toLocaleLowerCase().includes(normalizedQuery) ||
+        model.modelName.toLocaleLowerCase().includes(normalizedQuery) ||
+        model.channelName.toLocaleLowerCase().includes(normalizedQuery);
+      return (
+        matchesQuery &&
+        (status === 'all' || model.status === status) &&
+        (reviewStatus === 'all' || model.reviewStatus === reviewStatus)
+      );
     });
-  }, [query, status]);
+  }, [models, query, reviewStatus, status]);
 
-  function showPreviewNotice() {
-    toast.info(t('pages.account.sections.merchant.previewAction'));
+  const handleUnauthenticated = useCallback(() => setGuest(), [setGuest]);
+
+  function reload() {
+    clearMerchantModelOptionsCache();
+    setRefreshVersion((version) => version + 1);
   }
+
+  function openCreateDialog() {
+    setEditingModel(null);
+    setEditorOpen(true);
+  }
+
+  function openManageDialog(model: MerchantModel) {
+    setEditingModel(model);
+    setEditorOpen(true);
+  }
+
+  async function handleSave(draft: MerchantModelDraft): Promise<void> {
+    setIsMutating(true);
+    try {
+      if (editingModel) {
+        const updated = await updateMerchantModel(editingModel.id, draft);
+        setModels((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+        toast.success(
+          t(
+            updated.pendingPrice && updated.reviewStatus === 'pending'
+              ? 'pages.account.sections.merchant.models.feedback.priceReviewSubmitted'
+              : updated.reviewStatus === 'pending'
+                ? 'pages.account.sections.merchant.models.feedback.resubmitted'
+                : 'pages.account.sections.merchant.models.feedback.priceUpdated',
+          ),
+        );
+      } else {
+        const created = await createMerchantModel(draft);
+        setModels((current) => [created, ...current]);
+        clearMerchantModelOptionsCache();
+        toast.success(t('pages.account.sections.merchant.models.feedback.created'));
+      }
+    } catch (error: unknown) {
+      if (error instanceof ApiError && error.status === 401) setGuest();
+      toast.error(
+        t(
+          merchantModelErrorKey(
+            error,
+            editingModel
+              ? 'pages.account.sections.merchant.models.feedback.updateError'
+              : 'pages.account.sections.merchant.models.feedback.createError',
+          ),
+        ),
+      );
+      throw error;
+    } finally {
+      setIsMutating(false);
+    }
+  }
+
+  async function handleDelete(model: MerchantModel): Promise<void> {
+    setIsMutating(true);
+    try {
+      await deleteMerchantModel(model.id);
+      setModels((current) => current.filter((item) => item.id !== model.id));
+      clearMerchantModelOptionsCache();
+      toast.success(t('pages.account.sections.merchant.models.feedback.deleted'));
+    } catch (error: unknown) {
+      if (error instanceof ApiError && error.status === 401) setGuest();
+      toast.error(
+        t(
+          merchantModelErrorKey(
+            error,
+            'pages.account.sections.merchant.models.feedback.deleteError',
+          ),
+        ),
+      );
+      throw error;
+    } finally {
+      setIsMutating(false);
+    }
+  }
+
+  async function handleToggleStatus(model: MerchantModel): Promise<void> {
+    const nextStatus = model.status === 'offline' ? 'published' : 'offline';
+    setIsMutating(true);
+    try {
+      const updated = await updateMerchantModelStatus(model.id, nextStatus);
+      setModels((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      toast.success(
+        t(
+          nextStatus === 'published'
+            ? 'pages.account.sections.merchant.models.feedback.published'
+            : 'pages.account.sections.merchant.models.feedback.unpublished',
+        ),
+      );
+    } catch (error: unknown) {
+      if (error instanceof ApiError && error.status === 401) setGuest();
+      toast.error(
+        t(
+          merchantModelErrorKey(
+            error,
+            'pages.account.sections.merchant.models.feedback.statusUpdateError',
+          ),
+        ),
+      );
+    } finally {
+      setIsMutating(false);
+    }
+  }
+
+  const initialLoading = isLoading && models.length === 0;
+  const listState: ManagementListState = initialLoading
+    ? {
+        label: t('pages.account.sections.merchant.models.loading'),
+        status: 'loading',
+      }
+    : loadError
+      ? {
+          label: t('pages.account.sections.merchant.models.loadError'),
+          onRetry: reload,
+          retryLabel: t('pages.account.sections.merchant.models.retry'),
+          status: 'error',
+        }
+      : { status: 'ready' };
+  const columns: ManagementListColumn<MerchantModel>[] = [
+    {
+      className: 'min-w-48 px-4',
+      hideable: false,
+      key: 'model',
+      label: t('pages.account.sections.merchant.models.columns.model'),
+      mobile: false,
+      render: (model) => (
+        <div className="min-w-0">
+          <strong className="block truncate font-mono text-xs">{model.modelIdentifier}</strong>
+          <span className="mt-1 block truncate text-xs text-muted-foreground">
+            {model.modelName}
+          </span>
+        </div>
+      ),
+    },
+    {
+      className: 'min-w-44 text-xs text-muted-foreground',
+      hideable: false,
+      key: 'channel',
+      label: t('pages.account.sections.merchant.models.columns.channel'),
+      mobile: false,
+      render: (model) => model.channelName,
+    },
+    {
+      className: 'font-mono',
+      key: 'context',
+      label: t('pages.account.sections.merchant.models.columns.context'),
+      render: (model) => formatContextWindow(model.contextWindow),
+    },
+    {
+      className: 'font-mono text-xs',
+      key: 'inputPrice',
+      label: t('pages.account.sections.merchant.models.columns.inputPrice'),
+      render: (model) => (
+        <ModelPriceCell kind="input" language={i18n.resolvedLanguage} model={model} />
+      ),
+    },
+    {
+      className: 'font-mono text-xs',
+      key: 'outputPrice',
+      label: t('pages.account.sections.merchant.models.columns.outputPrice'),
+      render: (model) => (
+        <ModelPriceCell kind="output" language={i18n.resolvedLanguage} model={model} />
+      ),
+    },
+    {
+      key: 'status',
+      label: t('pages.account.sections.merchant.models.columns.status'),
+      render: (model) => <MerchantStatusBadge namespace="models" status={model.status} />,
+    },
+    {
+      key: 'reviewStatus',
+      label: t('pages.account.sections.merchant.models.columns.reviewStatus'),
+      render: (model) => <MerchantStatusBadge namespace="models" status={model.reviewStatus} />,
+    },
+    {
+      className: 'min-w-56',
+      hideable: false,
+      key: 'reviewIssue',
+      label: t('pages.account.sections.merchant.models.columns.reviewIssue'),
+      mobile: { className: 'col-span-2' },
+      render: (model) =>
+        model.reviewStatus === 'rejected' && model.reviewNote ? (
+          <span className="block whitespace-normal text-xs leading-5 text-destructive">
+            {model.reviewNote}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      className: 'min-w-44 font-mono text-xs text-muted-foreground',
+      key: 'updatedAt',
+      label: t('pages.account.sections.merchant.models.columns.updatedAt'),
+      render: (model) => formatMerchantDate(i18n.resolvedLanguage, model.updatedAt),
+    },
+    {
+      className: 'w-36 min-w-36 text-center',
+      hideable: false,
+      key: 'actions',
+      label: t('pages.account.sections.merchant.models.columns.actions'),
+      mobile: false,
+      render: (model) => (
+        <ModelActions
+          disabled={isMutating}
+          model={model}
+          onManage={openManageDialog}
+          onToggleStatus={(item) => void handleToggleStatus(item)}
+        />
+      ),
+    },
+  ];
 
   return (
     <div className="grid min-w-0 gap-3">
-      <Card className="gap-0 py-0 shadow-sm">
-        <div className="flex flex-col gap-3 p-4 md:flex-row md:items-center">
-          <div className="relative min-w-0 flex-1">
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              aria-label={t('pages.account.sections.merchant.models.search')}
-              className="pl-9"
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={t('pages.account.sections.merchant.models.search')}
-              value={query}
+      <ManagementList
+        caption={t('pages.account.sections.merchant.models.caption')}
+        columns={columns}
+        disabled={isMutating}
+        emptyIcon={Boxes}
+        emptyText={t('pages.account.sections.merchant.models.empty')}
+        items={visibleModels}
+        mobileHeader={(model) => (
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <strong className="block truncate font-mono text-sm">{model.modelIdentifier}</strong>
+              <span className="mt-1 block truncate text-xs text-muted-foreground">
+                {model.channelName}
+              </span>
+            </div>
+            <ModelActions
+              disabled={isMutating}
+              model={model}
+              onManage={openManageDialog}
+              onToggleStatus={(item) => void handleToggleStatus(item)}
             />
           </div>
-          <Select onValueChange={(value) => setStatus(value as ModelStatusFilter)} value={status}>
-            <SelectTrigger
-              aria-label={t('pages.account.sections.merchant.models.statusFilter')}
-              className="w-full md:w-44"
+        )}
+        rowKey="id"
+        selection={false}
+        state={listState}
+        toolbar={{
+          filters: (
+            <div className="grid w-full gap-2 sm:grid-cols-2 md:flex md:w-auto">
+              <Select
+                disabled={isMutating}
+                onValueChange={(value) => setStatus(value as ModelStatusFilter)}
+                value={status}
+              >
+                <SelectTrigger
+                  aria-label={t('pages.account.sections.merchant.models.statusFilter')}
+                  className="w-full md:w-40"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {modelStatusFilters.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {t(`pages.account.sections.merchant.models.statuses.${value}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                disabled={isMutating}
+                onValueChange={(value) => setReviewStatus(value as ModelReviewStatusFilter)}
+                value={reviewStatus}
+              >
+                <SelectTrigger
+                  aria-label={t('pages.account.sections.merchant.models.reviewStatusFilter')}
+                  className="w-full md:w-40"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {modelReviewStatusFilters.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {t(`pages.account.sections.merchant.models.reviewStatuses.${value}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ),
+          isRefreshing: isLoading,
+          onQueryChange: setQuery,
+          onRefresh: reload,
+          placeholder: t('pages.account.sections.merchant.models.search'),
+          primaryAction: (
+            <Button
+              className="flex-1 md:flex-none"
+              disabled={isMutating}
+              onClick={openCreateDialog}
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {modelStatusFilters.map((value) => (
-                <SelectItem key={value} value={value}>
-                  {t(`pages.account.sections.merchant.models.statuses.${value}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button onClick={showPreviewNotice}>
-            <Plus aria-hidden="true" />
-            {t('pages.account.sections.merchant.models.add')}
-          </Button>
-        </div>
-      </Card>
+              <Plus aria-hidden="true" />
+              {t('pages.account.sections.merchant.models.add')}
+            </Button>
+          ),
+          query,
+        }}
+      />
 
-      <Card className="hidden gap-0 overflow-hidden py-0 shadow-sm md:flex">
-        <Table>
-          <TableCaption className="sr-only">
-            {t('pages.account.sections.merchant.models.caption')}
-          </TableCaption>
-          <TableHeader className="bg-secondary/55">
-            <TableRow className="hover:bg-secondary/55">
-              <TableHead className="h-12 min-w-48 px-4">
-                {t('pages.account.sections.merchant.models.columns.model')}
-              </TableHead>
-              <TableHead className="min-w-44">
-                {t('pages.account.sections.merchant.models.columns.channel')}
-              </TableHead>
-              <TableHead>{t('pages.account.sections.merchant.models.columns.context')}</TableHead>
-              <TableHead>
-                {t('pages.account.sections.merchant.models.columns.inputPrice')}
-              </TableHead>
-              <TableHead>
-                {t('pages.account.sections.merchant.models.columns.outputPrice')}
-              </TableHead>
-              <TableHead>{t('pages.account.sections.merchant.models.columns.status')}</TableHead>
-              <TableHead className="min-w-44">
-                {t('pages.account.sections.merchant.models.columns.updatedAt')}
-              </TableHead>
-              <TableHead className="w-20 text-right">
-                {t('pages.account.sections.merchant.models.columns.actions')}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {visibleModels.map((model) => (
-              <ModelTableRow key={model.id} model={model} onManage={showPreviewNotice} />
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+      <MerchantModelDialog
+        channels={channels}
+        disabled={isMutating}
+        existingModels={models}
+        model={editingModel}
+        onDelete={handleDelete}
+        onOpenChange={setEditorOpen}
+        onSave={handleSave}
+        onUnauthenticated={handleUnauthenticated}
+        open={editorOpen}
+      />
+    </div>
+  );
+}
 
-      <div className="grid gap-3 md:hidden">
-        {visibleModels.map((model) => (
-          <ModelMobileCard key={model.id} model={model} onManage={showPreviewNotice} />
-        ))}
-      </div>
+const modelActionClassName =
+  'h-auto min-w-12 flex-col gap-1 px-2 py-1.5 text-muted-foreground hover:bg-primary/8 hover:text-primary';
 
-      {visibleModels.length === 0 ? (
-        <Card className="items-center gap-0 border-dashed px-6 py-14 text-center shadow-sm">
-          <Boxes aria-hidden="true" className="size-6 text-muted-foreground" />
-          <strong className="mt-4 text-sm">
-            {t('pages.account.sections.merchant.models.empty')}
-          </strong>
-        </Card>
+function ModelActions({
+  disabled,
+  model,
+  onManage,
+  onToggleStatus,
+}: {
+  disabled: boolean;
+  model: MerchantModel;
+  onManage: (model: MerchantModel) => void;
+  onToggleStatus: (model: MerchantModel) => void;
+}) {
+  const { t } = useTranslation();
+  const translationPath = 'pages.account.sections.merchant.models.actions';
+  const labelPath = 'pages.account.sections.merchant.models.actionLabels';
+  const isOffline = model.status === 'offline';
+  const statusAction = isOffline ? 'publish' : 'unpublish';
+
+  return (
+    <div className="flex items-center justify-end gap-0.5 md:justify-center">
+      <Button
+        aria-label={t(`${translationPath}.manage`, { name: model.modelIdentifier })}
+        className={modelActionClassName}
+        disabled={disabled}
+        onClick={() => onManage(model)}
+        title={t(`${translationPath}.manage`, { name: model.modelIdentifier })}
+        type="button"
+        variant="ghost"
+      >
+        <SlidersHorizontal aria-hidden="true" />
+        <span className="text-[11px] leading-none">{t(`${labelPath}.manage`)}</span>
+      </Button>
+
+      {model.hasApprovedPrice ? (
+        <Button
+          aria-label={t(`${translationPath}.${statusAction}`, { name: model.modelIdentifier })}
+          className={modelActionClassName}
+          disabled={disabled}
+          onClick={() => onToggleStatus(model)}
+          title={t(`${translationPath}.${statusAction}`, { name: model.modelIdentifier })}
+          type="button"
+          variant="ghost"
+        >
+          {isOffline ? <PlayCircle aria-hidden="true" /> : <PauseCircle aria-hidden="true" />}
+          <span className="text-[11px] leading-none">{t(`${labelPath}.${statusAction}`)}</span>
+        </Button>
       ) : null}
-      <p className="px-1 text-xs leading-5 text-muted-foreground">
-        {t('pages.account.sections.merchant.previewNotice')}
-      </p>
     </div>
   );
 }
 
-function ModelTableRow({ model, onManage }: { model: MerchantModel; onManage: () => void }) {
-  const { i18n, t } = useTranslation();
+function ModelPriceCell({
+  kind,
+  language,
+  model,
+}: {
+  kind: 'input' | 'output';
+  language: string | undefined;
+  model: MerchantModel;
+}) {
+  const { t } = useTranslation();
+  const current = kind === 'input' ? model.inputPrice : model.outputPrice;
+  const pending = model.pendingPrice
+    ? kind === 'input'
+      ? model.pendingPrice.inputPrice
+      : model.pendingPrice.outputPrice
+    : null;
 
   return (
-    <TableRow className="h-16">
-      <TableCell className="px-4 font-mono text-xs font-semibold">{model.model}</TableCell>
-      <TableCell className="text-xs text-muted-foreground">{model.channel}</TableCell>
-      <TableCell className="font-mono">{model.contextWindow}</TableCell>
-      <TableCell className="font-mono text-xs">
-        {formatUsd(i18n.resolvedLanguage, model.inputPrice)}
-      </TableCell>
-      <TableCell className="font-mono text-xs">
-        {formatUsd(i18n.resolvedLanguage, model.outputPrice)}
-      </TableCell>
-      <TableCell>
-        <MerchantStatusBadge namespace="models" status={model.status} />
-      </TableCell>
-      <TableCell className="font-mono text-xs text-muted-foreground">
-        {formatMerchantDate(i18n.resolvedLanguage, model.updatedAt)}
-      </TableCell>
-      <TableCell className="text-right">
-        <Button
-          aria-label={t('pages.account.sections.merchant.models.manageLabel', {
-            name: model.model,
-          })}
-          onClick={onManage}
-          size="icon-sm"
-          variant="ghost"
-        >
-          <SlidersHorizontal aria-hidden="true" />
-        </Button>
-      </TableCell>
-    </TableRow>
-  );
-}
-
-function ModelMobileCard({ model, onManage }: { model: MerchantModel; onManage: () => void }) {
-  const { i18n, t } = useTranslation();
-
-  return (
-    <Card className="gap-4 p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <strong className="block truncate font-mono text-sm">{model.model}</strong>
-          <span className="mt-1 block text-xs text-muted-foreground">{model.channel}</span>
-        </div>
-        <Button
-          aria-label={t('pages.account.sections.merchant.models.manageLabel', {
-            name: model.model,
-          })}
-          onClick={onManage}
-          size="icon-sm"
-          variant="ghost"
-        >
-          <SlidersHorizontal aria-hidden="true" />
-        </Button>
-      </div>
-      <MerchantStatusBadge namespace="models" status={model.status} />
-      <dl className="grid grid-cols-3 gap-3 rounded-lg bg-secondary/45 p-3 text-xs">
-        <ModelMetric
-          label={t('pages.account.sections.merchant.models.columns.context')}
-          value={model.contextWindow}
-        />
-        <ModelMetric
-          label={t('pages.account.sections.merchant.models.columns.inputPrice')}
-          value={formatUsd(i18n.resolvedLanguage, model.inputPrice)}
-        />
-        <ModelMetric
-          label={t('pages.account.sections.merchant.models.columns.outputPrice')}
-          value={formatUsd(i18n.resolvedLanguage, model.outputPrice)}
-        />
-      </dl>
-    </Card>
-  );
-}
-
-function ModelMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="mt-1 break-all font-mono font-semibold">{value}</dd>
+    <div className="min-w-28">
+      <span className="block font-mono text-xs">
+        {formatMerchantCurrency(language, current, model.priceCurrency)}
+      </span>
+      {pending === null || !model.pendingPrice ? null : (
+        <span className="mt-1 block whitespace-normal text-[11px] leading-4 text-warning">
+          {t(
+            model.pendingPrice.effectiveAt
+              ? 'pages.account.sections.merchant.models.priceChange.scheduled'
+              : model.reviewStatus === 'rejected'
+                ? 'pages.account.sections.merchant.models.priceChange.rejected'
+                : 'pages.account.sections.merchant.models.priceChange.pending',
+            {
+              date: model.pendingPrice.effectiveAt
+                ? formatMerchantDate(language, model.pendingPrice.effectiveAt)
+                : '',
+              price: formatMerchantCurrency(language, pending, model.pendingPrice.priceCurrency),
+            },
+          )}
+        </span>
+      )}
     </div>
   );
+}
+
+function formatContextWindow(value: number): string {
+  if (value >= 1_000_000) return `${Number((value / 1_000_000).toFixed(2))}M`;
+  if (value >= 1_000) return `${Number((value / 1_000).toFixed(2))}K`;
+  return String(value);
 }

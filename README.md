@@ -38,13 +38,33 @@ initial retry delay can be configured with the `MODELMESH_MODELS_DEV_*` variable
 preserves each upstream model object and converts the complete models.dev
 cost structure into fixed-point prices in PostgreSQL, including input, output, reasoning,
 cache-read, cache-write, audio input/output, legacy `context_over_200k`, every context tier, and
-experimental-mode prices. The administrator form renders these groups dynamically and can also
-store custom context tiers. Created models keep synchronized defaults and manual overrides
+experimental-mode prices with their own context tiers. When an upstream mode only publishes its
+short-context rates, the backend derives its longer-context rates from the matching standard tier
+ratios. The administrator form renders these groups dynamically and can also store custom context
+tiers. Created models keep synchronized defaults and manual overrides
 separately: blank fields read `default_pricing_nano_usd` and follow later catalog refreshes, while
 entered values read `pricing_overrides_nano_usd` and remain fixed until an administrator changes
 them. Custom models store their administrator-maintained baseline directly in
 `default_pricing_nano_usd`. Customer-facing model responses use the effective merged price book
 from the `models` table and do not depend on a live models.dev lookup.
+Merchant provider channels keep their HTTPS base URL, description, and discovered model IDs in
+PostgreSQL. Provider API keys are encrypted with AES-256-GCM before persistence and are never
+returned by the API. Production deployments must set a stable
+`MODELMESH_PROVIDER_CREDENTIAL_SECRET` of at least 32 characters; losing or rotating it without a
+credential migration makes existing provider keys unreadable. Development has an explicit
+local-only default so existing setup commands keep working. Model discovery runs through the
+backend with bounded timeouts, redirects disabled, and private network destinations blocked.
+Administrators maintain a platform-wide set of supported pricing currencies and fixed rates,
+each expressed as `1 USD = N price-currency units`. The synchronized model catalog remains an
+unmodified USD source. USD is always present as the non-removable default at rate `1`; when no
+additional currency is configured, it is the merchant's only available choice. Merchant listing
+forms let the merchant choose one configured currency and either keep the numeric values at `1:1`
+or convert the complete source price book with the administrator-maintained fixed rate. The
+merchant can then apply a sales multiplier or per-rate overrides, and the backend normalizes the
+saved listing back to USD with checked fixed-point arithmetic. `1:1` is the default and changing
+the currency only changes the unit; fixed-rate submissions must still match the current
+administrator configuration, so stale forms are rejected and refreshed. The customer-facing
+contract therefore stays in USD and never depends on a live exchange-rate provider.
 
 `MODELMESH_ENVIRONMENT=development` and `test` write structured logs only to the console.
 Development additionally enables SeaORM database query logs at the `info` level.
@@ -93,30 +113,104 @@ operation.
 Merchant and administrator accounts also receive database-controlled merchant routes for the
 operations dashboard, channels, model listings, usage logs, withdrawal requests, business
 requests, merchant profile, and support tickets. Channel management is persisted in PostgreSQL and
-scoped to the authenticated merchant account; the remaining merchant screens currently provide
-responsive UI preview data.
+scoped to the authenticated merchant account. Model listings are also persisted and owner-scoped;
+the remaining merchant screens currently provide responsive UI preview data.
 
 Merchant channels are managed through:
 
 - `GET /api/merchant/channel-providers`
 - `GET /api/merchant/channels`
 - `POST /api/merchant/channels`
-- `PUT /api/merchant/channels/{channel_id}`
-- `DELETE /api/merchant/channels/{channel_id}`
+- `PUT /api/merchant/channels/{id}`
+- `DELETE /api/merchant/channels/{id}`
+
+Channel responses keep an internal UUID in `id` for mutations and relationships, and expose a
+separate auto-incrementing `channelId` for display and search. Deleted channel numbers are not
+reused.
+
+Channel model selection keeps `availableModels` (the complete discovered or manually entered
+option set) separate from `supportedModels` (the enabled subset). Create and update requests accept
+both fields, and the backend always merges enabled models into the available set for compatibility
+with older clients that omit `availableModels`.
 
 Channel names are unique per merchant, ignoring case. The provider picker is sourced from active
 brands configured by an administrator, and create/update requests reference the selected
 `providerId`; arbitrary provider names are rejected. Existing channels keep their provider
 association when an administrator hides that brand, so merchants can still take them offline or
-delete them. Merchant writes can set a channel to `active` or `offline`; `degraded` is reserved for
-health-check output. Provider credentials are not accepted by this contract and must not be stored
-by the frontend.
+delete them. Merchant channels use one status field with four values: `pending`, `rejected`,
+`offline`, and `active`. New channels and material edits enter `pending`; approval changes them to
+`active`, while rejection changes them to `rejected`. Approved channels can then be switched
+between `active` and `offline`. After approval, the channel name, provider, and description are
+immutable; connection credentials, base URL, supported models, and runtime status remain editable
+without another review. The catalog review API derives its `approved` filter from both approved
+channel states.
+
+Merchant model listings are managed through:
+
+- `GET /api/merchant/model-options?channelId={channel_id}`
+- `GET /api/merchant/models`
+- `POST /api/merchant/models`
+- `PUT /api/merchant/models/{listing_id}`
+- `PUT /api/merchant/models/{listing_id}/status`
+- `DELETE /api/merchant/models/{listing_id}`
+
+Administrator pricing settings are managed through:
+
+- `GET /api/admin/price-settings`
+- `PUT /api/admin/price-settings`
+
+Each listing joins one owned channel to one published administrator model. The channel provider and
+model brand must match, the context window is inherited from the administrator model, and a channel
+cannot list the same model twice. Each listing persists integer USD nano-unit values per million
+tokens. The administrator's pricing configuration always contains USD and can additionally include
+any subset of CNY (RMB), EUR, GBP, JPY, HKD, SGD, AUD, CAD, KRW, and USDT, with one manually
+controlled fixed rate per configured currency. The listing form inherits
+the administrator model's complete pricing shape,
+including base input/output, cache rates, context tiers, experimental modes such as `fast`, and
+service tiers. Merchants choose either `parity` conversion, which keeps entered numbers unchanged
+across currencies, or `fixedRate` conversion, which uses the administrator's current rate. They can
+apply one sales-price multiplier to recalculate every supported rate, then optionally fine-tune
+individual prices before saving. Create and update requests carry the conversion mode and displayed
+rate snapshot; removed currencies and stale fixed rates are rejected, and the frontend refreshes
+the price book before a retry. A listing now has an independent runtime status (`published` or
+`offline`) and review status (`pending`, `approved`, or `rejected`). Creating a listing starts an
+initial review while the runtime status remains `offline`. After the first approval, editing the
+price never removes the model or changes its runtime status. The administrator configures a global
+price-increase threshold and an approval-to-effective delay through the price-settings API. A
+decrease or an increase at or below the threshold applies immediately. An increase above the
+threshold is stored separately as a proposed price while the current approved price continues to
+serve traffic. Approval schedules the proposed price for the configured number of hours; a zero
+delay applies it immediately. Until the effective time, administrators can correct the decision and
+merchants can see both the current and proposed prices. Approved listings can be switched between
+`published` and `offline` without deleting channel or pricing data. Removing a listing or catalog
+model also keeps the channel model count synchronized.
+
+Channel and model review queues are managed through:
+
+- `GET /api/admin/catalog-reviews?kind={channel|model}&page=1&pageSize=20`
+- `POST /api/admin/catalog-reviews/{review_id}/test-connection`
+- `POST /api/admin/catalog-reviews/{review_id}/test-model`
+- `POST /api/admin/catalog-reviews/{review_id}/review`
+
+The list supports a text query plus `pending`, `approved`, and `rejected` status filters. The review
+request includes the status last seen by the administrator, so initial decisions and later
+corrections both reject stale concurrent updates instead of overwriting them. The interface asks for
+confirmation before saving a decision, and completed reviews can be corrected from their detail
+dialog. Before reviewing a channel, an
+administrator can test its stored endpoint and encrypted credential against the upstream models
+API; the response reports latency and discovered model count without exposing credentials or the
+upstream response body. Model reviews can run randomized live inference verification without first
+querying the upstream models list. Three independent challenges and one follow-up conversation
+check input fidelity, exact output structure, multi-turn context, request parameter handling, token
+accounting, content integrity, repeated-call stability, and routing consistency. The response
+contains only check statuses, latency, reported model identifiers, endpoint trust classification,
+and provider fingerprints; channel credentials, prompts, and raw model output remain server-side.
 
 Administrator accounts receive additional database-controlled routes for the operations overview,
 user and merchant management, marketplace brand and model catalog management, platform-wide usage
 records, withdrawal review, an immutable financial ledger, channel and model reviews, risk alerts,
-audit logs, ticket management, route access, and system settings. The administration screens
-currently use responsive preview data;
+audit logs, ticket management, route access, and system settings. The administration screens other
+than the pricing currency card and channel/model review queues currently use responsive preview data;
 financial amounts are represented as integer micro-USD values so the later API contract does not
 depend on floating-point money.
 
@@ -163,6 +257,9 @@ The initial error-code ranges are:
 | `17000-17999` | User management errors        |
 | `18000-18999` | Merchant management errors    |
 | `19000-19999` | Merchant channel errors       |
+| `20000-20999` | Merchant model listing errors |
+| `21000-21999` | Price settings errors         |
+| `22000-22999` | Catalog review errors         |
 | `90000-99998` | Infrastructure errors         |
 | `99999`       | Unknown internal server error |
 

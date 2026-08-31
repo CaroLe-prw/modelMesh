@@ -5,11 +5,46 @@ use axum::{
 };
 
 use crate::{
-    dto::{ModelCatalogEntryResponse, ModelCatalogListQuery, ModelCatalogLookupQuery},
+    dto::{
+        BrandResponse, ModelCatalogEntryResponse, ModelCatalogListQuery, ModelCatalogLookupQuery,
+        ModelCatalogOptionResponse, ModelCatalogOptionsResponse,
+    },
     error::AppError,
     handlers::auth::authenticate_user,
     state::AppState,
 };
+
+pub async fn options(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<ModelCatalogOptionsResponse>, AppError> {
+    let user = authenticate_user(&state, &headers).await?;
+    let brands = state.brand_service.list(user.role, None, None).await?;
+    let brand_identifiers = brands
+        .iter()
+        .map(|brand| brand.identifier.clone())
+        .collect();
+    let models_by_brand = state
+        .model_catalog_service
+        .list_options(user.role, brand_identifiers)
+        .await?
+        .into_iter()
+        .map(|(brand_identifier, options)| {
+            (
+                brand_identifier,
+                options
+                    .into_iter()
+                    .map(ModelCatalogOptionResponse::from)
+                    .collect(),
+            )
+        })
+        .collect();
+
+    Ok(Json(ModelCatalogOptionsResponse {
+        brands: brands.into_iter().map(BrandResponse::from).collect(),
+        models_by_brand,
+    }))
+}
 
 pub async fn list(
     State(state): State<AppState>,

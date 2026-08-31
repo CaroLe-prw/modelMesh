@@ -3,14 +3,14 @@ use std::collections::HashMap;
 use jiff::Timestamp;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait,
-    PaginatorTrait, QueryFilter, QueryOrder, Set, TransactionTrait,
+    PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Set, TransactionTrait,
     sea_query::{Expr, LikeExpr, extension::postgres::PgExpr},
 };
 use time::OffsetDateTime;
 
 use crate::{
     domain::{ManagedModel, ModelPricing, ModelStatus, Page, Pagination},
-    entity::{brand, model},
+    entity::{brand, merchant_model_listing, model},
 };
 
 use super::{RepositoryConflict, RepositoryError, database_constraint};
@@ -67,7 +67,7 @@ impl ModelRepository {
             paginator.num_items(),
             paginator.fetch_page(u64::from(pagination.page_index()))
         )?;
-        let items = models
+        let mut items = models
             .into_iter()
             .map(|(model, brand)| {
                 let brand = brand.ok_or_else(|| {
@@ -76,6 +76,7 @@ impl ModelRepository {
                 managed_model_from_models(model, brand)
             })
             .collect::<Result<Vec<_>, _>>()?;
+        self.attach_merchant_counts(&mut items).await?;
 
         Ok(Page::new(items, pagination, total))
     }
@@ -183,7 +184,7 @@ impl ModelRepository {
         else {
             return Ok(None);
         };
-        let brand = brand
+        let _brand = brand
             .ok_or_else(|| RepositoryError::InvalidData("model brand was not found".to_owned()))?;
         let uses_catalog_pricing = existing.catalog_source.is_some();
         let current_default_pricing = pricing_from_json(existing.default_pricing_nano_usd.clone())?;
@@ -214,13 +215,13 @@ impl ModelRepository {
         active.default_pricing_nano_usd = Set(default_pricing_nano_usd);
         active.pricing_overrides_nano_usd = Set(pricing_overrides_nano_usd);
         active.updated_at = Set(OffsetDateTime::now_utc());
-        let updated = active.update(&self.database).await?;
+        active.update(&self.database).await?;
 
-        managed_model_from_models(updated, brand).map(Some)
+        self.find_by_id(id).await
     }
 
-    async fn find_by_id(&self, id: i64) -> Result<Option<ManagedModel>, RepositoryError> {
-        model::Entity::find_by_id(id)
+    pub async fn find_by_id(&self, id: i64) -> Result<Option<ManagedModel>, RepositoryError> {
+        let model = model::Entity::find_by_id(id)
             .find_also_related(brand::Entity)
             .one(&self.database)
             .await?
@@ -230,7 +231,68 @@ impl ModelRepository {
                 })?;
                 managed_model_from_models(model, brand)
             })
-            .transpose()
+            .transpose()?;
+        let Some(model) = model else {
+            return Ok(None);
+        };
+        let mut models = vec![model];
+        self.attach_merchant_counts(&mut models).await?;
+        Ok(models.pop())
+    }
+
+    pub async fn list_published_by_brand(
+        &self,
+        brand_identifier: &str,
+    ) -> Result<Vec<ManagedModel>, RepositoryError> {
+        let mut models = model::Entity::find()
+            .find_also_related(brand::Entity)
+            .filter(brand::Column::Identifier.eq(brand_identifier))
+            .filter(model::Column::Status.eq(ModelStatus::Published.as_str()))
+            .order_by_asc(model::Column::Name)
+            .order_by_asc(model::Column::Id)
+            .all(&self.database)
+            .await?
+            .into_iter()
+            .map(|(model, brand)| {
+                let brand = brand.ok_or_else(|| {
+                    RepositoryError::InvalidData("model brand was not found".to_owned())
+                })?;
+                managed_model_from_models(model, brand)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        self.attach_merchant_counts(&mut models).await?;
+        Ok(models)
+    }
+
+    async fn attach_merchant_counts(
+        &self,
+        models: &mut [ManagedModel],
+    ) -> Result<(), RepositoryError> {
+        if models.is_empty() {
+            return Ok(());
+        }
+        let model_ids = models.iter().map(|model| model.id).collect::<Vec<_>>();
+        let counts = merchant_model_listing::Entity::find()
+            .select_only()
+            .column(merchant_model_listing::Column::ModelId)
+            .column_as(
+                Expr::cust("COUNT(DISTINCT merchant_user_id)"),
+                "merchant_count",
+            )
+            .filter(merchant_model_listing::Column::ModelId.is_in(model_ids))
+            .filter(merchant_model_listing::Column::Status.eq("published"))
+            .group_by(merchant_model_listing::Column::ModelId)
+            .into_tuple::<(i64, i64)>()
+            .all(&self.database)
+            .await?
+            .into_iter()
+            .collect::<HashMap<_, _>>();
+
+        for model in models {
+            model.merchant_count = u64::try_from(counts.get(&model.id).copied().unwrap_or(0))
+                .map_err(|error| RepositoryError::InvalidData(error.to_string()))?;
+        }
+        Ok(())
     }
 }
 

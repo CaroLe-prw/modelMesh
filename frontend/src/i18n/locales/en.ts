@@ -1032,6 +1032,28 @@ export const en = {
                 cancel: 'Cancel',
                 confirm: 'Delete',
               },
+              priceUnit: {
+                title: 'Price unit and fixed exchange rate',
+                description:
+                  'Administrators control the entry currency and fixed rate. The backend stores normalized USD prices, so merchants and customers always use USD.',
+                currencyLabel: 'Price unit',
+                exchangeRateLabel: 'Fixed exchange rate',
+                exchangeRateHint: 'Enter this as “1 USD = value {{currency}}”. USD is fixed at 1.',
+                exchangeRateError: 'Enter a valid rate greater than 0. The USD rate must be 1.',
+                options: {
+                  USD: 'USD · US dollar',
+                  CNY: 'CNY · Renminbi (RMB)',
+                  EUR: 'EUR · Euro',
+                  GBP: 'GBP · Pound sterling',
+                  JPY: 'JPY · Japanese yen',
+                  HKD: 'HKD · Hong Kong dollar',
+                  SGD: 'SGD · Singapore dollar',
+                  AUD: 'AUD · Australian dollar',
+                  CAD: 'CAD · Canadian dollar',
+                  KRW: 'KRW · South Korean won',
+                  USDT: 'USDT · Tether',
+                },
+              },
               editDialog: {
                 title: 'Model pricing settings',
                 description:
@@ -1107,9 +1129,13 @@ export const en = {
                 pricing: {
                   title: 'Complete pricing rules',
                   perMillion: 'USD / 1M tokens',
+                  perMillionCurrency: '{{currency}} / 1M tokens',
                   eachModelDefault: 'Each model default',
                   addContextTier: 'Add context tier',
                   removeContextTier: 'Remove context tier',
+                  loading: 'Loading complete pricing for the selected model…',
+                  loadError: 'Pricing for the selected model could not be loaded.',
+                  retry: 'Try again',
                   contextThreshold: {
                     label: 'Context price boundary',
                     placeholder: 'For example: 272000',
@@ -1124,6 +1150,11 @@ export const en = {
                     contextRange: 'Over {{minimum}} and up to {{maximum}} tokens',
                     tier: '{{type}} · over {{size}} tokens',
                     experimentalMode: 'Experimental mode · {{mode}}',
+                    experimentalModeUntil:
+                      'Experimental mode · {{mode}} (up to {{maximum}} tokens)',
+                    experimentalModeTier: 'Experimental mode · {{mode}} (over {{minimum}} tokens)',
+                    experimentalModeRange:
+                      'Experimental mode · {{mode}} (over {{minimum}} and up to {{maximum}} tokens)',
                     serviceTier: 'Service tier · {{tier}}',
                   },
                   rates: {
@@ -1266,19 +1297,29 @@ export const en = {
             },
           },
           catalogReviews: {
-            eyebrow: 'CATALOG GOVERNANCE',
+            eyebrow: 'LISTING REVIEWS',
             title: 'Channel and model reviews',
             description:
-              'Review channel and model publication, removals, price changes, and policy violations.',
-            search: 'Search review, channel, model, or merchant',
-            kindFilter: 'Filter by subject type',
+              'Review merchant channel submissions, model listings, and model price changes separately.',
+            loading: 'Loading review records…',
+            loadError: 'Could not load review records',
+            retry: 'Reload',
+            tabs: {
+              channels: 'Channel reviews',
+              models: 'Model reviews',
+            },
+            search: {
+              channel: 'Search channel name, channel ID, or merchant',
+              model: 'Search model name, model ID, channel ID, or merchant',
+            },
             statusFilter: 'Filter by review status',
-            caption: 'Channel and model review records',
-            empty: 'No matching review records',
-            kinds: {
-              all: 'All subjects',
-              channel: 'Channel',
-              model: 'Model',
+            captions: {
+              channel: 'Channel review records',
+              model: 'Model review records',
+            },
+            empty: {
+              channel: 'No matching channel review records',
+              model: 'No matching model review records',
             },
             actions: {
               publish: 'Publish',
@@ -1294,16 +1335,180 @@ export const en = {
             },
             columns: {
               subject: 'Subject',
-              kind: 'Type',
+              channelId: 'Channel ID',
+              merchant: 'Merchant',
               action: 'Change',
               detail: 'Details',
+              reviewNote: 'Review note',
               status: 'Status',
               createdAt: 'Submitted at',
-              review: 'Review',
+              review: 'Actions',
             },
             reviewActions: {
+              review: 'Review',
+              detail: 'Details',
               approve: 'Approve review',
               reject: 'Reject review',
+            },
+            reviewDialog: {
+              titles: {
+                channel: 'Review channel',
+                model: 'Review model',
+              },
+              detailTitles: {
+                channel: 'Channel review details',
+                model: 'Model review details',
+              },
+              editTitles: {
+                channel: 'Change channel decision',
+                model: 'Change model decision',
+              },
+              description: 'Review the submission for “{{name}}”, then approve or reject it.',
+              detailDescription: 'View the submission and review result for “{{name}}”.',
+              editDescription:
+                'Correct the review decision for “{{name}}”. Price changes still follow the configured effective-delay policy.',
+              subject: 'Subject',
+              channelId: 'Channel ID',
+              merchant: 'Merchant',
+              provider: 'Model provider',
+              change: 'Submitted change',
+              status: 'Review status',
+              submittedAt: 'Submitted at',
+              modelIdentifier: 'Model ID',
+              contextWindow: 'Context window',
+              outputPrice: 'Output price / 1M tokens',
+              currentOutputPrice: 'Current output / 1M tokens',
+              proposedOutputPrice: 'Proposed output / 1M tokens',
+              priceEffectiveAt: 'New price effective at',
+              connection: {
+                title: 'Channel connection test',
+                description:
+                  'Request the models endpoint with the stored channel URL and credential without exposing the credential to the browser.',
+                test: 'Test connection',
+                retest: 'Test again',
+                testing: 'Testing…',
+                successTitle: 'Channel connection is healthy',
+                successDescription: 'Retrieved {{models}} models successfully in {{latency}} ms.',
+                failedTitle: 'Channel connection failed',
+                errors: {
+                  credentialsRejected:
+                    'The provider rejected the channel credential. Ask the merchant to check the API key.',
+                  connectionFailed:
+                    'The provider could not be reached or returned an invalid models response. Check the channel URL and provider status.',
+                  notFound: 'This channel review no longer exists. Refresh the list.',
+                  general: 'The connection test could not be completed. Try again later.',
+                },
+              },
+              modelTest: {
+                title: 'Model inference verification',
+                description:
+                  'Call the submitted model directly and verify randomized input and output, multi-turn context, parameters, token accounting, content integrity, and routing consistency.',
+                test: 'Verify model',
+                retest: 'Verify again',
+                testing: 'Verifying…',
+                failedTitle: 'Model verification was not completed',
+                errors: {
+                  credentialsRejected:
+                    'The provider rejected the channel credential. Ask the merchant to check the API key.',
+                  testFailed:
+                    'Every inference request failed or returned an unreadable response. Check the model ID, channel URL, and provider status.',
+                  notFound: 'This model review no longer exists. Refresh the list.',
+                  general: 'Model verification could not be completed. Try again later.',
+                },
+                outcomes: {
+                  passed: {
+                    title: 'Model verification passed',
+                    description:
+                      '{{successes}} of {{attempts}} randomized tests succeeded with an average latency of {{latency}} ms.',
+                  },
+                  warning: {
+                    title: 'Model verification needs review',
+                    description:
+                      '{{successes}} of {{attempts}} randomized tests succeeded with an average latency of {{latency}} ms. Review the individual checks.',
+                  },
+                  failed: {
+                    title: 'Model verification found anomalies',
+                    description:
+                      '{{successes}} of {{attempts}} randomized tests succeeded with an average latency of {{latency}} ms. Investigate failed checks before approval.',
+                  },
+                },
+                checks: {
+                  inference: 'Live inference requests',
+                  inputFidelity: 'Input and calculation fidelity',
+                  outputStructure: 'Output structure',
+                  multiTurnContext: 'Multi-turn context',
+                  parameterCompliance: 'Request parameter compliance',
+                  tokenAccounting: 'Token accounting',
+                  contentIntegrity: 'Content integrity',
+                  stability: 'Repeated-call stability',
+                  routingConsistency: 'Model routing consistency',
+                },
+                statuses: {
+                  passed: 'Passed',
+                  warning: 'Review',
+                  failed: 'Failed',
+                },
+                claimedModel: 'Submitted model',
+                observedModel: 'Observed model',
+                identityRisk: 'Identity risk',
+                endpointTrust: 'Endpoint type',
+                fingerprint: 'System fingerprint',
+                notReported: 'Not reported by provider',
+                risks: {
+                  low: 'Low risk',
+                  medium: 'Medium risk',
+                  high: 'High risk: possible substitution or routing drift',
+                  unverified: 'Unverified',
+                },
+                endpoint: {
+                  official: 'Official provider endpoint',
+                  thirdParty: 'Third-party channel endpoint',
+                },
+              },
+              note: 'Review note',
+              notePlaceholder: 'Explain the reason when rejecting',
+              noteHint: 'Required for rejection; optional for approval.',
+              noteCount: '{{count}} / {{max}}',
+              noteRequired: 'Enter a rejection reason before submitting.',
+              noNote: 'No review note was provided',
+              edit: 'Change decision',
+              cancel: 'Cancel',
+              approve: 'Approve review',
+              reject: 'Reject review',
+              confirmation: {
+                description:
+                  '“{{name}}” is currently “{{current}}”. Change it to “{{next}}”? Approved prices follow the configured delay and can be corrected from Details before taking effect.',
+                approved: {
+                  title: 'Approve this review?',
+                  confirm: 'Confirm approval',
+                },
+                rejected: {
+                  title: 'Reject this review?',
+                  confirm: 'Confirm rejection',
+                },
+              },
+            },
+            details: {
+              model: '{{identifier}} · {{context}} Token context',
+              currentPrice: 'Current {{price}}',
+              proposedPrice: 'Proposed {{price}}',
+              scheduledPrice: 'New {{price}} · effective {{date}}',
+            },
+            feedback: {
+              approved: 'Approved “{{name}}”',
+              rejected: 'Rejected “{{name}}”',
+              changed: {
+                approved: 'Changed “{{name}}” to approved',
+                rejected: 'Changed “{{name}}” to rejected',
+              },
+            },
+            errors: {
+              invalid:
+                'Check the review note. Rejections require a note of no more than 1,000 characters.',
+              notFound: 'This review no longer exists. Refresh and try again.',
+              conflict:
+                'Another administrator changed this review. The list was refreshed; check it again.',
+              general: 'The review could not be completed. Try again later.',
             },
           },
           riskAlerts: {
@@ -1389,8 +1594,64 @@ export const en = {
             eyebrow: 'PLATFORM POLICIES',
             title: 'System settings',
             description:
-              'Configure registration, withdrawal thresholds, fees, and the platform service rate.',
+              'Configure price conversion, registration, withdrawal thresholds, fees, and the platform service rate.',
             save: 'Save settings',
+            tabs: {
+              pricing: 'Pricing management',
+              general: 'General settings',
+            },
+            pricing: {
+              title: 'Pricing currency and fixed exchange rate',
+              description:
+                'USD is the required default currency. Add other entry currencies here; merchants can only choose configured currencies and saved values are normalized to USD.',
+              configuredCount: '{{count}} currencies configured',
+              add: 'Add currency',
+              remove: 'Delete the {{currency}} exchange-rate setting',
+              defaultCurrency: 'System default',
+              defaultCurrencyHelp:
+                'USD is the required default pricing currency, fixed at 1 and cannot be removed.',
+              currencyLabel: 'Pricing currency',
+              currencyHelp: 'Each currency can be configured once. Customers continue to see USD.',
+              exchangeRateLabel: 'Fixed exchange rate',
+              exchangeRateHint: 'Enter this as “1 USD = value {{currency}}”. USD is fixed at 1.',
+              exchangeRateError: 'Enter a valid rate greater than 0. The USD rate must be 1.',
+              reviewPolicy: {
+                title: 'Model price-increase review policy',
+                description:
+                  'Models keep their runtime state and current price. Only increases above the threshold enter price review; approved prices switch after the configured delay.',
+                thresholdLabel: 'Increase requiring review',
+                thresholdHelp:
+                  'Review when any price item rises above this percentage. Use 0 to review every increase. Price decreases apply immediately.',
+                delayLabel: 'Delay after approval',
+                delayHelp:
+                  'Keep using the old price after approval, then switch automatically after this many hours. Use 0 for immediate effect.',
+                hoursUnit: 'hours',
+                invalid:
+                  'The threshold must be 0–1000% with up to two decimals, and the delay must be an integer from 0–720 hours.',
+              },
+              loading: 'Loading price settings…',
+              retry: 'Reload',
+              save: 'Save price settings',
+              feedback: {
+                saved: 'The currencies, exchange rates, and price-review policy were saved.',
+                invalid: 'Check the currencies, exchange rates, and price-review policy.',
+                loadError: 'Unable to load price settings',
+                saveError: 'Unable to save price settings. Try again later.',
+              },
+              options: {
+                USD: 'USD · US dollar',
+                CNY: 'CNY · Renminbi (RMB)',
+                EUR: 'EUR · Euro',
+                GBP: 'GBP · Pound sterling',
+                JPY: 'JPY · Japanese yen',
+                HKD: 'HKD · Hong Kong dollar',
+                SGD: 'SGD · Singapore dollar',
+                AUD: 'AUD · Australian dollar',
+                CAD: 'CAD · Canadian dollar',
+                KRW: 'KRW · South Korean won',
+                USDT: 'USDT · Tether',
+              },
+            },
             registration: {
               title: 'Registration policy',
               description: 'Control whether new users can create accounts from the public flow.',
@@ -1439,7 +1700,7 @@ export const en = {
             eyebrow: 'Provider channels',
             title: 'Channel management',
             description: 'Manage provider connections, available models, and channel health.',
-            search: 'Search channel or provider',
+            search: 'Search channel name, channel ID, or provider',
             statusFilter: 'Filter by channel status',
             add: 'Add channel',
             caption: 'Merchant model channels',
@@ -1460,14 +1721,17 @@ export const en = {
               'Channel settings are stored by the backend. Model count, success rate, and latency will be updated from runtime data.',
             statuses: {
               all: 'All statuses',
-              active: 'Healthy',
-              degraded: 'Degraded',
+              active: 'Active',
               offline: 'Offline',
+              pending: 'In review',
+              rejected: 'Rejected',
             },
             columns: {
-              channel: 'Channel',
+              channel: 'Channel name',
+              channelId: 'Channel ID',
               provider: 'Model provider',
               status: 'Status',
+              reviewReason: 'Review reason',
               models: 'Models',
               successRate: 'Success rate',
               latency: 'Average latency',
@@ -1477,10 +1741,18 @@ export const en = {
             dialog: {
               createTitle: 'Add channel',
               createDescription:
-                'Create a model provider channel. It will appear in the channel list immediately.',
+                'Submit a model provider channel. Its initial status is in review.',
               editTitle: 'Edit channel',
               editDescription: 'Update the channel details and operating status.',
+              approvedEditDescription:
+                'Update the connection, supported models, or operating status without another review.',
+              resubmitDescription:
+                'Update the channel using the rejection reason. Saving will submit it for review again.',
+              reviewNoteTitle: 'Previous rejection reason',
+              reviewFieldsLocked:
+                'This channel is approved. Its name, provider, and description are locked.',
               fields: {
+                lockedHint: 'This approved field cannot be changed.',
                 name: {
                   label: 'Channel name',
                   placeholder: 'For example, Northstar Global',
@@ -1496,9 +1768,53 @@ export const en = {
                   retry: 'Reload',
                   hint: 'Providers are managed by administrators; only enabled providers can be selected.',
                 },
+                baseUrl: {
+                  label: 'API Base URL',
+                  placeholder: 'https://api.example.com/v1',
+                  hint: 'Enter an HTTPS base URL. Model discovery requests /models beneath it.',
+                },
+                apiKey: {
+                  label: 'API Key',
+                  placeholder: 'sk-…',
+                  configuredPlaceholder: 'Configured securely; leave blank to keep it',
+                  hint: 'The key is sent only to the ModelMesh backend, encrypted at rest, and never returned in plaintext.',
+                  configuredHint:
+                    'The saved key is encrypted. Leave blank to keep it or enter a replacement.',
+                },
+                description: {
+                  label: 'Channel description',
+                  placeholder: 'For example: direct provider route, low latency, high concurrency',
+                  hint: 'Optional. Describe the route, capabilities, or usage constraints.',
+                },
+                models: {
+                  label: 'Supported models',
+                  hint: 'Discover models from the provider API or add model IDs manually.',
+                  discover: 'Discover models',
+                  placeholder: 'Select one or more models',
+                  searchPlaceholder: 'Search model IDs',
+                  emptySearch: 'No matching models',
+                  empty:
+                    'No models yet. Discover them from the provider or add one manually below.',
+                  selectedCount: '{{count}} models selected',
+                  selectAll: 'Select all',
+                  invert: 'Invert',
+                  clear: 'Clear',
+                  toggleAll: 'Select or clear all models from this provider',
+                  summary: '{{selected}} selected / {{available}} available',
+                  manualLabel: 'Add a model ID manually',
+                  manualPlaceholder: 'Enter a model ID and press Enter',
+                  manualAdd: 'Add',
+                  discovered: 'Discovered and selected {{count}} models.',
+                  discoveryErrors: {
+                    credentials: 'The API key was rejected. Check it and try again.',
+                    invalid: 'The base URL or provider configuration is invalid.',
+                    connection:
+                      'Models could not be loaded. Check the URL, network, and API compatibility.',
+                  },
+                },
                 status: {
                   label: 'Channel status',
-                  hint: 'This only enables or takes the channel offline. Health checks determine degradation.',
+                  hint: 'After approval, the channel can be switched between active and offline.',
                   options: {
                     active: 'Enabled',
                     offline: 'Offline',
@@ -1519,10 +1835,15 @@ export const en = {
                 provider: {
                   required: 'Select a model provider.',
                 },
+                baseUrl: 'Enter a valid HTTPS API Base URL.',
+                apiKey: 'Enter an API key.',
+                description: 'The channel description cannot exceed 500 characters.',
+                models: 'Select or add at least one supported model.',
               },
               cancel: 'Cancel',
-              create: 'Add channel',
+              create: 'Submit for review',
               save: 'Save changes',
+              resubmit: 'Resubmit for review',
               delete: {
                 title: 'Delete this channel?',
                 description:
@@ -1532,8 +1853,9 @@ export const en = {
               },
             },
             feedback: {
-              created: 'Channel added',
+              created: 'Channel submitted for review; its current status is in review',
               updated: 'Channel updated',
+              resubmitted: 'Channel resubmitted for review',
               enabled: 'Channel enabled',
               offline: 'Channel taken offline',
               deleted: 'Channel deleted',
@@ -1543,6 +1865,9 @@ export const en = {
               invalid: 'Check the channel details and try again.',
               duplicate: 'A channel with this name already exists.',
               notFound: 'The channel no longer exists.',
+              pendingReview: 'This channel has not been approved and cannot be enabled yet.',
+              reviewFieldsLocked:
+                'This channel is approved. Its name, provider, and description cannot be changed.',
               createError: 'Unable to add the channel. Try again later.',
               updateError: 'Unable to update the channel. Try again later.',
               enableError: 'Unable to enable the channel. Try again later.',
@@ -1556,25 +1881,187 @@ export const en = {
             description: 'Configure channel models, context windows, pricing, and listing status.',
             search: 'Search model or channel',
             statusFilter: 'Filter by listing status',
+            reviewStatusFilter: 'Filter by review status',
             add: 'List model',
+            refresh: 'Refresh model listings',
             caption: 'Merchant model listings',
             manageLabel: 'Manage model {{name}}',
+            actions: {
+              manage: 'Configure model {{name}}',
+              publish: 'Publish model {{name}}',
+              unpublish: 'Take model {{name}} offline',
+            },
+            actionLabels: {
+              manage: 'Settings',
+              publish: 'Publish',
+              unpublish: 'Offline',
+            },
             empty: 'No matching models',
+            loading: 'Loading model listings…',
+            loadError: 'Unable to load model listings',
+            retry: 'Reload',
             statuses: {
               all: 'All statuses',
               published: 'Published',
-              review: 'In review',
-              draft: 'Draft',
+              offline: 'Offline',
+              approved: 'Approved',
+              pending: 'Pending review',
+              rejected: 'Rejected',
+            },
+            reviewStatuses: {
+              all: 'All review statuses',
+              approved: 'Approved',
+              pending: 'Pending review',
+              rejected: 'Rejected',
             },
             columns: {
               model: 'Model',
               channel: 'Channel',
               context: 'Context',
+              priceUnit: 'Price unit / rate',
               inputPrice: 'Input / 1M',
               outputPrice: 'Output / 1M',
-              status: 'Status',
+              status: 'Runtime status',
+              reviewStatus: 'Review status',
+              reviewIssue: 'Review issue',
               updatedAt: 'Updated',
               actions: 'Actions',
+            },
+            priceChange: {
+              pending: 'Pending review: {{price}}',
+              rejected: 'Rejected: {{price}}',
+              scheduled: '{{price}} · effective {{date}}',
+            },
+            dialog: {
+              createTitle: 'List a model',
+              createDescription:
+                'Choose one of your channels and a catalog model, then configure complete sales pricing and listing status.',
+              editTitle: 'Manage model listing',
+              editDescription:
+                'The model and channel stay fixed. Price edits apply immediately or enter review according to the increase policy.',
+              fields: {
+                channel: 'Channel',
+                model: 'Catalog model',
+                priceCurrency: 'Pricing currency',
+                inputPrice: 'Input / 1M tokens (USD)',
+                outputPrice: 'Output / 1M tokens (USD)',
+                status: 'Listing status',
+              },
+              channelPlaceholder: 'Choose a channel',
+              channelSearch: 'Search channels',
+              emptyChannels: 'No approved channels are available. Wait for channel approval first.',
+              modelPlaceholder: 'Choose a model matching the channel brand',
+              modelSearch: 'Search model name or ID',
+              emptyModels: 'No unlisted models are available for this channel',
+              loadingModels: 'Loading available models…',
+              modelLoadError: 'Unable to load models. Select the channel again to retry.',
+              identityLockedHint:
+                'The model and channel are locked after the initial submission; later edits change sales pricing only.',
+              priceCurrencyPlaceholder: 'Choose an administrator-configured currency',
+              pricing: {
+                title: 'Complete sales pricing',
+                hint: 'Administrator-configured base, cache, context-tier, and mode prices are prefilled and can be adjusted before listing.',
+                multiplier: {
+                  label: 'Sales price multiplier',
+                  inputLabel: 'Multiplier',
+                  hint: 'Based on administrator pricing. Changing the multiplier recalculates every sales price below.',
+                  customized:
+                    'Some prices were adjusted individually. Changing the multiplier will recalculate them all.',
+                },
+                adminExchangeRate:
+                  'Current pricing configuration: 1 USD = {{rate}} {{currency}}. Edit below in {{currency}}; saved values are normalized to USD.',
+                paritySummary:
+                  'Using 1:1: changing currency only changes the price unit and keeps every value unchanged. The administrator fixed rate is 1 USD = {{rate}} {{currency}}.',
+                conversionMode: {
+                  label: 'Conversion',
+                  parity: '1:1 (keep values)',
+                  fixedRate: 'Fixed exchange rate',
+                },
+                currency: {
+                  label: 'Price unit',
+                  hint: 'The default 1:1 mode only changes the price unit. Select the administrator-maintained fixed rate when needed.',
+                  options: {
+                    USD: 'USD · US dollar',
+                    CNY: 'CNY · Renminbi (RMB)',
+                    EUR: 'EUR · Euro',
+                    GBP: 'GBP · Pound sterling',
+                    JPY: 'JPY · Japanese yen',
+                    HKD: 'HKD · Hong Kong dollar',
+                    SGD: 'SGD · Singapore dollar',
+                    AUD: 'AUD · Australian dollar',
+                    CAD: 'CAD · Canadian dollar',
+                    KRW: 'KRW · South Korean won',
+                    USDT: 'USDT · Tether',
+                  },
+                },
+                perMillion: 'USD / 1M tokens',
+                perMillionCurrency: '{{currency}} / 1M tokens',
+                groups: {
+                  base: 'Standard pricing',
+                  baseUntil: 'Standard pricing (up to {{size}} tokens)',
+                  contextOver200k: 'Over 200K context (compatibility price)',
+                  customTier: 'Context tier pricing',
+                  contextTier: 'Over {{size}} tokens',
+                  contextRange: 'Over {{minimum}} and up to {{maximum}} tokens',
+                  tier: '{{type}} · over {{size}} tokens',
+                  experimentalMode: 'Experimental mode · {{mode}}',
+                  experimentalModeUntil: 'Experimental mode · {{mode}} (up to {{maximum}} tokens)',
+                  experimentalModeTier: 'Experimental mode · {{mode}} (over {{minimum}} tokens)',
+                  experimentalModeRange:
+                    'Experimental mode · {{mode}} (over {{minimum}} and up to {{maximum}} tokens)',
+                  serviceTier: 'Service tier · {{tier}}',
+                },
+                rates: {
+                  input: 'Input / 1M',
+                  output: 'Output / 1M',
+                  reasoning: 'Reasoning / 1M',
+                  cache_read: 'Cache read / 1M',
+                  cache_write: 'Cache write / 1M',
+                  input_audio: 'Audio input / 1M',
+                  output_audio: 'Audio output / 1M',
+                },
+              },
+              errors: {
+                price: { invalid: 'Enter a valid sales price greater than or equal to 0.' },
+              },
+              invalid: 'Choose a valid channel and catalog model, then complete every sales price.',
+              create: 'Submit for review',
+              save: 'Save changes',
+              cancel: 'Cancel',
+              delete: 'Delete model',
+              deleteDialog: {
+                title: 'Delete model?',
+                description:
+                  '{{name}} and its channel pricing configuration will be permanently removed. This cannot be undone.',
+                cancel: 'Cancel',
+                confirm: 'Delete model',
+              },
+            },
+            feedback: {
+              created:
+                'The model was submitted for review and will publish after initial approval.',
+              updated: 'The model listing was updated.',
+              priceUpdated: 'The price was updated and is now effective.',
+              priceReviewSubmitted:
+                'The increase was submitted for review. The model keeps its current state and price.',
+              resubmitted: 'The model was resubmitted for review.',
+              published: 'The model is now published.',
+              unpublished: 'The model is offline. Its configuration and pricing were retained.',
+              deleted: 'The model was deleted.',
+              invalid: 'Check the listing details and try again.',
+              duplicate: 'This model is already listed on the selected channel.',
+              notFound: 'The model listing no longer exists.',
+              providerMismatch: 'The channel brand does not match the selected model brand.',
+              priceSettingsChanged:
+                'The administrator just updated the currency or exchange rate. Prices are refreshing; review them before saving again.',
+              channelNotFound: 'The selected channel no longer exists.',
+              channelPendingReview:
+                'The selected channel has not been approved and cannot be used for model listings.',
+              modelNotFound: 'The selected catalog model no longer exists or is disabled.',
+              createError: 'Unable to list the model. Try again later.',
+              updateError: 'Unable to update the model listing. Try again later.',
+              statusUpdateError: 'Unable to update the model listing status. Try again later.',
+              deleteError: 'Unable to delete the model. Try again later.',
             },
           },
           usageLogs: {

@@ -8,18 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Toggle } from '@/components/ui/toggle';
 import { login, register } from '@/features/auth/api/auth';
+import { resolvePostLoginPath, type AuthLocationState } from '@/features/auth/auth-navigation';
 import { useAuth } from '@/features/auth/context/auth-context';
 import { API_ERROR_CODE } from '@/lib/api-error-codes';
 import { ApiError } from '@/lib/api-client';
 
 interface AuthPageProps {
   mode: 'login' | 'register';
-}
-
-interface AuthLocationState {
-  from?: string;
-  registrationCompleted?: boolean;
 }
 
 const authErrorKeys = new Map<number, string>([
@@ -173,14 +170,6 @@ export function AuthPage({ mode }: AuthPageProps) {
   );
 }
 
-function resolvePostLoginPath(requestedPath: string | undefined): string {
-  if (requestedPath?.startsWith('/') && !requestedPath.startsWith('//')) {
-    return requestedPath;
-  }
-
-  return '/account';
-}
-
 function resolveAuthErrorKey(error: unknown): string {
   if (error instanceof ApiError) {
     return (
@@ -232,25 +221,23 @@ function AuthField({ autoComplete, icon: Icon, label, name, placeholder, type }:
           type={isPassword && isPasswordVisible ? 'text' : type}
         />
         {isPassword && (
-          <Button
+          <Toggle
             aria-label={
               isPasswordVisible ? t('auth.fields.hidePassword') : t('auth.fields.showPassword')
             }
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            onClick={() => setIsPasswordVisible((visible) => !visible)}
-            size="icon-sm"
+            className="absolute right-1.5 top-1/2 size-8 -translate-y-1/2 p-0 text-muted-foreground hover:text-foreground"
+            onPressedChange={setIsPasswordVisible}
+            pressed={isPasswordVisible}
             title={
               isPasswordVisible ? t('auth.fields.hidePassword') : t('auth.fields.showPassword')
             }
-            type="button"
-            variant="ghost"
           >
             {isPasswordVisible ? (
               <EyeOff aria-hidden="true" className="size-4" />
             ) : (
               <Eye aria-hidden="true" className="size-4" />
             )}
-          </Button>
+          </Toggle>
         )}
       </div>
     </div>

@@ -48,6 +48,7 @@ import {
   listMerchantChannelProviders,
   listMerchantChannels,
   updateMerchantChannel,
+  updateMerchantChannelStatus,
   type MerchantChannel,
   type MerchantChannelDraft,
   type MerchantChannelProvider,
@@ -61,9 +62,16 @@ import { API_ERROR_CODE } from '@/lib/api-error-codes';
 import { ApiError } from '@/lib/api-client';
 
 type ChannelStatusFilter = 'all' | MerchantChannelStatus;
-const channelStatusFilters: ChannelStatusFilter[] = ['all', 'active', 'degraded', 'offline'];
+const channelStatusFilters: ChannelStatusFilter[] = [
+  'all',
+  'pending',
+  'rejected',
+  'offline',
+  'active',
+];
 const channelOptionalColumnIds = [
   'status',
+  'reviewReason',
   'models',
   'successRate',
   'latency',
@@ -86,6 +94,10 @@ function merchantChannelErrorKey(error: unknown, fallback: string): string {
       return 'pages.account.sections.merchant.channels.feedback.duplicate';
     case API_ERROR_CODE.MERCHANT_CHANNEL_NOT_FOUND:
       return 'pages.account.sections.merchant.channels.feedback.notFound';
+    case API_ERROR_CODE.MERCHANT_CHANNEL_PENDING_REVIEW:
+      return 'pages.account.sections.merchant.channels.feedback.pendingReview';
+    case API_ERROR_CODE.MERCHANT_CHANNEL_REVIEW_FIELDS_LOCKED:
+      return 'pages.account.sections.merchant.channels.feedback.reviewFieldsLocked';
     default:
       return fallback;
   }
@@ -170,6 +182,8 @@ export function MerchantChannelsPanel() {
     return channels.filter((channel) => {
       const matchesQuery =
         normalizedQuery.length === 0 ||
+        String(channel.channelId).includes(normalizedQuery) ||
+        channel.id.toLocaleLowerCase().includes(normalizedQuery) ||
         channel.name.toLocaleLowerCase().includes(normalizedQuery) ||
         channel.provider.toLocaleLowerCase().includes(normalizedQuery);
       return matchesQuery && (status === 'all' || channel.status === status);
@@ -210,6 +224,9 @@ export function MerchantChannelsPanel() {
 
   async function handleSaveChannel(draft: MerchantChannelDraft): Promise<void> {
     const editingId = editor.open && editor.mode === 'edit' ? editor.channelId : null;
+    const resubmitting = editingId
+      ? channels.some((channel) => channel.id === editingId && channel.status === 'rejected')
+      : false;
     setIsMutating(true);
     try {
       if (editingId) {
@@ -217,9 +234,23 @@ export function MerchantChannelsPanel() {
         setChannels((current) =>
           current.map((channel) => (channel.id === updated.id ? updated : channel)),
         );
-        toast.success(t('pages.account.sections.merchant.channels.feedback.updated'));
+        toast.success(
+          t(
+            resubmitting
+              ? 'pages.account.sections.merchant.channels.feedback.resubmitted'
+              : 'pages.account.sections.merchant.channels.feedback.updated',
+          ),
+        );
       } else {
-        const created = await createMerchantChannel(draft);
+        const created = await createMerchantChannel({
+          apiKey: draft.apiKey ?? '',
+          availableModels: draft.availableModels,
+          baseUrl: draft.baseUrl,
+          description: draft.description,
+          name: draft.name,
+          providerId: draft.providerId,
+          supportedModels: draft.supportedModels,
+        });
         setChannels((current) => [created, ...current]);
         toast.success(t('pages.account.sections.merchant.channels.feedback.created'));
       }
@@ -267,11 +298,7 @@ export function MerchantChannelsPanel() {
     const nextStatus = channel.status === 'offline' ? 'active' : 'offline';
     setIsMutating(true);
     try {
-      const updated = await updateMerchantChannel(channel.id, {
-        name: channel.name,
-        providerId: channel.providerId,
-        status: nextStatus,
-      });
+      const updated = await updateMerchantChannelStatus(channel.id, nextStatus);
       setChannels((current) => current.map((item) => (item.id === updated.id ? updated : item)));
       toast.success(
         t(
@@ -400,7 +427,10 @@ export function MerchantChannelsPanel() {
                   </TableCaption>
                   <TableHeader className="bg-secondary/55">
                     <TableRow className="hover:bg-secondary/55">
-                      <TableHead className="h-12 min-w-44 px-4">
+                      <TableHead className="h-12 min-w-28 px-4">
+                        {t('pages.account.sections.merchant.channels.columns.channelId')}
+                      </TableHead>
+                      <TableHead className="min-w-56">
                         {t('pages.account.sections.merchant.channels.columns.channel')}
                       </TableHead>
                       <TableHead className="min-w-36">
@@ -409,6 +439,11 @@ export function MerchantChannelsPanel() {
                       {visibleColumns.has('status') && (
                         <TableHead>
                           {t('pages.account.sections.merchant.channels.columns.status')}
+                        </TableHead>
+                      )}
+                      {visibleColumns.has('reviewReason') && (
+                        <TableHead className="min-w-56">
+                          {t('pages.account.sections.merchant.channels.columns.reviewReason')}
                         </TableHead>
                       )}
                       {visibleColumns.has('models') && (
@@ -431,7 +466,7 @@ export function MerchantChannelsPanel() {
                           {t('pages.account.sections.merchant.channels.columns.updatedAt')}
                         </TableHead>
                       )}
-                      <TableHead className="w-[168px] min-w-[168px] text-center">
+                      <TableHead className="w-[168px] min-w-[168px]">
                         {t('pages.account.sections.merchant.channels.columns.actions')}
                       </TableHead>
                     </TableRow>
@@ -551,13 +586,21 @@ function ChannelTableRow({
 
   return (
     <TableRow className="h-16">
-      <TableCell className="px-4">
+      <TableCell className="px-4 font-mono text-sm text-muted-foreground">
+        {channel.channelId}
+      </TableCell>
+      <TableCell>
         <strong className="block text-sm">{channel.name}</strong>
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">{channel.provider}</TableCell>
       {visibleColumns.has('status') && (
         <TableCell>
           <MerchantStatusBadge namespace="channels" status={channel.status} />
+        </TableCell>
+      )}
+      {visibleColumns.has('reviewReason') && (
+        <TableCell className="max-w-72 whitespace-normal text-sm leading-5">
+          <ChannelReviewReason channel={channel} />
         </TableCell>
       )}
       {visibleColumns.has('models') && (
@@ -625,9 +668,25 @@ function ChannelMobileCard({
           </dt>
           <dd className="mt-1 truncate text-sm">{channel.provider}</dd>
         </div>
+        <div className="col-span-2 min-w-0">
+          <dt className="text-xs text-muted-foreground">
+            {t('pages.account.sections.merchant.channels.columns.channelId')}
+          </dt>
+          <dd className="mt-1 font-mono text-xs">{channel.channelId}</dd>
+        </div>
       </dl>
       {visibleColumns.has('status') && (
         <MerchantStatusBadge namespace="channels" status={channel.status} />
+      )}
+      {visibleColumns.has('reviewReason') && (
+        <dl className="rounded-lg bg-secondary/45 p-3 text-xs">
+          <dt className="text-muted-foreground">
+            {t('pages.account.sections.merchant.channels.columns.reviewReason')}
+          </dt>
+          <dd className="mt-1 whitespace-normal leading-5">
+            <ChannelReviewReason channel={channel} />
+          </dd>
+        </dl>
       )}
       {hasVisibleMetrics && (
         <dl className="grid grid-cols-3 gap-3 rounded-lg bg-secondary/45 p-3 text-xs">
@@ -697,7 +756,7 @@ function ChannelActions({
   const statusAction = isOffline ? 'enable' : 'offline';
 
   return (
-    <div className="flex items-center justify-end gap-0.5">
+    <div className="flex items-center justify-end gap-0.5 md:justify-center">
       <Button
         aria-label={t(`${translationPath}.edit`, { name: channel.name })}
         className={channelActionClassName}
@@ -711,18 +770,20 @@ function ChannelActions({
         <span className="text-[11px] leading-none">{t(`${labelPath}.edit`)}</span>
       </Button>
 
-      <Button
-        aria-label={t(`${translationPath}.${statusAction}`, { name: channel.name })}
-        className={channelActionClassName}
-        disabled={disabled}
-        onClick={() => onToggleStatus(channel)}
-        title={t(`${translationPath}.${statusAction}`, { name: channel.name })}
-        type="button"
-        variant="ghost"
-      >
-        {isOffline ? <PlayCircle aria-hidden="true" /> : <PauseCircle aria-hidden="true" />}
-        <span className="text-[11px] leading-none">{t(`${labelPath}.${statusAction}`)}</span>
-      </Button>
+      {channel.status === 'active' || channel.status === 'offline' ? (
+        <Button
+          aria-label={t(`${translationPath}.${statusAction}`, { name: channel.name })}
+          className={channelActionClassName}
+          disabled={disabled}
+          onClick={() => onToggleStatus(channel)}
+          title={t(`${translationPath}.${statusAction}`, { name: channel.name })}
+          type="button"
+          variant="ghost"
+        >
+          {isOffline ? <PlayCircle aria-hidden="true" /> : <PauseCircle aria-hidden="true" />}
+          <span className="text-[11px] leading-none">{t(`${labelPath}.${statusAction}`)}</span>
+        </Button>
+      ) : null}
 
       <Button
         aria-label={t(`${translationPath}.delete`, { name: channel.name })}
@@ -737,6 +798,16 @@ function ChannelActions({
         <span className="text-[11px] leading-none">{t(`${labelPath}.delete`)}</span>
       </Button>
     </div>
+  );
+}
+
+function ChannelReviewReason({ channel }: { channel: MerchantChannel }) {
+  if (!channel.reviewNote) return <span className="text-muted-foreground">—</span>;
+
+  return (
+    <span className={channel.status === 'rejected' ? 'text-destructive' : undefined}>
+      {channel.reviewNote}
+    </span>
   );
 }
 

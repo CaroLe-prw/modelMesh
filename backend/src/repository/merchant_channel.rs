@@ -19,17 +19,27 @@ pub struct MerchantChannelRepository {
 }
 
 pub struct NewMerchantChannelRecord {
+    pub api_key_ciphertext: String,
+    pub available_models: Vec<String>,
+    pub base_url: String,
+    pub description: String,
     pub id: String,
     pub merchant_user_id: UserId,
     pub name: String,
     pub provider_id: String,
-    pub status: MerchantChannelStatus,
+    pub supported_models: Vec<String>,
 }
 
 pub struct UpdateMerchantChannelRecord {
+    pub api_key_ciphertext: String,
+    pub available_models: Vec<String>,
+    pub base_url: String,
+    pub description: String,
     pub name: String,
     pub provider_id: String,
     pub status: MerchantChannelStatus,
+    pub submit_for_review: bool,
+    pub supported_models: Vec<String>,
 }
 
 impl MerchantChannelRepository {
@@ -70,12 +80,24 @@ impl MerchantChannelRepository {
         &self,
         record: NewMerchantChannelRecord,
     ) -> Result<MerchantChannel, RepositoryError> {
+        let model_count = i64::try_from(record.supported_models.len()).map_err(invalid_data)?;
+        let available_models =
+            serde_json::to_value(record.available_models).map_err(invalid_data)?;
+        let supported_models =
+            serde_json::to_value(record.supported_models).map_err(invalid_data)?;
         let channel = merchant_channel::ActiveModel {
             id: Set(Uuid::parse_str(&record.id).map_err(invalid_data)?),
             merchant_user_id: Set(record.merchant_user_id),
             name: Set(record.name),
             provider_identifier: Set(record.provider_id),
-            status: Set(record.status.as_str().to_owned()),
+            available_models: Set(available_models),
+            base_url: Set(record.base_url),
+            api_key_ciphertext: Set(record.api_key_ciphertext),
+            description: Set(record.description),
+            supported_models: Set(supported_models),
+            status: Set(MerchantChannelStatus::Pending.as_str().to_owned()),
+            review_action: Set("publish".to_owned()),
+            model_count: Set(model_count),
             ..Default::default()
         }
         .insert(&self.database)
@@ -96,11 +118,72 @@ impl MerchantChannelRepository {
         record: UpdateMerchantChannelRecord,
     ) -> Result<Option<MerchantChannel>, RepositoryError> {
         let channel_id = Uuid::parse_str(channel_id).map_err(invalid_data)?;
+        let model_count = i64::try_from(record.supported_models.len()).map_err(invalid_data)?;
+        let available_models =
+            serde_json::to_value(record.available_models).map_err(invalid_data)?;
+        let supported_models =
+            serde_json::to_value(record.supported_models).map_err(invalid_data)?;
+        let mut changes = merchant_channel::ActiveModel {
+            name: Set(record.name),
+            provider_identifier: Set(record.provider_id),
+            available_models: Set(available_models),
+            base_url: Set(record.base_url),
+            api_key_ciphertext: Set(record.api_key_ciphertext),
+            description: Set(record.description),
+            supported_models: Set(supported_models),
+            status: Set(record.status.as_str().to_owned()),
+            model_count: Set(model_count),
+            ..Default::default()
+        };
+        if record.submit_for_review {
+            changes.status = Set(MerchantChannelStatus::Pending.as_str().to_owned());
+            changes.review_action = Set("publish".to_owned());
+            changes.review_note = Set(String::new());
+        }
+        let update = merchant_channel::Entity::update_many()
+            .set(changes)
+            .col_expr(
+                merchant_channel::Column::UpdatedAt,
+                Expr::current_timestamp(),
+            );
+        let update = if record.submit_for_review {
+            update.col_expr(
+                merchant_channel::Column::ReviewSubmittedAt,
+                Expr::current_timestamp(),
+            )
+        } else {
+            update
+        };
+        let updated = update
+            .filter(merchant_channel::Column::MerchantUserId.eq(user_id))
+            .filter(merchant_channel::Column::Id.eq(channel_id))
+            .exec_with_returning(&self.database)
+            .await
+            .map_err(map_merchant_channel_write_error)?
+            .into_iter()
+            .next();
+
+        let Some(channel) = updated else {
+            return Ok(None);
+        };
+        let provider = channel
+            .find_related(brand::Entity)
+            .one(&self.database)
+            .await?;
+
+        merchant_channel_from_models((channel, provider)).map(Some)
+    }
+
+    pub async fn update_status(
+        &self,
+        user_id: UserId,
+        channel_id: &str,
+        status: MerchantChannelStatus,
+    ) -> Result<Option<MerchantChannel>, RepositoryError> {
+        let channel_id = Uuid::parse_str(channel_id).map_err(invalid_data)?;
         let updated = merchant_channel::Entity::update_many()
             .set(merchant_channel::ActiveModel {
-                name: Set(record.name),
-                provider_identifier: Set(record.provider_id),
-                status: Set(record.status.as_str().to_owned()),
+                status: Set(status.as_str().to_owned()),
                 ..Default::default()
             })
             .col_expr(
@@ -110,11 +193,9 @@ impl MerchantChannelRepository {
             .filter(merchant_channel::Column::MerchantUserId.eq(user_id))
             .filter(merchant_channel::Column::Id.eq(channel_id))
             .exec_with_returning(&self.database)
-            .await
-            .map_err(map_merchant_channel_write_error)?
+            .await?
             .into_iter()
             .next();
-
         let Some(channel) = updated else {
             return Ok(None);
         };
@@ -156,21 +237,33 @@ fn merchant_channel_from_models(
     })?;
     let status = match model.status.as_str() {
         "active" => MerchantChannelStatus::Active,
-        "degraded" => MerchantChannelStatus::Degraded,
         "offline" => MerchantChannelStatus::Offline,
+        "pending" => MerchantChannelStatus::Pending,
+        "rejected" => MerchantChannelStatus::Rejected,
         value => {
             return Err(RepositoryError::InvalidData(format!(
                 "invalid merchant channel status: {value}"
             )));
         }
     };
+    let available_models = serde_json::from_value::<Vec<String>>(model.available_models.clone())
+        .map_err(invalid_data)?;
+    let supported_models = serde_json::from_value::<Vec<String>>(model.supported_models.clone())
+        .map_err(invalid_data)?;
 
     Ok(MerchantChannel {
+        api_key_ciphertext: model.api_key_ciphertext,
+        available_models,
+        base_url: model.base_url,
+        description: model.description,
         id: model.id.hyphenated().to_string(),
+        public_id: model.public_id,
         name: model.name,
         provider_id: provider.identifier,
         provider: provider.name,
         status,
+        supported_models,
+        review_note: model.review_note,
         model_count: u64::try_from(model.model_count).map_err(invalid_data)?,
         success_rate_basis_points: u32::try_from(model.success_rate_basis_points)
             .map_err(invalid_data)?,

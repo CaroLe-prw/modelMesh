@@ -1,7 +1,20 @@
-use crate::domain::{ModelCatalogEntry, ModelPricing};
+use crate::domain::{ModelCatalogEntry, ModelCatalogOption, ModelPriceTier, ModelPricing};
 use serde_json::json;
 
-use super::ModelCatalogEntryResponse;
+use super::{ModelCatalogEntryResponse, ModelCatalogOptionResponse};
+
+#[test]
+fn catalog_option_response_contains_only_selection_fields() {
+    let response = ModelCatalogOptionResponse::from(ModelCatalogOption {
+        model_id: "gpt-test".to_owned(),
+        model_name: "GPT Test".to_owned(),
+    });
+
+    assert_eq!(
+        serde_json::to_value(response).expect("catalog option should serialize"),
+        json!({ "modelId": "gpt-test", "name": "GPT Test" })
+    );
+}
 
 #[test]
 fn catalog_response_exposes_usd_per_million_prices() {
@@ -21,6 +34,15 @@ fn catalog_response_exposes_usd_per_million_prices() {
                 ("reasoning".to_owned(), 1_500_000_000),
             ]
             .into(),
+            experimental_mode_tiers: [(
+                "fast".to_owned(),
+                vec![ModelPriceTier {
+                    tier_type: "context".to_owned(),
+                    size: 272_000,
+                    rates: [("output".to_owned(), 6_000_000_000)].into(),
+                }],
+            )]
+            .into(),
             ..Default::default()
         },
         source_data: json!({}),
@@ -34,5 +56,9 @@ fn catalog_response_exposes_usd_per_million_prices() {
     assert_eq!(response.input_price, Some(1.25));
     assert_eq!(response.output_price, Some(10.0));
     assert_eq!(response.pricing.base["reasoning"], 15.0);
+    assert_eq!(
+        response.pricing.experimental_mode_tiers["fast"][0].rates["output"],
+        60.0
+    );
     assert_eq!(response.source, "models.dev");
 }

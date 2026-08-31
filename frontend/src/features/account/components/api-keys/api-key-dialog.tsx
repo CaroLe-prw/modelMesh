@@ -1,5 +1,6 @@
 import { useEffect, useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { RadioCardItem } from '@/components/common/radio-card-item';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import type { ApiKeyDraft, ApiKeyItem } from '@/features/account/components/api-keys/api-key-types';
@@ -412,29 +414,26 @@ export function ApiKeyDialog({
               />
               {validityEnabled && (
                 <div className="grid gap-4">
-                  <div
+                  <RadioGroup
                     aria-label={t('pages.account.sections.apiKeys.dialog.validityPresets')}
                     className="flex flex-wrap gap-2"
-                    role="group"
+                    onValueChange={(value) => {
+                      const preset = expiryPresets.find((item) => item === value);
+                      if (preset) handleExpiryPresetChange(preset);
+                    }}
+                    value={expiryPreset}
                   >
                     {expiryPresets.map((preset) => (
-                      <Button
-                        aria-pressed={expiryPreset === preset}
-                        className={
-                          expiryPreset === preset
-                            ? 'border-primary/20 bg-primary/10 text-primary hover:bg-primary/15'
-                            : undefined
-                        }
+                      <RadioCardItem
+                        className="h-8 border-transparent bg-secondary px-3 text-sm shadow-none hover:bg-secondary/80 peer-data-[state=checked]:border-primary/20 peer-data-[state=checked]:bg-primary/10 peer-data-[state=checked]:text-primary peer-data-[state=checked]:hover:bg-primary/15"
+                        id={`api-key-expiry-${preset}`}
                         key={preset}
-                        onClick={() => handleExpiryPresetChange(preset)}
-                        size="sm"
-                        type="button"
-                        variant={expiryPreset === preset ? 'outline' : 'secondary'}
+                        value={preset}
                       >
                         {t(`pages.account.sections.apiKeys.dialog.expiryPresets.${preset}`)}
-                      </Button>
+                      </RadioCardItem>
                     ))}
-                  </div>
+                  </RadioGroup>
                   <div className="grid gap-2">
                     <Label htmlFor="api-key-expiration">
                       {t('pages.account.sections.apiKeys.dialog.expiration')}

@@ -45,7 +45,11 @@ import {
 } from '@/features/account/components/admin/add-model-dialog';
 import { EditModelDialog } from '@/features/account/components/admin/edit-model-dialog';
 import { formatMerchantDate } from '@/features/account/components/merchant/merchant-demo-data';
-import { listBrands, type BrandItem } from '@/features/account/api/brands';
+import type { BrandItem } from '@/features/account/api/brands';
+import {
+  listModelCatalogOptions,
+  type ModelCatalogOption,
+} from '@/features/account/api/model-catalog';
 import {
   createModel as createModelRequest,
   createModelsBatch,
@@ -94,6 +98,9 @@ export function AdminModelsPanel() {
   const { setGuest } = useAuth();
   const [brand, setBrand] = useState('all');
   const [brandOptions, setBrandOptions] = useState<BrandItem[]>([]);
+  const [modelCatalogOptions, setModelCatalogOptions] = useState<
+    Record<string, ModelCatalogOption[]>
+  >({});
   const [brandStatus, setBrandStatus] = useState<'error' | 'loading' | 'ready'>('loading');
   const [brandRefreshVersion, setBrandRefreshVersion] = useState(0);
   const [modelsState, setModelsState] = useState<ModelItem[]>([]);
@@ -120,10 +127,11 @@ export function AdminModelsPanel() {
     let active = true;
 
     setBrandStatus('loading');
-    void listBrands({}, controller.signal)
-      .then((brands) => {
+    void listModelCatalogOptions(controller.signal)
+      .then((options) => {
         if (!active) return;
-        setBrandOptions(brands);
+        setBrandOptions(options.brands);
+        setModelCatalogOptions(options.modelsByBrand);
         setBrandStatus('ready');
       })
       .catch((error: unknown) => {
@@ -400,7 +408,7 @@ export function AdminModelsPanel() {
       ),
     },
     {
-      className: 'min-w-48',
+      className: 'min-w-56 px-3',
       hideable: false,
       key: 'actions',
       label: t('pages.account.sections.admin.catalogManagement.models.columns.actions'),
@@ -487,6 +495,7 @@ export function AdminModelsPanel() {
             brands={brandOptions}
             brandStatus={brandStatus}
             existingModelKeys={modelsState.map((model) => `${model.brandId}/${model.identifier}`)}
+            modelCatalogOptions={modelCatalogOptions}
             onBrandRetry={() => setBrandRefreshVersion((version) => version + 1)}
             onCreate={createModels}
           />
@@ -653,40 +662,43 @@ function ModelActions({
   );
 
   return (
-    <div className="flex flex-nowrap justify-start gap-0.5">
+    <div className="grid w-full grid-cols-3 items-stretch gap-1">
       <Button
         aria-label={manageDescription}
-        className="h-auto min-h-12 w-14 flex-col gap-1 px-1 py-1.5 text-[10px]"
+        className="h-auto min-h-12 min-w-0 w-full flex-col gap-1 px-1 py-1.5 text-[10px]"
         disabled={disabled}
         onClick={() => onManage(model)}
+        title={manageDescription}
         type="button"
         variant="ghost"
       >
         <Settings2 aria-hidden="true" />
-        <span>{manageLabel}</span>
+        <span className="whitespace-nowrap">{manageLabel}</span>
       </Button>
       <Button
         aria-label={toggleDescription}
-        className="h-auto min-h-12 w-14 flex-col gap-1 px-1 py-1.5 text-[10px]"
+        className="h-auto min-h-12 min-w-0 w-full flex-col gap-1 px-1 py-1.5 text-[10px]"
         disabled={disabled}
         onClick={() => onToggle(model)}
+        title={toggleDescription}
         type="button"
         variant="ghost"
       >
         {isPublished ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
-        <span>{toggleLabel}</span>
+        <span className="whitespace-nowrap">{toggleLabel}</span>
       </Button>
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button
             aria-label={deleteDescription}
-            className="h-auto min-h-12 w-14 flex-col gap-1 px-1 py-1.5 text-[10px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            className="h-auto min-h-12 min-w-0 w-full flex-col gap-1 px-1 py-1.5 text-[10px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
             disabled={disabled}
+            title={deleteDescription}
             type="button"
             variant="ghost"
           >
             <Trash2 aria-hidden="true" />
-            <span>{deleteLabel}</span>
+            <span className="whitespace-nowrap">{deleteLabel}</span>
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent size="sm">

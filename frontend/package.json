@@ -12,6 +12,7 @@
     "lint": "oxlint",
     "prepare": "sh ../scripts/setup-git-hooks.sh",
     "preview": "vite preview",
+    "test": "node --test --experimental-strip-types tests/*.test.ts",
     "ui:add": "pnpm dlx --package shadcn@4.16.1 --package zod@3.25.76 shadcn add",
     "ui:info": "pnpm dlx --package shadcn@4.16.1 --package zod@3.25.76 shadcn info"
   },

@@ -31,6 +31,23 @@ mod m0030_simplify_merchant_application_code;
 mod m0031_separate_merchant_status;
 mod m0032_create_merchant_channels;
 mod m0033_link_merchant_channels_to_brands;
+mod m0034_create_merchant_model_listings;
+mod m0035_add_merchant_model_pricing;
+mod m0036_add_merchant_model_price_currency;
+mod m0037_add_model_price_exchange_rate;
+mod m0038_create_price_settings;
+mod m0039_expand_price_settings;
+mod m0040_ensure_default_usd_price_setting;
+mod m0041_add_catalog_review_workflow;
+mod m0042_require_channel_approval_before_activation;
+mod m0043_add_catalog_review_notes;
+mod m0044_add_merchant_channel_connection;
+mod m0045_add_merchant_channel_public_id;
+mod m0046_add_merchant_channel_available_models;
+mod m0047_unify_merchant_channel_status;
+mod m0048_add_merchant_model_rejected_status;
+mod m0049_add_merchant_model_offline_status;
+mod m0050_separate_model_review_and_price_effective_state;
 
 use sea_orm_migration::prelude::*;
 
@@ -73,6 +90,23 @@ impl MigratorTrait for Migrator {
             Box::new(m0031_separate_merchant_status::Migration),
             Box::new(m0032_create_merchant_channels::Migration),
             Box::new(m0033_link_merchant_channels_to_brands::Migration),
+            Box::new(m0034_create_merchant_model_listings::Migration),
+            Box::new(m0035_add_merchant_model_pricing::Migration),
+            Box::new(m0036_add_merchant_model_price_currency::Migration),
+            Box::new(m0037_add_model_price_exchange_rate::Migration),
+            Box::new(m0038_create_price_settings::Migration),
+            Box::new(m0039_expand_price_settings::Migration),
+            Box::new(m0040_ensure_default_usd_price_setting::Migration),
+            Box::new(m0041_add_catalog_review_workflow::Migration),
+            Box::new(m0042_require_channel_approval_before_activation::Migration),
+            Box::new(m0043_add_catalog_review_notes::Migration),
+            Box::new(m0044_add_merchant_channel_connection::Migration),
+            Box::new(m0045_add_merchant_channel_public_id::Migration),
+            Box::new(m0046_add_merchant_channel_available_models::Migration),
+            Box::new(m0047_unify_merchant_channel_status::Migration),
+            Box::new(m0048_add_merchant_model_rejected_status::Migration),
+            Box::new(m0049_add_merchant_model_offline_status::Migration),
+            Box::new(m0050_separate_model_review_and_price_effective_state::Migration),
         ]
     }
 }

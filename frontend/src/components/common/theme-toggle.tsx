@@ -1,6 +1,6 @@
 import { Moon, Sun } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
+import { Toggle } from '@/components/ui/toggle';
 
 interface ThemeToggleProps {
   isDark: boolean;
@@ -12,12 +12,17 @@ export function ThemeToggle({ isDark, onToggle }: ThemeToggleProps) {
   const label = isDark ? t('theme.toLight') : t('theme.toDark');
 
   return (
-    <Button aria-label={label} aria-pressed={isDark} size="icon" variant="ghost" onClick={onToggle}>
+    <Toggle
+      aria-label={label}
+      className="size-9 p-0 hover:bg-accent hover:text-accent-foreground"
+      onPressedChange={onToggle}
+      pressed={isDark}
+    >
       {isDark ? (
         <Sun aria-hidden="true" className="size-4" />
       ) : (
         <Moon aria-hidden="true" className="size-4" />
       )}
-    </Button>
+    </Toggle>
   );
 }

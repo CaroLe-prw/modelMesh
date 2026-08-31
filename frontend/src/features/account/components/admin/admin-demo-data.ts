@@ -1,13 +1,10 @@
 import type { MerchantUsageStatus } from '@/features/account/components/merchant/merchant-demo-data';
 
 export type AdminAuditOutcome = 'failed' | 'succeeded';
-export type AdminCatalogAction = 'priceChange' | 'publish' | 'unpublish' | 'violation';
-export type AdminCatalogKind = 'channel' | 'model';
 export type AdminLedgerDirection = 'credit' | 'debit';
 export type AdminLedgerType = 'merchantRevenue' | 'topup' | 'usage' | 'withdrawal';
 export type AdminMerchantStatus = 'active' | 'pending' | 'rejected' | 'suspended';
 export type AdminReconciliationStatus = 'matched' | 'mismatch' | 'pending';
-export type AdminReviewStatus = 'approved' | 'pending' | 'rejected';
 export type AdminRiskSeverity = 'critical' | 'high' | 'low' | 'medium';
 export type AdminRiskStatus = 'investigating' | 'open' | 'resolved';
 export type AdminRiskType = 'amount' | 'frequency' | 'login' | 'usage';
@@ -22,18 +19,6 @@ export interface AdminLedgerEntry {
   reconciliationStatus: AdminReconciliationStatus;
   reference: string;
   type: AdminLedgerType;
-}
-
-export interface AdminCatalogReview {
-  action: AdminCatalogAction;
-  createdAt: string;
-  detail: string;
-  id: string;
-  kind: AdminCatalogKind;
-  merchant: string;
-  name: string;
-  priceMicrousd?: number;
-  status: AdminReviewStatus;
 }
 
 export interface AdminRiskAlert {
@@ -141,51 +126,6 @@ export const adminLedgerEntries: AdminLedgerEntry[] = [
     reconciliationStatus: 'mismatch',
     reference: 'req_01K24MZ8KS',
     type: 'usage',
-  },
-];
-
-export const adminCatalogReviews: AdminCatalogReview[] = [
-  {
-    action: 'publish',
-    createdAt: '2026-08-09T03:42:00Z',
-    detail: 'gpt-5 · 128K context',
-    id: 'review_01K24JEDPA',
-    kind: 'model',
-    merchant: 'Northstar AI',
-    name: 'gpt-5',
-    priceMicrousd: 12_500_000,
-    status: 'pending',
-  },
-  {
-    action: 'priceChange',
-    createdAt: '2026-08-08T09:24:00Z',
-    detail: 'Output price / 1M tokens',
-    id: 'review_01K22NPG2R',
-    kind: 'model',
-    merchant: 'Alloy Cloud',
-    name: 'claude-sonnet-4',
-    priceMicrousd: 18_000_000,
-    status: 'pending',
-  },
-  {
-    action: 'violation',
-    createdAt: '2026-08-07T06:12:00Z',
-    detail: 'Credential validation failed repeatedly',
-    id: 'review_01K1Y2E3XF',
-    kind: 'channel',
-    merchant: 'SwiftGate',
-    name: 'SwiftGate Primary',
-    status: 'rejected',
-  },
-  {
-    action: 'unpublish',
-    createdAt: '2026-08-06T02:30:00Z',
-    detail: 'Provider maintenance window',
-    id: 'review_01K1SN9C7M',
-    kind: 'model',
-    merchant: 'Vertex Relay',
-    name: 'gemini-2.5-pro',
-    status: 'approved',
   },
 ];
 

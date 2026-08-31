@@ -2,7 +2,10 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import type { MerchantChannelStatus } from '@/features/account/api/merchant-channels';
 import type {
+  MerchantModelReviewStatus,
   MerchantModelStatus,
+} from '@/features/account/api/merchant-models';
+import type {
   MerchantRequestStatus,
   MerchantUsageStatus,
   MerchantWithdrawalStatus,
@@ -10,6 +13,7 @@ import type {
 
 type MerchantStatus =
   | MerchantChannelStatus
+  | MerchantModelReviewStatus
   | MerchantModelStatus
   | MerchantRequestStatus
   | MerchantUsageStatus
@@ -19,8 +23,6 @@ const statusClasses: Record<MerchantStatus, string> = {
   active: 'border-success/25 bg-success/10 text-success',
   approved: 'border-success/25 bg-success/10 text-success',
   changesRequested: 'border-warning/25 bg-warning/10 text-warning',
-  degraded: 'border-warning/25 bg-warning/10 text-warning',
-  draft: 'border-border bg-secondary text-muted-foreground',
   failed: 'border-destructive/25 bg-destructive/10 text-destructive',
   offline: 'border-destructive/25 bg-destructive/10 text-destructive',
   paid: 'border-success/25 bg-success/10 text-success',
@@ -28,7 +30,6 @@ const statusClasses: Record<MerchantStatus, string> = {
   processing: 'border-primary/25 bg-primary/10 text-primary',
   published: 'border-success/25 bg-success/10 text-success',
   rejected: 'border-destructive/25 bg-destructive/10 text-destructive',
-  review: 'border-warning/25 bg-warning/10 text-warning',
   succeeded: 'border-success/25 bg-success/10 text-success',
 };
 

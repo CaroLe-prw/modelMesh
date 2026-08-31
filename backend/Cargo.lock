@@ -392,6 +392,7 @@ dependencies = [
  "log",
  "password-hash",
  "reqwest",
+ "ring",
  "sea-orm",
  "sea-orm-migration",
  "serde",

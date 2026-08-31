@@ -9,7 +9,6 @@ import {
   RadioTower,
   ScrollText,
   Trash2,
-  type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { AdminMerchant } from '@/features/account/api/admin-merchants';
+import { AdminListActionButton } from '@/features/account/components/admin/admin-list-action-button';
 
 export function AdminMerchantActions({
   disabled,
@@ -45,15 +45,15 @@ export function AdminMerchantActions({
   const translationPath = 'pages.account.sections.admin.merchants.actions';
 
   return (
-    <div className="flex items-center gap-1">
-      <MerchantActionButton
+    <div className="flex items-center gap-1 md:justify-center">
+      <AdminListActionButton
         disabled={disabled}
         icon={Pencil}
         label={t(`${translationPath}.edit`)}
         onClick={() => onEdit(merchant)}
       />
       {(merchant.status === 'active' || merchant.status === 'suspended') && (
-        <MerchantActionButton
+        <AdminListActionButton
           disabled={disabled}
           icon={merchant.status === 'active' ? Ban : CircleCheck}
           label={t(`${translationPath}.${merchant.status === 'active' ? 'disable' : 'enable'}`)}
@@ -61,7 +61,7 @@ export function AdminMerchantActions({
         />
       )}
       {merchant.status === 'pending' && (
-        <MerchantActionButton
+        <AdminListActionButton
           disabled={disabled}
           icon={ClipboardCheck}
           label={t(`${translationPath}.review`)}
@@ -122,31 +122,5 @@ export function AdminMerchantActions({
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
-  );
-}
-
-function MerchantActionButton({
-  disabled,
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  disabled: boolean;
-  icon: LucideIcon;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      aria-label={label}
-      className="h-auto min-w-12 flex-col gap-1 px-2 py-1.5 text-xs font-normal text-muted-foreground hover:text-foreground"
-      disabled={disabled}
-      onClick={onClick}
-      type="button"
-      variant="ghost"
-    >
-      <Icon aria-hidden="true" className="size-4" />
-      {label}
-    </Button>
   );
 }

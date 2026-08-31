@@ -3,9 +3,11 @@ import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { RadioCardItem } from '@/components/common/radio-card-item';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { RadioGroup } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { brands, catalogModels, formatUsd, tokenOptions, type BrandId } from '../data/marketplace';
 
@@ -37,20 +39,23 @@ export function CatalogSelectionPanel({
         step="01"
         title={t('pages.models.explorer.brand.title')}
       >
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        <RadioGroup
+          className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6"
+          onValueChange={(value) => {
+            const brand = brands.find((item) => item.id === value);
+            if (brand) onBrandChange(brand.id);
+          }}
+          value={selectedBrandId}
+        >
           {brands.map((brand) => {
             const isSelected = brand.id === selectedBrandId;
 
             return (
-              <Button
-                className={cn(
-                  'h-auto min-h-20 justify-start whitespace-normal rounded-lg px-3 text-left',
-                  isSelected && 'border-primary/40',
-                )}
-                aria-pressed={isSelected}
+              <RadioCardItem
+                className="min-h-20 justify-start rounded-lg px-3 text-left"
+                id={`catalog-brand-${brand.id}`}
                 key={brand.id}
-                variant={isSelected ? 'secondary' : 'outline'}
-                onClick={() => onBrandChange(brand.id)}
+                value={brand.id}
               >
                 <span
                   className={cn(
@@ -70,10 +75,10 @@ export function CatalogSelectionPanel({
                     })}
                   </small>
                 </span>
-              </Button>
+              </RadioCardItem>
             );
           })}
-        </div>
+        </RadioGroup>
       </SelectionStage>
 
       <SelectionStage
@@ -82,20 +87,20 @@ export function CatalogSelectionPanel({
         step="02"
         title={t('pages.models.explorer.model.title')}
       >
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <RadioGroup
+          className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4"
+          onValueChange={onModelChange}
+          value={selectedModelId}
+        >
           {visibleModels.map((model) => {
             const isSelected = model.id === selectedModelId;
 
             return (
-              <Button
-                className={cn(
-                  'relative h-auto min-h-22 justify-start whitespace-normal rounded-lg p-3.5 text-left',
-                  isSelected && 'border-primary/40',
-                )}
-                aria-pressed={isSelected}
+              <RadioCardItem
+                className="relative min-h-22 justify-start rounded-lg p-3.5 text-left"
+                id={`catalog-model-${model.id}`}
                 key={model.id}
-                variant={isSelected ? 'secondary' : 'outline'}
-                onClick={() => onModelChange(model.id)}
+                value={model.id}
               >
                 {isSelected && (
                   <span className="absolute right-3 top-3 grid size-5 place-items-center rounded-full bg-primary text-primary-foreground">
@@ -113,10 +118,10 @@ export function CatalogSelectionPanel({
                     count: model.merchantCount,
                   })}
                 </span>
-              </Button>
+              </RadioCardItem>
             );
           })}
-        </div>
+        </RadioGroup>
       </SelectionStage>
 
       <SelectionStage
@@ -126,19 +131,18 @@ export function CatalogSelectionPanel({
         title={t('pages.models.explorer.token.title')}
       >
         <div className="flex flex-col gap-2 sm:flex-row">
-          {tokenOptions.map((token) => {
-            const isSelected = token.id === selectedTokenId;
-
-            return (
-              <Button
-                className={cn(
-                  'h-auto min-h-18 flex-1 justify-start whitespace-normal rounded-lg px-4 text-left',
-                  isSelected && 'border-primary/40',
-                )}
-                aria-pressed={isSelected}
+          <RadioGroup
+            className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row"
+            onValueChange={onTokenChange}
+            value={selectedTokenId}
+          >
+            {tokenOptions.map((token) => (
+              <RadioCardItem
+                className="min-h-18 justify-start rounded-lg px-4 text-left"
+                containerClassName="flex-1"
+                id={`catalog-token-${token.id}`}
                 key={token.id}
-                variant={isSelected ? 'secondary' : 'outline'}
-                onClick={() => onTokenChange(token.id)}
+                value={token.id}
               >
                 <span
                   className={cn(
@@ -162,9 +166,9 @@ export function CatalogSelectionPanel({
                 >
                   {t(`pages.models.explorer.token.${token.status}`)}
                 </Badge>
-              </Button>
-            );
-          })}
+              </RadioCardItem>
+            ))}
+          </RadioGroup>
           <Button asChild className="min-h-18 min-w-36 border-dashed" variant="outline">
             <Link to="/register">
               <Plus aria-hidden="true" className="size-4" />

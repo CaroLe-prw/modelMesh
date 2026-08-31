@@ -7,11 +7,22 @@ use super::{MerchantChannelResponse, MerchantChannelStatusValue, UpdateMerchantC
 #[test]
 fn merchant_channel_response_uses_the_public_camel_case_contract() {
     let response = MerchantChannelResponse::from(MerchantChannel {
+        api_key_ciphertext: "v1.encrypted".to_owned(),
+        available_models: vec![
+            "gpt-5".to_owned(),
+            "gpt-5-mini".to_owned(),
+            "gpt-5-nano".to_owned(),
+        ],
+        base_url: "https://api.openai.com/v1".to_owned(),
+        description: "Official direct connection".to_owned(),
         id: "00000000-0000-4000-8000-000000000001".to_owned(),
+        public_id: 42,
         name: "Northstar Global".to_owned(),
         provider_id: "openai".to_owned(),
         provider: "OpenAI".to_owned(),
         status: MerchantChannelStatus::Active,
+        supported_models: vec!["gpt-5".to_owned(), "gpt-5-mini".to_owned()],
+        review_note: String::new(),
         model_count: 8,
         success_rate_basis_points: 9_996,
         average_latency_ms: 842,
@@ -27,11 +38,18 @@ fn merchant_channel_response_uses_the_public_camel_case_contract() {
     assert_eq!(
         value,
         json!({
+            "apiKeyConfigured": true,
+            "availableModels": ["gpt-5", "gpt-5-mini", "gpt-5-nano"],
+            "baseUrl": "https://api.openai.com/v1",
+            "channelId": 42,
+            "description": "Official direct connection",
             "id": "00000000-0000-4000-8000-000000000001",
             "name": "Northstar Global",
             "providerId": "openai",
             "provider": "OpenAI",
             "status": "active",
+            "supportedModels": ["gpt-5", "gpt-5-mini"],
+            "reviewNote": "",
             "modelCount": 8,
             "successRate": 99.96,
             "latencyMs": 842,
@@ -48,9 +66,13 @@ fn merchant_channel_request_accepts_all_public_statuses() {
         ("offline", MerchantChannelStatus::Offline),
     ] {
         let request: UpdateMerchantChannelRequest = serde_json::from_value(json!({
+            "availableModels": ["gpt-5", "gpt-5-mini"],
+            "baseUrl": "https://api.openai.com/v1",
+            "description": "",
             "name": "Channel",
             "providerId": "openai",
-            "status": value
+            "status": value,
+            "supportedModels": ["gpt-5"]
         }))
         .expect("channel request should deserialize");
 
@@ -62,11 +84,26 @@ fn merchant_channel_request_accepts_all_public_statuses() {
         MerchantChannelStatus::Offline
     );
 
+    let legacy_request: UpdateMerchantChannelRequest = serde_json::from_value(json!({
+        "baseUrl": "https://api.openai.com/v1",
+        "description": "",
+        "name": "Channel",
+        "providerId": "openai",
+        "status": "offline",
+        "supportedModels": ["gpt-5"]
+    }))
+    .expect("legacy request without available models should deserialize");
+    assert!(legacy_request.available_models.is_empty());
+
     assert!(
         serde_json::from_value::<UpdateMerchantChannelRequest>(json!({
+            "availableModels": ["gpt-5"],
+            "baseUrl": "https://api.openai.com/v1",
+            "description": "",
             "name": "Channel",
             "providerId": "openai",
-            "status": "degraded"
+            "status": "degraded",
+            "supportedModels": ["gpt-5"]
         }))
         .is_err()
     );

@@ -7,8 +7,9 @@ use serde::Serialize;
 
 use crate::services::{
     ApiKeyServiceError, AppRouteServiceError, AuthServiceError, BrandPresetServiceError,
-    BrandServiceError, MerchantApplicationServiceError, MerchantChannelServiceError,
-    MerchantManagementServiceError, ModelCatalogServiceError, ModelServiceError,
+    BrandServiceError, CatalogReviewServiceError, MerchantApplicationServiceError,
+    MerchantChannelServiceError, MerchantManagementServiceError, MerchantModelServiceError,
+    ModelCatalogServiceError, ModelServiceError, PriceSettingsServiceError,
     UserManagementServiceError,
 };
 
@@ -49,6 +50,20 @@ pub enum ErrorCode {
     InvalidMerchantChannel = 19_001,
     MerchantChannelNameAlreadyExists = 19_002,
     MerchantChannelNotFound = 19_003,
+    MerchantChannelPendingReview = 19_004,
+    MerchantChannelConnectionFailed = 19_005,
+    MerchantChannelCredentialsRejected = 19_006,
+    MerchantChannelReviewFieldsLocked = 19_007,
+    InvalidMerchantModel = 20_001,
+    MerchantModelAlreadyExists = 20_002,
+    MerchantModelNotFound = 20_003,
+    MerchantModelProviderMismatch = 20_004,
+    MerchantModelPriceSettingsChanged = 20_005,
+    InvalidPriceSettings = 21_001,
+    InvalidCatalogReview = 22_001,
+    CatalogReviewNotFound = 22_002,
+    CatalogReviewConflict = 22_003,
+    CatalogReviewModelTestFailed = 22_004,
     DependencyUnavailable = 90_001,
     Internal = 99_999,
 }
@@ -95,6 +110,20 @@ pub enum AppError {
     InvalidMerchantChannel,
     MerchantChannelNameAlreadyExists,
     MerchantChannelNotFound,
+    MerchantChannelPendingReview,
+    MerchantChannelConnectionFailed,
+    MerchantChannelCredentialsRejected,
+    MerchantChannelReviewFieldsLocked,
+    InvalidMerchantModel,
+    MerchantModelAlreadyExists,
+    MerchantModelNotFound,
+    MerchantModelProviderMismatch,
+    MerchantModelPriceSettingsChanged,
+    InvalidPriceSettings,
+    InvalidCatalogReview,
+    CatalogReviewNotFound,
+    CatalogReviewConflict,
+    CatalogReviewModelTestFailed,
     DependencyUnavailable,
     Internal,
 }
@@ -243,7 +272,61 @@ impl From<MerchantChannelServiceError> for AppError {
                 Self::MerchantChannelNameAlreadyExists
             }
             MerchantChannelServiceError::NotFound => Self::MerchantChannelNotFound,
+            MerchantChannelServiceError::PendingReview => Self::MerchantChannelPendingReview,
+            MerchantChannelServiceError::ReviewFieldsLocked => {
+                Self::MerchantChannelReviewFieldsLocked
+            }
+            MerchantChannelServiceError::ConnectionFailed => Self::MerchantChannelConnectionFailed,
+            MerchantChannelServiceError::CredentialsRejected => {
+                Self::MerchantChannelCredentialsRejected
+            }
             MerchantChannelServiceError::Internal => Self::Internal,
+        }
+    }
+}
+
+impl From<MerchantModelServiceError> for AppError {
+    fn from(error: MerchantModelServiceError) -> Self {
+        match error {
+            MerchantModelServiceError::Forbidden => Self::Forbidden,
+            MerchantModelServiceError::InvalidInput => Self::InvalidMerchantModel,
+            MerchantModelServiceError::AlreadyExists => Self::MerchantModelAlreadyExists,
+            MerchantModelServiceError::ChannelNotFound => Self::MerchantChannelNotFound,
+            MerchantModelServiceError::ChannelPendingReview => Self::MerchantChannelPendingReview,
+            MerchantModelServiceError::ModelNotFound => Self::ModelNotFound,
+            MerchantModelServiceError::ProviderMismatch => Self::MerchantModelProviderMismatch,
+            MerchantModelServiceError::PriceSettingsChanged => {
+                Self::MerchantModelPriceSettingsChanged
+            }
+            MerchantModelServiceError::NotFound => Self::MerchantModelNotFound,
+            MerchantModelServiceError::Internal => Self::Internal,
+        }
+    }
+}
+
+impl From<PriceSettingsServiceError> for AppError {
+    fn from(error: PriceSettingsServiceError) -> Self {
+        match error {
+            PriceSettingsServiceError::Forbidden => Self::Forbidden,
+            PriceSettingsServiceError::InvalidInput => Self::InvalidPriceSettings,
+            PriceSettingsServiceError::Internal => Self::Internal,
+        }
+    }
+}
+
+impl From<CatalogReviewServiceError> for AppError {
+    fn from(error: CatalogReviewServiceError) -> Self {
+        match error {
+            CatalogReviewServiceError::ConnectionFailed => Self::MerchantChannelConnectionFailed,
+            CatalogReviewServiceError::CredentialsRejected => {
+                Self::MerchantChannelCredentialsRejected
+            }
+            CatalogReviewServiceError::Forbidden => Self::Forbidden,
+            CatalogReviewServiceError::InvalidInput => Self::InvalidCatalogReview,
+            CatalogReviewServiceError::NotFound => Self::CatalogReviewNotFound,
+            CatalogReviewServiceError::InvalidState => Self::CatalogReviewConflict,
+            CatalogReviewServiceError::ModelTestFailed => Self::CatalogReviewModelTestFailed,
+            CatalogReviewServiceError::Internal => Self::Internal,
         }
     }
 }
@@ -317,6 +400,53 @@ impl IntoResponse for AppError {
             Self::MerchantChannelNotFound => {
                 (StatusCode::NOT_FOUND, ErrorCode::MerchantChannelNotFound)
             }
+            Self::MerchantChannelPendingReview => (
+                StatusCode::CONFLICT,
+                ErrorCode::MerchantChannelPendingReview,
+            ),
+            Self::MerchantChannelConnectionFailed => (
+                StatusCode::BAD_GATEWAY,
+                ErrorCode::MerchantChannelConnectionFailed,
+            ),
+            Self::MerchantChannelCredentialsRejected => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                ErrorCode::MerchantChannelCredentialsRejected,
+            ),
+            Self::MerchantChannelReviewFieldsLocked => (
+                StatusCode::CONFLICT,
+                ErrorCode::MerchantChannelReviewFieldsLocked,
+            ),
+            Self::InvalidMerchantModel => {
+                (StatusCode::BAD_REQUEST, ErrorCode::InvalidMerchantModel)
+            }
+            Self::MerchantModelAlreadyExists => {
+                (StatusCode::CONFLICT, ErrorCode::MerchantModelAlreadyExists)
+            }
+            Self::MerchantModelNotFound => {
+                (StatusCode::NOT_FOUND, ErrorCode::MerchantModelNotFound)
+            }
+            Self::MerchantModelProviderMismatch => (
+                StatusCode::BAD_REQUEST,
+                ErrorCode::MerchantModelProviderMismatch,
+            ),
+            Self::MerchantModelPriceSettingsChanged => (
+                StatusCode::CONFLICT,
+                ErrorCode::MerchantModelPriceSettingsChanged,
+            ),
+            Self::InvalidPriceSettings => {
+                (StatusCode::BAD_REQUEST, ErrorCode::InvalidPriceSettings)
+            }
+            Self::InvalidCatalogReview => {
+                (StatusCode::BAD_REQUEST, ErrorCode::InvalidCatalogReview)
+            }
+            Self::CatalogReviewNotFound => {
+                (StatusCode::NOT_FOUND, ErrorCode::CatalogReviewNotFound)
+            }
+            Self::CatalogReviewConflict => (StatusCode::CONFLICT, ErrorCode::CatalogReviewConflict),
+            Self::CatalogReviewModelTestFailed => (
+                StatusCode::BAD_GATEWAY,
+                ErrorCode::CatalogReviewModelTestFailed,
+            ),
             Self::DependencyUnavailable => (
                 StatusCode::SERVICE_UNAVAILABLE,
                 ErrorCode::DependencyUnavailable,

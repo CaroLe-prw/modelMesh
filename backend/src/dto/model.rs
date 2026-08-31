@@ -32,7 +32,6 @@ pub struct CreateModelRequest {
     pub name: Option<String>,
     #[serde(default)]
     pub context_window: Option<i64>,
-    #[serde(default)]
     pub input_price: Option<f64>,
     #[serde(default)]
     pub cache_read_price: Option<f64>,
@@ -50,7 +49,6 @@ pub struct CreateModelRequest {
 pub struct BatchCreateModelsRequest {
     pub brand_id: String,
     pub model_ids: Vec<String>,
-    #[serde(default)]
     pub input_price: Option<f64>,
     #[serde(default)]
     pub cache_read_price: Option<f64>,
@@ -83,9 +81,23 @@ pub struct ModelPriceOverrideRequest {
 pub enum ModelPriceGroupRequest {
     Base,
     ContextOver200k,
-    Tier { tier_type: String, size: i64 },
-    ExperimentalMode { mode: String },
-    ServiceTier { tier: String },
+    Tier {
+        #[serde(rename = "tierType")]
+        tier_type: String,
+        size: i64,
+    },
+    ExperimentalMode {
+        mode: String,
+    },
+    ExperimentalModeTier {
+        mode: String,
+        #[serde(rename = "tierType")]
+        tier_type: String,
+        size: i64,
+    },
+    ServiceTier {
+        tier: String,
+    },
 }
 
 #[derive(Debug, Deserialize)]

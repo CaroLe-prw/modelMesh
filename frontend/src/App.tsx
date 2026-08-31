@@ -3,7 +3,7 @@ import { SiteFooter } from '@/components/layout/site-footer';
 import { SiteHeader } from '@/components/layout/site-header';
 import { Toaster } from '@/components/ui/sonner';
 import { AccountRouteContent } from '@/features/account/components/account-route-content';
-import { ProtectedRoute } from '@/features/auth/components/protected-route';
+import { GuestOnlyRoute, ProtectedRoute } from '@/features/auth/components/protected-route';
 import { useDocumentLocale } from '@/hooks/use-document-locale';
 import { useTheme } from '@/hooks/use-theme';
 import { AccountPage } from '@/pages/account-page';
@@ -36,8 +36,10 @@ function App() {
           </Route>
           <Route path="/routing" element={<RoutingPage />} />
           <Route path="/features" element={<FeaturesPage />} />
-          <Route path="/login" element={<AuthPage mode="login" />} />
-          <Route path="/register" element={<AuthPage mode="register" />} />
+          <Route element={<GuestOnlyRoute />}>
+            <Route path="/login" element={<AuthPage mode="login" />} />
+            <Route path="/register" element={<AuthPage mode="register" />} />
+          </Route>
           <Route path="*" element={<Navigate replace to="/" />} />
         </Routes>
       </main>

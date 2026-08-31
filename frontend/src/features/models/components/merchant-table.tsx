@@ -3,7 +3,6 @@ import { Pin, Route, Search, SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { SignalBars } from '@/components/common/signal-bars';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -21,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Toggle } from '@/components/ui/toggle';
 import { cn } from '@/lib/utils';
 import {
   formatUsd,
@@ -146,18 +146,18 @@ export function MerchantTable({ model }: MerchantTableProps) {
             </Select>
           </div>
 
-          <Button
-            aria-pressed={healthyOnly}
+          <Toggle
             className="lg:ml-auto"
-            variant={healthyOnly ? 'secondary' : 'outline'}
-            onClick={() => setHealthyOnly((current) => !current)}
+            onPressedChange={setHealthyOnly}
+            pressed={healthyOnly}
+            variant="outline"
           >
             <span className="size-2 rounded-full bg-success" />
             {t('pages.models.merchants.healthyOnly')}
-          </Button>
+          </Toggle>
         </div>
 
-        <Table className="model-table min-w-[1120px] border-collapse text-left">
+        <Table className="model-table min-w-[1120px] border-collapse text-center">
           <TableHeader>
             <TableRow className="bg-secondary/65 hover:bg-secondary/65">
               {merchantHeadings.map((heading) => (
@@ -178,7 +178,7 @@ export function MerchantTable({ model }: MerchantTableProps) {
               return (
                 <TableRow key={merchant.id}>
                   <TableCell className="h-18 border-b border-border px-3 pl-5 transition-colors">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center gap-3">
                       <span className="grid size-9 place-items-center rounded-lg border border-border bg-secondary font-mono text-[10px] font-bold text-primary">
                         {merchant.name.slice(0, 1)}
                       </span>
@@ -202,7 +202,7 @@ export function MerchantTable({ model }: MerchantTableProps) {
                     </Badge>
                   </TableCell>
                   <TableCell className="h-18 border-b border-border px-3 transition-colors">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center gap-2">
                       <SignalBars signals={merchant.signals} />
                       <strong
                         className={cn(
@@ -218,7 +218,7 @@ export function MerchantTable({ model }: MerchantTableProps) {
                     {merchant.latency.toFixed(2)}s
                   </TableCell>
                   <TableCell className="h-18 border-b border-border px-3 transition-colors">
-                    <div className="flex max-w-30 flex-wrap gap-1">
+                    <div className="mx-auto flex max-w-30 flex-wrap justify-center gap-1">
                       {merchant.tags.map((tag) => (
                         <Badge className={cn('h-5 px-2 text-[8px]', tagClasses[tag])} key={tag}>
                           {t(`pages.models.merchants.tags.${tag}`)}
@@ -230,25 +230,25 @@ export function MerchantTable({ model }: MerchantTableProps) {
                     {t(`pages.models.merchants.lastSuccess.${merchant.lastSuccessKey}`)}
                   </TableCell>
                   <TableCell className="h-18 border-b border-border px-3 pr-5 transition-colors">
-                    <div className="flex min-w-60 justify-end gap-2.5">
-                      <Button
+                    <div className="flex min-w-60 justify-center gap-2.5">
+                      <Toggle
                         className="h-10 min-w-28 rounded-lg px-4 text-[11px]"
-                        variant={isPinned ? 'secondary' : 'outline'}
-                        onClick={() =>
-                          setPinnedMerchantId((current) =>
-                            current === merchant.id ? undefined : merchant.id,
-                          )
+                        onPressedChange={(pressed) =>
+                          setPinnedMerchantId(pressed ? merchant.id : undefined)
                         }
+                        pressed={isPinned}
+                        variant="outline"
                       >
                         <Pin aria-hidden="true" className="size-3.5" />
                         {t(
                           isPinned ? 'pages.models.merchants.pinned' : 'pages.models.merchants.pin',
                         )}
-                      </Button>
-                      <Button
-                        className="h-10 min-w-28 rounded-lg px-4 text-[11px]"
-                        variant={isInRoute ? 'outline' : 'default'}
-                        onClick={() => toggleRouteMerchant(merchant.id)}
+                      </Toggle>
+                      <Toggle
+                        className="h-10 min-w-28 rounded-lg border-primary bg-primary px-4 text-[11px] text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground data-[state=on]:border-input data-[state=on]:bg-background data-[state=on]:text-foreground"
+                        onPressedChange={() => toggleRouteMerchant(merchant.id)}
+                        pressed={isInRoute}
+                        variant="outline"
                       >
                         <Route aria-hidden="true" className="size-3.5" />
                         {t(
@@ -256,7 +256,7 @@ export function MerchantTable({ model }: MerchantTableProps) {
                             ? 'pages.models.merchants.inRoute'
                             : 'pages.models.merchants.addRoute',
                         )}
-                      </Button>
+                      </Toggle>
                     </div>
                   </TableCell>
                 </TableRow>

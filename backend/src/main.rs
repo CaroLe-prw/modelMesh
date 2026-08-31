@@ -21,10 +21,10 @@ use pools::{
     create_database_connection, create_model_catalog_database_connection, create_redis_pool,
     verify_database_connection,
 };
-use repository::ModelCatalogRepository;
+use repository::{MerchantModelRepository, ModelCatalogRepository};
 use routes::create_router;
 use sea_orm_migration::MigratorTrait;
-use services::ModelCatalogSyncService;
+use services::{MerchantModelPriceActivationService, ModelCatalogSyncService};
 use state::AppState;
 use std::{net::SocketAddr, path::PathBuf, process::ExitCode, time::Duration};
 
@@ -44,6 +44,11 @@ async fn main() -> Result<ExitCode, Box<dyn std::error::Error>> {
         log_filter = %config.log_filter,
         "logging initialized"
     );
+    if config.provider_credential_key_is_default {
+        tracing::warn!(
+            "using the development-only provider credential key; configure MODELMESH_PROVIDER_CREDENTIAL_SECRET before storing non-test provider keys"
+        );
+    }
 
     if let Err(error) = run(config).await {
         tracing::error!(
@@ -85,10 +90,19 @@ async fn run(config: AppConfig) -> Result<(), StartupError> {
         retry_delay: Duration::from_secs(config.models_dev_retry_delay_seconds),
     })
     .map_err(startup_error("models_dev_client"))?;
-    let state = AppState::new(database, redis, config.access_token_ttl_seconds);
+    let state = AppState::new(
+        database.clone(),
+        redis,
+        config.access_token_ttl_seconds,
+        config.provider_credential_key,
+    );
     let app = create_router(state);
     let models_dev_sync_interval_seconds = config.models_dev_sync_interval_seconds;
     tokio::spawn(run_model_catalog_sync(config.clone(), models_dev_client));
+    tokio::spawn(
+        MerchantModelPriceActivationService::new(MerchantModelRepository::new(database))
+            .run(Duration::from_secs(60)),
+    );
 
     tracing::info!(
         bind_address = %config.bind_address,

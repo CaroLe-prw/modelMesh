@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CartesianGrid, Line, LineChart, Pie, PieChart, XAxis, YAxis } from 'recharts';
-import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   type ChartConfig,
@@ -11,6 +10,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   apiKeyDistribution,
   endpointDistribution,
@@ -79,18 +79,27 @@ function DistributionCard({ data, title }: DistributionCardProps) {
     <Card className="gap-0 py-0 shadow-sm">
       <CardHeader className="border-b border-border px-4 py-4">
         <CardTitle className="text-sm">{title}</CardTitle>
-        <CardAction className="flex rounded-md bg-secondary p-0.5">
-          {(['tokens', 'cost'] as const).map((option) => (
-            <Button
-              className="h-7 px-2.5 text-xs"
-              key={option}
-              onClick={() => setMetric(option)}
-              size="sm"
-              variant={metric === option ? 'outline' : 'ghost'}
-            >
-              {t(`pages.account.sections.usage.charts.metrics.${option}`)}
-            </Button>
-          ))}
+        <CardAction>
+          <ToggleGroup
+            aria-label={title}
+            className="rounded-md bg-secondary p-0.5"
+            onValueChange={(value) => {
+              if (value === 'tokens' || value === 'cost') setMetric(value);
+            }}
+            size="sm"
+            type="single"
+            value={metric}
+          >
+            {(['tokens', 'cost'] as const).map((option) => (
+              <ToggleGroupItem
+                className="h-7 px-2.5 text-xs data-[state=on]:bg-background"
+                key={option}
+                value={option}
+              >
+                {t(`pages.account.sections.usage.charts.metrics.${option}`)}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
         </CardAction>
       </CardHeader>
       <CardContent className="grid items-center gap-2 p-4 sm:grid-cols-[180px_minmax(0,1fr)]">

@@ -536,7 +536,7 @@ export function AdminMerchantsPanel() {
           )}
           notice={null}
           selectionDisabled={isLoading || isMutating}
-          tableClassName="min-w-[84rem] table-fixed"
+          tableClassName="table-fixed"
         />
       )}
 

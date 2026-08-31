@@ -58,51 +58,79 @@ export interface MerchantSettlementAccount {
 
 export const merchantChannels: MerchantChannel[] = [
   {
+    apiKeyConfigured: true,
+    baseUrl: 'https://api.openai.com/v1',
+    channelId: 1,
     createdAt: '2026-08-09T04:20:00Z',
+    description: 'Official direct connection',
     id: 'channel-northstar',
     latencyMs: 842,
     modelCount: 8,
     name: 'Northstar Global',
     provider: 'OpenAI',
     providerId: 'openai',
+    reviewNote: '',
     status: 'active',
     successRate: 99.96,
+    availableModels: ['gpt-5', 'gpt-5-mini'],
+    supportedModels: ['gpt-5', 'gpt-5-mini'],
     updatedAt: '2026-08-09T04:26:00Z',
   },
   {
+    apiKeyConfigured: true,
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    channelId: 2,
     createdAt: '2026-08-09T04:10:00Z',
+    description: 'APAC provider route',
     id: 'channel-vertex',
     latencyMs: 1_180,
     modelCount: 5,
     name: 'Vertex APAC',
     provider: 'Google Vertex AI',
     providerId: 'google',
-    status: 'degraded',
+    reviewNote: '',
+    status: 'offline',
     successRate: 97.82,
+    availableModels: ['gemini-2.5-pro'],
+    supportedModels: ['gemini-2.5-pro'],
     updatedAt: '2026-08-09T04:18:00Z',
   },
   {
+    apiKeyConfigured: true,
+    baseUrl: 'https://api.anthropic.com/v1',
+    channelId: 3,
     createdAt: '2026-08-09T04:00:00Z',
+    description: 'Official direct connection',
     id: 'channel-anthropic',
     latencyMs: 934,
     modelCount: 4,
     name: 'Anthropic Direct',
     provider: 'Anthropic',
     providerId: 'anthropic',
+    reviewNote: '',
     status: 'active',
     successRate: 99.71,
+    availableModels: ['claude-sonnet-4'],
+    supportedModels: ['claude-sonnet-4'],
     updatedAt: '2026-08-09T04:12:00Z',
   },
   {
+    apiKeyConfigured: true,
+    baseUrl: 'https://api.example.com/v1',
+    channelId: 4,
     createdAt: '2026-08-09T03:30:00Z',
+    description: 'Backup compatible endpoint',
     id: 'channel-backup',
     latencyMs: 0,
     modelCount: 3,
     name: 'Backup Pool',
     provider: 'OpenAI Compatible',
     providerId: 'openai',
+    reviewNote: '',
     status: 'offline',
     successRate: 0,
+    availableModels: ['gpt-4.1-mini'],
+    supportedModels: ['gpt-4.1-mini'],
     updatedAt: '2026-08-09T03:45:00Z',
   },
 ];
@@ -273,6 +301,26 @@ export function formatMerchantDate(language: string | undefined, value: string):
 export function formatUsd(language: string | undefined, value: number): string {
   return new Intl.NumberFormat(language, {
     currency: 'USD',
+    maximumFractionDigits: 4,
+    minimumFractionDigits: 2,
+    style: 'currency',
+  }).format(value);
+}
+
+export function formatMerchantCurrency(
+  language: string | undefined,
+  value: number,
+  currency: string,
+): string {
+  if (currency === 'USDT') {
+    return `USDT ${new Intl.NumberFormat(language, {
+      maximumFractionDigits: 4,
+      minimumFractionDigits: 2,
+    }).format(value)}`;
+  }
+  return new Intl.NumberFormat(language, {
+    currency,
+    currencyDisplay: 'narrowSymbol',
     maximumFractionDigits: 4,
     minimumFractionDigits: 2,
     style: 'currency',

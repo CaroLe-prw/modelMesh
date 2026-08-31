@@ -68,9 +68,21 @@ pub struct UpdateModelPricing {
 pub enum ModelPriceGroupInput {
     Base,
     ContextOver200k,
-    Tier { tier_type: String, size: i64 },
-    ExperimentalMode { mode: String },
-    ServiceTier { tier: String },
+    Tier {
+        tier_type: String,
+        size: i64,
+    },
+    ExperimentalMode {
+        mode: String,
+    },
+    ExperimentalModeTier {
+        mode: String,
+        tier_type: String,
+        size: i64,
+    },
+    ServiceTier {
+        tier: String,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -447,7 +459,7 @@ fn default_base_price(pricing: &ModelPricing, rate: &str) -> ResolvedPrice {
     }
 }
 
-fn resolve_pricing_overrides(
+pub(super) fn resolve_pricing_overrides(
     overrides: Vec<ModelPriceOverrideInput>,
 ) -> Result<ModelPricing, ModelServiceError> {
     if overrides.len() > MAX_PRICE_OVERRIDES {
@@ -496,6 +508,30 @@ fn resolve_pricing_overrides(
                     .or_default()
                     .insert(rate, price);
             }
+            ModelPriceGroupInput::ExperimentalModeTier {
+                mode,
+                tier_type,
+                size,
+            } => {
+                if size < 0 {
+                    return Err(ModelServiceError::InvalidInput);
+                }
+                let mode = normalize_price_name(mode, MAX_PRICE_GROUP_NAME_LENGTH)?;
+                let tier_type = normalize_price_name(tier_type, MAX_PRICE_GROUP_NAME_LENGTH)?;
+                let tiers = pricing.experimental_mode_tiers.entry(mode).or_default();
+                if let Some(tier) = tiers
+                    .iter_mut()
+                    .find(|tier| tier.tier_type == tier_type && tier.size == size)
+                {
+                    tier.rates.insert(rate, price);
+                } else {
+                    tiers.push(ModelPriceTier {
+                        tier_type,
+                        size,
+                        rates: [(rate, price)].into(),
+                    });
+                }
+            }
             ModelPriceGroupInput::ServiceTier { tier } => {
                 let tier = normalize_price_name(tier, MAX_PRICE_GROUP_NAME_LENGTH)?;
                 pricing
@@ -511,6 +547,13 @@ fn resolve_pricing_overrides(
             .cmp(&right.size)
             .then(left.tier_type.cmp(&right.tier_type))
     });
+    for tiers in pricing.experimental_mode_tiers.values_mut() {
+        tiers.sort_by(|left, right| {
+            left.size
+                .cmp(&right.size)
+                .then(left.tier_type.cmp(&right.tier_type))
+        });
+    }
 
     Ok(pricing)
 }

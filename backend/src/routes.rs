@@ -3,12 +3,15 @@ mod app_route;
 mod auth;
 mod brand;
 mod brand_preset;
+mod catalog_review;
 mod health;
 mod merchant_application;
 mod merchant_channel;
 mod merchant_management;
+mod merchant_model;
 mod model;
 mod model_catalog;
+mod price_settings;
 mod user_management;
 
 use axum::{Router, http::Request};
@@ -43,12 +46,15 @@ fn api_router() -> Router<AppState> {
         .merge(auth::router())
         .merge(brand::router())
         .merge(brand_preset::router())
+        .merge(catalog_review::router())
         .merge(health::router())
         .merge(model_catalog::router())
         .merge(model::router())
         .merge(merchant_application::router())
         .merge(merchant_channel::router())
         .merge(merchant_management::router())
+        .merge(merchant_model::router())
+        .merge(price_settings::router())
         .merge(user_management::router())
 }
 

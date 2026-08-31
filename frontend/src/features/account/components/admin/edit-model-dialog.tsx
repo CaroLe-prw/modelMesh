@@ -10,7 +10,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { ModelPricing, ModelPriceRates } from '@/features/account/api/model-catalog';
+import type {
+  ModelPricing,
+  ModelPriceRates,
+  ModelPriceTier,
+} from '@/features/account/api/model-catalog';
 import type {
   ModelItem,
   ModelPriceOverride,
@@ -104,6 +108,7 @@ export function EditModelDialog({
   function removeCustomPriceTier(id: number) {
     const prefix = `custom-tier-${id}:`;
     setForm((current) => ({
+      ...current,
       customPriceTiers: current.customPriceTiers.filter((tier) => tier.id !== id),
       priceValues: Object.fromEntries(
         Object.entries(current.priceValues).filter(([key]) => !key.startsWith(prefix)),
@@ -176,7 +181,9 @@ export function EditModelDialog({
 
     setIsSubmitting(true);
     try {
-      await onSave(model, { priceOverrides });
+      await onSave(model, {
+        priceOverrides,
+      });
       onOpenChange(false);
     } catch {
       // The parent shows the localized error and leaves this dialog open for correction.
@@ -252,6 +259,8 @@ export function EditModelDialog({
                   onRemoveCustomTier={removeCustomPriceTier}
                   onUpdateCustomTier={updateCustomPriceTier}
                   priceErrors={priceErrors}
+                  currencySymbol="$"
+                  priceUnitLabel={t(`${createTranslationPath}.pricing.perMillion`)}
                   t={t}
                   translationPath={createTranslationPath}
                   values={form.priceValues}
@@ -314,11 +323,23 @@ function initialPricingForm(model: ModelItem): EditPricingForm {
   for (const [mode, rates] of Object.entries(source.experimentalModes ?? {})) {
     addPriceValues(priceValues, `experimental-${mode}`, rates);
   }
+  for (const [mode, tiers] of Object.entries(source.experimentalModeTiers ?? {})) {
+    for (const tier of tiers) {
+      addPriceValues(
+        priceValues,
+        `experimental-${mode}-tier-${tier.tierType}-${tier.size}`,
+        tier.rates,
+      );
+    }
+  }
   for (const [tier, rates] of Object.entries(source.serviceTiers ?? {})) {
     addPriceValues(priceValues, `service-${tier}`, rates);
   }
 
-  return { customPriceTiers, priceValues };
+  return {
+    customPriceTiers,
+    priceValues,
+  };
 }
 
 function addPriceValues(values: Record<string, string>, groupId: string, rates?: ModelPriceRates) {
@@ -347,9 +368,49 @@ function pricingShape(model: ModelItem): ModelPricing {
         ? rateShape(defaults.contextOver200k, source.contextOver200k)
         : undefined,
     experimentalModes: groupShape(defaults.experimentalModes, source.experimentalModes),
+    experimentalModeTiers: namedTierGroupShape(
+      defaults.experimentalModeTiers,
+      source.experimentalModeTiers,
+    ),
     serviceTiers: groupShape(defaults.serviceTiers, source.serviceTiers),
     tiers,
   };
+}
+
+function namedTierGroupShape(
+  defaults?: Record<string, ModelPriceTier[]>,
+  overrides?: Record<string, ModelPriceTier[]>,
+): Record<string, ModelPriceTier[]> | undefined {
+  const names = new Set([...Object.keys(defaults ?? {}), ...Object.keys(overrides ?? {})]);
+  if (names.size === 0) return undefined;
+  return Object.fromEntries(
+    [...names].map((name) => {
+      const defaultTiers = defaults?.[name] ?? [];
+      const overrideTiers = overrides?.[name] ?? [];
+      const identities = new Set([
+        ...defaultTiers.map((tier) => tierKey(tier.tierType, tier.size)),
+        ...overrideTiers.map((tier) => tierKey(tier.tierType, tier.size)),
+      ]);
+      const tiers = [...identities].flatMap((identity) => {
+        const defaultTier = defaultTiers.find(
+          (tier) => tierKey(tier.tierType, tier.size) === identity,
+        );
+        const overrideTier = overrideTiers.find(
+          (tier) => tierKey(tier.tierType, tier.size) === identity,
+        );
+        const shape = defaultTier ?? overrideTier;
+        return shape
+          ? [
+              {
+                ...shape,
+                rates: rateShape(defaultTier?.rates, overrideTier?.rates),
+              },
+            ]
+          : [];
+      });
+      return [name, tiers];
+    }),
+  );
 }
 
 function groupShape(

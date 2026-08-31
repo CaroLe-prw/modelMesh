@@ -115,7 +115,7 @@ pub async fn create_batch(
     ))
 }
 
-fn price_override_input(request: ModelPriceOverrideRequest) -> ModelPriceOverrideInput {
+pub(super) fn price_override_input(request: ModelPriceOverrideRequest) -> ModelPriceOverrideInput {
     ModelPriceOverrideInput {
         group: match request.group {
             ModelPriceGroupRequest::Base => ModelPriceGroupInput::Base,
@@ -126,6 +126,15 @@ fn price_override_input(request: ModelPriceOverrideRequest) -> ModelPriceOverrid
             ModelPriceGroupRequest::ExperimentalMode { mode } => {
                 ModelPriceGroupInput::ExperimentalMode { mode }
             }
+            ModelPriceGroupRequest::ExperimentalModeTier {
+                mode,
+                tier_type,
+                size,
+            } => ModelPriceGroupInput::ExperimentalModeTier {
+                mode,
+                tier_type,
+                size,
+            },
             ModelPriceGroupRequest::ServiceTier { tier } => {
                 ModelPriceGroupInput::ServiceTier { tier }
             }

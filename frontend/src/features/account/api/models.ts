@@ -62,6 +62,12 @@ export type ModelPriceGroup =
   | { type: 'contextOver200k' }
   | { size: number; tierType: string; type: 'tier' }
   | { mode: string; type: 'experimentalMode' }
+  | {
+      mode: string;
+      size: number;
+      tierType: string;
+      type: 'experimentalModeTier';
+    }
   | { tier: string; type: 'serviceTier' };
 
 export interface ModelPriceOverride {

@@ -3,7 +3,9 @@ use std::collections::BTreeMap;
 use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::{ModelCatalogEntry, ModelPriceRates, ModelPricing};
+use crate::domain::{ModelCatalogEntry, ModelCatalogOption, ModelPriceRates, ModelPricing};
+
+use super::BrandResponse;
 
 const PRICE_NANO_USD_SCALE: f64 = 100_000_000.0;
 
@@ -18,6 +20,29 @@ pub struct ModelCatalogLookupQuery {
 #[serde(rename_all = "camelCase")]
 pub struct ModelCatalogListQuery {
     pub brand_id: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelCatalogOptionsResponse {
+    pub brands: Vec<BrandResponse>,
+    pub models_by_brand: BTreeMap<String, Vec<ModelCatalogOptionResponse>>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelCatalogOptionResponse {
+    pub model_id: String,
+    pub name: String,
+}
+
+impl From<ModelCatalogOption> for ModelCatalogOptionResponse {
+    fn from(option: ModelCatalogOption) -> Self {
+        Self {
+            model_id: option.model_id,
+            name: option.model_name,
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -79,6 +104,8 @@ pub struct ModelPricingResponse {
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub experimental_modes: BTreeMap<String, BTreeMap<String, f64>>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub experimental_mode_tiers: BTreeMap<String, Vec<ModelPriceTierResponse>>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub service_tiers: BTreeMap<String, BTreeMap<String, f64>>,
 }
 
@@ -109,12 +136,33 @@ impl From<ModelPricing> for ModelPricingResponse {
                 .into_iter()
                 .map(|(name, rates)| (name, price_rates_from_nano_usd(rates)))
                 .collect(),
+            experimental_mode_tiers: pricing
+                .experimental_mode_tiers
+                .into_iter()
+                .map(|(name, tiers)| {
+                    (
+                        name,
+                        tiers
+                            .into_iter()
+                            .map(model_price_tier_from_nano_usd)
+                            .collect(),
+                    )
+                })
+                .collect(),
             service_tiers: pricing
                 .service_tiers
                 .into_iter()
                 .map(|(name, rates)| (name, price_rates_from_nano_usd(rates)))
                 .collect(),
         }
+    }
+}
+
+fn model_price_tier_from_nano_usd(tier: crate::domain::ModelPriceTier) -> ModelPriceTierResponse {
+    ModelPriceTierResponse {
+        tier_type: tier.tier_type,
+        size: tier.size,
+        rates: price_rates_from_nano_usd(tier.rates),
     }
 }
 

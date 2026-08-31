@@ -30,9 +30,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 
 export interface ManagementDataColumn<T> {
   className?: string;
+  headerClassName?: string;
   hideable?: boolean;
   key: string;
   label: string;
@@ -65,6 +67,9 @@ export interface ManagementBatchAction<T> {
   onClick: (selectedItems: T[], clearSelection: () => void) => void;
   variant?: 'default' | 'destructive' | 'ghost' | 'outline' | 'secondary';
 }
+
+const managementColumnMinimumWidth = 160;
+const managementSelectionColumnWidth = 48;
 
 export function ManagementListActions<K extends string>({
   columnOptions,
@@ -224,6 +229,7 @@ export function ManagementDataList<T>({
   mobileFields,
   mobileHeader,
   notice,
+  selectable = true,
   selectionDisabled = false,
   tableClassName,
   tableStyle,
@@ -240,6 +246,7 @@ export function ManagementDataList<T>({
   mobileFields: ManagementMobileField<T>[];
   mobileHeader: (item: T) => ReactNode;
   notice?: string | null;
+  selectable?: boolean;
   selectionDisabled?: boolean;
   tableClassName?: string;
   tableStyle?: CSSProperties;
@@ -251,6 +258,12 @@ export function ManagementDataList<T>({
   const allItemsSelected =
     items.length > 0 && items.every((item) => selectedKeys.has(getKey(item)));
   const someItemsSelected = selectedItems.length > 0 && !allItemsSelected;
+  const adaptiveTableStyle: CSSProperties = {
+    minWidth:
+      columns.length * managementColumnMinimumWidth +
+      (selectable ? managementSelectionColumnWidth : 0),
+    ...tableStyle,
+  };
 
   function clearSelection() {
     setSelectedKeys(new Set());
@@ -298,7 +311,7 @@ export function ManagementDataList<T>({
 
   return (
     <>
-      {selectedItems.length > 0 && (
+      {selectable && selectedItems.length > 0 && (
         <Card className="gap-0 py-0 shadow-sm">
           <div
             aria-label={t('common.listSelection.toolbarLabel')}
@@ -340,18 +353,24 @@ export function ManagementDataList<T>({
       )}
 
       <Card className="hidden gap-0 overflow-hidden py-0 shadow-sm md:flex">
-        <Table className={tableClassName} selectable style={tableStyle}>
+        <Table
+          className={cn('table-fixed', tableClassName)}
+          selectable={selectable}
+          style={adaptiveTableStyle}
+        >
           <TableCaption className="sr-only">{caption}</TableCaption>
           <TableHeader className="bg-secondary/55">
             <TableRow className="hover:bg-secondary/55">
-              <TableHead className="w-12 min-w-12 px-4">
-                <Checkbox
-                  aria-label={t('common.listSelection.selectAll')}
-                  checked={allItemsSelected ? true : someItemsSelected ? 'indeterminate' : false}
-                  disabled={selectionDisabled}
-                  onCheckedChange={(checked) => setAllItemsSelected(checked === true)}
-                />
-              </TableHead>
+              {selectable && (
+                <TableHead className="w-12 min-w-12 px-4">
+                  <Checkbox
+                    aria-label={t('common.listSelection.selectAll')}
+                    checked={allItemsSelected ? true : someItemsSelected ? 'indeterminate' : false}
+                    disabled={selectionDisabled}
+                    onCheckedChange={(checked) => setAllItemsSelected(checked === true)}
+                  />
+                </TableHead>
+              )}
               {columns.map((column) => (
                 <TableHead
                   aria-sort={
@@ -361,13 +380,13 @@ export function ManagementDataList<T>({
                         : 'descending'
                       : undefined
                   }
-                  className={column.className}
+                  className={cn(column.className, column.headerClassName)}
                   key={column.key}
                 >
                   {column.sort ? (
                     <Button
                       aria-label={column.sort.label}
-                      className="-ml-2 h-8 px-2 font-medium"
+                      className="mx-auto h-8 px-2 font-medium"
                       onClick={column.sort.onChange}
                       size="sm"
                       type="button"
@@ -398,17 +417,21 @@ export function ManagementDataList<T>({
                 data-state={selectedItemKeys.has(getKey(item)) ? 'selected' : undefined}
                 key={getKey(item)}
               >
-                <TableCell className="w-12 min-w-12 px-4">
-                  <Checkbox
-                    aria-label={t('common.listSelection.selectItem', { id: getKey(item) })}
-                    checked={selectedItemKeys.has(getKey(item))}
-                    disabled={selectionDisabled}
-                    onCheckedChange={(checked) => setItemSelected(item, checked === true)}
-                  />
-                </TableCell>
+                {selectable && (
+                  <TableCell className="w-12 min-w-12 px-4">
+                    <Checkbox
+                      aria-label={t('common.listSelection.selectItem', { id: getKey(item) })}
+                      checked={selectedItemKeys.has(getKey(item))}
+                      disabled={selectionDisabled}
+                      onCheckedChange={(checked) => setItemSelected(item, checked === true)}
+                    />
+                  </TableCell>
+                )}
                 {columns.map((column) => (
                   <TableCell className={column.className} key={column.key}>
-                    {column.render(item)}
+                    <div className="flex min-w-0 justify-center text-center">
+                      {column.render(item)}
+                    </div>
                   </TableCell>
                 ))}
               </TableRow>
@@ -426,13 +449,15 @@ export function ManagementDataList<T>({
             key={getKey(item)}
           >
             <div className="flex items-start gap-3">
-              <Checkbox
-                aria-label={t('common.listSelection.selectItem', { id: getKey(item) })}
-                checked={selectedItemKeys.has(getKey(item))}
-                className="mt-0.5 size-5"
-                disabled={selectionDisabled}
-                onCheckedChange={(checked) => setItemSelected(item, checked === true)}
-              />
+              {selectable && (
+                <Checkbox
+                  aria-label={t('common.listSelection.selectItem', { id: getKey(item) })}
+                  checked={selectedItemKeys.has(getKey(item))}
+                  className="mt-0.5 size-5"
+                  disabled={selectionDisabled}
+                  onCheckedChange={(checked) => setItemSelected(item, checked === true)}
+                />
+              )}
               <div className="min-w-0 flex-1">{mobileHeader(item)}</div>
             </div>
             <dl className="grid grid-cols-2 gap-3 rounded-lg bg-secondary/45 p-3 text-xs">

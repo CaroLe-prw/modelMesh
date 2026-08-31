@@ -5,11 +5,14 @@ mod app_route_cache;
 mod auth;
 mod brand;
 mod brand_preset;
+mod catalog_review;
 mod merchant_application;
 mod merchant_channel;
 mod merchant_management;
+mod merchant_model;
 mod model;
 mod model_catalog;
+mod price_settings;
 mod user_cache;
 mod user_management;
 
@@ -24,6 +27,7 @@ pub use app_route_cache::AppRouteCacheRepository;
 pub use auth::{AuthRepository, NewUserRecord};
 pub use brand::{BrandRepository, BrandSearch, NewBrandRecord, UpdateBrandRecord};
 pub use brand_preset::BrandPresetRepository;
+pub use catalog_review::{CatalogReviewRepository, CatalogReviewResult, CatalogReviewSearch};
 pub use merchant_application::{MerchantApplicationRepository, NewMerchantApplicationRecord};
 pub use merchant_channel::{
     MerchantChannelRepository, NewMerchantChannelRecord, UpdateMerchantChannelRecord,
@@ -32,8 +36,13 @@ pub use merchant_management::{
     ManagedMerchantReviewResult, MerchantManagementRepository, MerchantSearch,
     ReviewManagedMerchantRecord, UpdateManagedMerchantRecord,
 };
+pub use merchant_model::{
+    MerchantModelPriceMutation, MerchantModelRepository, NewMerchantModelRecord,
+    UpdateMerchantModelRecord,
+};
 pub use model::{ModelRepository, ModelSearch, NewModelRecord, UpdateModelPricingRecord};
 pub use model_catalog::{ModelCatalogRepository, NewModelCatalogEntry};
+pub use price_settings::PriceSettingsRepository;
 pub use user_cache::UserCacheRepository;
 pub use user_management::{
     CreateManagedUserRecord, ManagedUserBalanceAdjustmentResult, ManagedUserDeletionResult,
@@ -49,6 +58,7 @@ pub enum RepositoryConflict {
     ModelIdentifier,
     MerchantApplication,
     MerchantChannelName,
+    MerchantModelListing,
     UserEmail,
 }
 

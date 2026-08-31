@@ -1,12 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import type { MerchantChannelStatus } from '@/features/account/api/merchant-channels';
+import type { MerchantRequestStatus } from '@/features/account/api/merchant-requests';
 import type {
   MerchantModelReviewStatus,
   MerchantModelStatus,
 } from '@/features/account/api/merchant-models';
 import type {
-  MerchantRequestStatus,
   MerchantUsageStatus,
   MerchantWithdrawalStatus,
 } from '@/features/account/components/merchant/merchant-demo-data';
@@ -22,7 +22,9 @@ type MerchantStatus =
 const statusClasses: Record<MerchantStatus, string> = {
   active: 'border-success/25 bg-success/10 text-success',
   approved: 'border-success/25 bg-success/10 text-success',
+  cancelled: 'border-border bg-secondary text-muted-foreground',
   changesRequested: 'border-warning/25 bg-warning/10 text-warning',
+  completed: 'border-success/25 bg-success/10 text-success',
   failed: 'border-destructive/25 bg-destructive/10 text-destructive',
   offline: 'border-destructive/25 bg-destructive/10 text-destructive',
   paid: 'border-success/25 bg-success/10 text-success',

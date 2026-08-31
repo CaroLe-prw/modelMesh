@@ -1,8 +1,6 @@
 import type { MerchantChannel } from '@/features/account/api/merchant-channels';
 
 export type MerchantModelStatus = 'draft' | 'published' | 'review';
-export type MerchantRequestStatus = 'approved' | 'changesRequested' | 'pending';
-export type MerchantRequestType = 'channelAccess' | 'modelReview' | 'quotaAdjustment';
 export type MerchantSettlementCurrency = 'USD' | 'USDT';
 export type MerchantSettlementMethod = 'bank' | 'usdt';
 export type MerchantUsageStatus = 'failed' | 'succeeded';
@@ -28,15 +26,6 @@ export interface MerchantUsageLog {
   model: string;
   status: MerchantUsageStatus;
   tokens: number;
-}
-
-export interface MerchantRequest {
-  id: string;
-  status: MerchantRequestStatus;
-  subjectKey: 'channelExpansion' | 'modelPricing' | 'quotaIncrease';
-  submittedAt: string;
-  type: MerchantRequestType;
-  updatedAt: string;
 }
 
 export interface MerchantWithdrawal {
@@ -264,37 +253,10 @@ export const merchantSettlementAccounts: MerchantSettlementAccount[] = [
   },
 ];
 
-export const merchantRequests: MerchantRequest[] = [
-  {
-    id: 'mr_01K24FD8BC',
-    status: 'pending',
-    subjectKey: 'modelPricing',
-    submittedAt: '2026-08-09T02:16:00Z',
-    type: 'modelReview',
-    updatedAt: '2026-08-09T02:16:00Z',
-  },
-  {
-    id: 'mr_01K1Z8CE7N',
-    status: 'changesRequested',
-    subjectKey: 'channelExpansion',
-    submittedAt: '2026-08-06T07:32:00Z',
-    type: 'channelAccess',
-    updatedAt: '2026-08-08T05:42:00Z',
-  },
-  {
-    id: 'mr_01K1Q2MS4V',
-    status: 'approved',
-    subjectKey: 'quotaIncrease',
-    submittedAt: '2026-08-03T11:08:00Z',
-    type: 'quotaAdjustment',
-    updatedAt: '2026-08-04T01:24:00Z',
-  },
-];
-
 export function formatMerchantDate(language: string | undefined, value: string): string {
   return new Intl.DateTimeFormat(language, {
     dateStyle: 'medium',
-    timeStyle: 'short',
+    timeStyle: 'medium',
   }).format(new Date(value));
 }
 

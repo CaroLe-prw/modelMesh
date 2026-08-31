@@ -8,15 +8,17 @@ use crate::{
         AccessTokenRepository, ApiKeyRepository, AppRouteCacheRepository, AppRouteRepository,
         AuthRepository, BrandPresetRepository, BrandRepository, CatalogReviewRepository,
         MerchantApplicationRepository, MerchantChannelRepository, MerchantManagementRepository,
-        MerchantModelRepository, ModelCatalogRepository, ModelRepository, PriceSettingsRepository,
-        UserCacheRepository, UserManagementRepository,
+        MerchantModelRepository, MerchantProfileRepository, MerchantRequestRepository,
+        MerchantSettlementSettingsRepository, ModelCatalogRepository, ModelRepository,
+        PriceSettingsRepository, UserCacheRepository, UserManagementRepository,
     },
     security::CredentialCipher,
     services::{
         ApiKeyService, AppRouteService, AuthService, BrandPresetService, BrandService,
         CatalogReviewService, MerchantApplicationService, MerchantChannelService,
-        MerchantManagementService, MerchantModelService, ModelCatalogService, ModelService,
-        PriceSettingsService, UserManagementService,
+        MerchantManagementService, MerchantModelService, MerchantProfileService,
+        MerchantRequestService, MerchantSettlementSettingsService, ModelCatalogService,
+        ModelService, PriceSettingsService, UserManagementService,
     },
 };
 
@@ -32,6 +34,9 @@ pub struct AppState {
     pub merchant_channel_service: MerchantChannelService,
     pub merchant_management_service: MerchantManagementService,
     pub merchant_model_service: MerchantModelService,
+    pub merchant_profile_service: MerchantProfileService,
+    pub merchant_request_service: MerchantRequestService,
+    pub merchant_settlement_settings_service: MerchantSettlementSettingsService,
     pub model_catalog_service: ModelCatalogService,
     pub model_service: ModelService,
     pub price_settings_service: PriceSettingsService,
@@ -92,7 +97,7 @@ impl AppState {
             merchant_channel_service: MerchantChannelService::new(
                 merchant_channel_repository.clone(),
                 brand_repository,
-                credential_cipher,
+                credential_cipher.clone(),
                 upstream_models_client,
             ),
             merchant_management_service: MerchantManagementService::new(
@@ -104,6 +109,16 @@ impl AppState {
                 merchant_channel_repository,
                 model_repository.clone(),
                 price_settings_repository.clone(),
+            ),
+            merchant_profile_service: MerchantProfileService::new(
+                MerchantProfileRepository::new(database.clone()),
+                credential_cipher,
+            ),
+            merchant_request_service: MerchantRequestService::new(MerchantRequestRepository::new(
+                database.clone(),
+            )),
+            merchant_settlement_settings_service: MerchantSettlementSettingsService::new(
+                MerchantSettlementSettingsRepository::new(database.clone()),
             ),
             model_catalog_service: ModelCatalogService::new(ModelCatalogRepository::new(
                 database.clone(),

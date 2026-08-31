@@ -48,6 +48,15 @@ mod m0047_unify_merchant_channel_status;
 mod m0048_add_merchant_model_rejected_status;
 mod m0049_add_merchant_model_offline_status;
 mod m0050_separate_model_review_and_price_effective_state;
+mod m0051_create_merchant_requests;
+mod m0052_create_merchant_resource_events;
+mod m0053_guard_resource_events_during_user_deletion;
+mod m0054_create_paginated_merchant_business_logs;
+mod m0055_create_merchant_profiles;
+mod m0056_expand_merchant_settlement_methods;
+mod m0057_create_merchant_settlement_settings;
+mod m0058_remove_wechat_settlement_option;
+mod m0059_remove_wechat_settlement_schema;
 
 use sea_orm_migration::prelude::*;
 
@@ -107,6 +116,15 @@ impl MigratorTrait for Migrator {
             Box::new(m0048_add_merchant_model_rejected_status::Migration),
             Box::new(m0049_add_merchant_model_offline_status::Migration),
             Box::new(m0050_separate_model_review_and_price_effective_state::Migration),
+            Box::new(m0051_create_merchant_requests::Migration),
+            Box::new(m0052_create_merchant_resource_events::Migration),
+            Box::new(m0053_guard_resource_events_during_user_deletion::Migration),
+            Box::new(m0054_create_paginated_merchant_business_logs::Migration),
+            Box::new(m0055_create_merchant_profiles::Migration),
+            Box::new(m0056_expand_merchant_settlement_methods::Migration),
+            Box::new(m0057_create_merchant_settlement_settings::Migration),
+            Box::new(m0058_remove_wechat_settlement_option::Migration),
+            Box::new(m0059_remove_wechat_settlement_schema::Migration),
         ]
     }
 }

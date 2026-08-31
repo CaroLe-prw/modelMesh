@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminPriceSettingsCard } from '@/features/account/components/admin/admin-price-settings-card';
+import { AdminSettlementSettingsCard } from '@/features/account/components/admin/admin-settlement-settings-card';
 
 export function AdminSettingsPanel() {
   const { t } = useTranslation();
@@ -84,6 +85,8 @@ export function AdminSettingsPanel() {
               </div>
             </CardContent>
           </Card>
+
+          <AdminSettlementSettingsCard />
 
           <form onSubmit={handleSubmit}>
             <Card className="gap-0 py-0 shadow-sm">

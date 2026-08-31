@@ -9,10 +9,13 @@ mod merchant_application;
 mod merchant_channel;
 mod merchant_management;
 mod merchant_model;
+mod merchant_profile;
+mod merchant_request;
 mod model;
 mod model_catalog;
 mod pagination;
 mod price_settings;
+mod settlement_settings;
 mod user_management;
 
 pub use api_key::{
@@ -47,6 +50,12 @@ pub use merchant_model::{
     MerchantModelResponse, MerchantPriceConversionModeValue, UpdateMerchantModelRequest,
     UpdateMerchantModelStatusRequest,
 };
+pub use merchant_profile::{
+    CreateMerchantSettlementAccountRequest, MerchantProfileResponse, UpdateMerchantProfileRequest,
+};
+pub use merchant_request::{
+    CreateMerchantRequestRequest, ListMerchantRequestsQuery, MerchantRequestResponse,
+};
 pub use model::{
     BatchCreateModelsRequest, CreateModelRequest, ListModelsQuery, ModelPriceGroupRequest,
     ModelPriceOverrideRequest, ModelResponse, ModelStatusRequest, UpdateModelPricingRequest,
@@ -57,6 +66,9 @@ pub use model_catalog::{
 };
 pub use pagination::{PaginatedResponse, PaginationQuery, PaginationResponse};
 pub use price_settings::{PriceSettingsResponse, UpdatePriceSettingsRequest};
+pub use settlement_settings::{
+    MerchantSettlementSettingsResponse, UpdateMerchantSettlementSettingsRequest,
+};
 pub use user_management::{
     AdjustManagedUserBalanceRequest, BatchDeleteManagedUsersRequest,
     BatchDeleteManagedUsersResponse, CreateManagedUserRequest,

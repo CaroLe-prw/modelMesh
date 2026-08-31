@@ -69,6 +69,6 @@ export const demoSupportTickets: SupportTicket[] = [
 export function formatSupportTicketDate(language: string | undefined, value: string): string {
   return new Intl.DateTimeFormat(language, {
     dateStyle: 'medium',
-    timeStyle: 'short',
+    timeStyle: 'medium',
   }).format(new Date(value));
 }

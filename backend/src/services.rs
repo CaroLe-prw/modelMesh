@@ -12,9 +12,12 @@ mod merchant_application;
 mod merchant_channel;
 mod merchant_management;
 mod merchant_model;
+mod merchant_profile;
+mod merchant_request;
 mod model;
 mod model_catalog;
 mod price_settings;
+mod settlement_settings;
 mod user_activity_tracker;
 mod user_management;
 
@@ -39,6 +42,13 @@ pub use merchant_model::{
     CreateMerchantModel, MerchantModelPriceActivationService, MerchantModelService,
     MerchantModelServiceError, MerchantPriceConversionMode, UpdateMerchantModel,
 };
+pub use merchant_profile::{
+    CreateMerchantSettlementAccount, MerchantProfileService, MerchantProfileServiceError,
+    UpdateMerchantProfile,
+};
+pub use merchant_request::{
+    CreateMerchantRequest, MerchantRequestService, MerchantRequestServiceError,
+};
 pub use model::{
     CreateCatalogModels, CreateModel, ModelPriceGroupInput, ModelPriceOverrideInput, ModelService,
     ModelServiceError, UpdateModelPricing,
@@ -46,6 +56,9 @@ pub use model::{
 pub use model_catalog::{ModelCatalogService, ModelCatalogServiceError, ModelCatalogSyncService};
 pub use price_settings::{
     PriceReviewPolicyInput, PriceSettingInput, PriceSettingsService, PriceSettingsServiceError,
+};
+pub use settlement_settings::{
+    MerchantSettlementSettingsService, MerchantSettlementSettingsServiceError,
 };
 pub use user_management::{
     CreateManagedUser, UpdateManagedUser, UserManagementService, UserManagementServiceError,

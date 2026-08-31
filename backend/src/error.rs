@@ -9,8 +9,9 @@ use crate::services::{
     ApiKeyServiceError, AppRouteServiceError, AuthServiceError, BrandPresetServiceError,
     BrandServiceError, CatalogReviewServiceError, MerchantApplicationServiceError,
     MerchantChannelServiceError, MerchantManagementServiceError, MerchantModelServiceError,
-    ModelCatalogServiceError, ModelServiceError, PriceSettingsServiceError,
-    UserManagementServiceError,
+    MerchantProfileServiceError, MerchantRequestServiceError,
+    MerchantSettlementSettingsServiceError, ModelCatalogServiceError, ModelServiceError,
+    PriceSettingsServiceError, UserManagementServiceError,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -64,6 +65,12 @@ pub enum ErrorCode {
     CatalogReviewNotFound = 22_002,
     CatalogReviewConflict = 22_003,
     CatalogReviewModelTestFailed = 22_004,
+    InvalidMerchantRequest = 23_001,
+    InvalidMerchantProfile = 24_001,
+    MerchantSettlementAccountLimit = 24_002,
+    MerchantSettlementAccountNotFound = 24_003,
+    MerchantSettlementOptionDisabled = 24_004,
+    InvalidMerchantSettlementSettings = 24_005,
     DependencyUnavailable = 90_001,
     Internal = 99_999,
 }
@@ -124,6 +131,12 @@ pub enum AppError {
     CatalogReviewNotFound,
     CatalogReviewConflict,
     CatalogReviewModelTestFailed,
+    InvalidMerchantRequest,
+    InvalidMerchantProfile,
+    MerchantSettlementAccountLimit,
+    MerchantSettlementAccountNotFound,
+    MerchantSettlementOptionDisabled,
+    InvalidMerchantSettlementSettings,
     DependencyUnavailable,
     Internal,
 }
@@ -304,6 +317,47 @@ impl From<MerchantModelServiceError> for AppError {
     }
 }
 
+impl From<MerchantRequestServiceError> for AppError {
+    fn from(error: MerchantRequestServiceError) -> Self {
+        match error {
+            MerchantRequestServiceError::Forbidden => Self::Forbidden,
+            MerchantRequestServiceError::InvalidInput => Self::InvalidMerchantRequest,
+            MerchantRequestServiceError::Internal => Self::Internal,
+        }
+    }
+}
+
+impl From<MerchantProfileServiceError> for AppError {
+    fn from(error: MerchantProfileServiceError) -> Self {
+        match error {
+            MerchantProfileServiceError::Forbidden => Self::Forbidden,
+            MerchantProfileServiceError::InvalidInput => Self::InvalidMerchantProfile,
+            MerchantProfileServiceError::SettlementAccountLimit => {
+                Self::MerchantSettlementAccountLimit
+            }
+            MerchantProfileServiceError::SettlementAccountNotFound => {
+                Self::MerchantSettlementAccountNotFound
+            }
+            MerchantProfileServiceError::SettlementOptionDisabled => {
+                Self::MerchantSettlementOptionDisabled
+            }
+            MerchantProfileServiceError::Internal => Self::Internal,
+        }
+    }
+}
+
+impl From<MerchantSettlementSettingsServiceError> for AppError {
+    fn from(error: MerchantSettlementSettingsServiceError) -> Self {
+        match error {
+            MerchantSettlementSettingsServiceError::Forbidden => Self::Forbidden,
+            MerchantSettlementSettingsServiceError::InvalidInput => {
+                Self::InvalidMerchantSettlementSettings
+            }
+            MerchantSettlementSettingsServiceError::Internal => Self::Internal,
+        }
+    }
+}
+
 impl From<PriceSettingsServiceError> for AppError {
     fn from(error: PriceSettingsServiceError) -> Self {
         match error {
@@ -446,6 +500,28 @@ impl IntoResponse for AppError {
             Self::CatalogReviewModelTestFailed => (
                 StatusCode::BAD_GATEWAY,
                 ErrorCode::CatalogReviewModelTestFailed,
+            ),
+            Self::InvalidMerchantRequest => {
+                (StatusCode::BAD_REQUEST, ErrorCode::InvalidMerchantRequest)
+            }
+            Self::InvalidMerchantProfile => {
+                (StatusCode::BAD_REQUEST, ErrorCode::InvalidMerchantProfile)
+            }
+            Self::MerchantSettlementAccountLimit => (
+                StatusCode::CONFLICT,
+                ErrorCode::MerchantSettlementAccountLimit,
+            ),
+            Self::MerchantSettlementAccountNotFound => (
+                StatusCode::NOT_FOUND,
+                ErrorCode::MerchantSettlementAccountNotFound,
+            ),
+            Self::MerchantSettlementOptionDisabled => (
+                StatusCode::CONFLICT,
+                ErrorCode::MerchantSettlementOptionDisabled,
+            ),
+            Self::InvalidMerchantSettlementSettings => (
+                StatusCode::BAD_REQUEST,
+                ErrorCode::InvalidMerchantSettlementSettings,
             ),
             Self::DependencyUnavailable => (
                 StatusCode::SERVICE_UNAVAILABLE,

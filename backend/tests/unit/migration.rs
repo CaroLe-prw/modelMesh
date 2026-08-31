@@ -62,6 +62,15 @@ fn migrations_are_registered_in_schema_order() {
             "m0048_add_merchant_model_rejected_status",
             "m0049_add_merchant_model_offline_status",
             "m0050_separate_model_review_and_price_effective_state",
+            "m0051_create_merchant_requests",
+            "m0052_create_merchant_resource_events",
+            "m0053_guard_resource_events_during_user_deletion",
+            "m0054_create_paginated_merchant_business_logs",
+            "m0055_create_merchant_profiles",
+            "m0056_expand_merchant_settlement_methods",
+            "m0057_create_merchant_settlement_settings",
+            "m0058_remove_wechat_settlement_option",
+            "m0059_remove_wechat_settlement_schema",
         ]
     );
 }

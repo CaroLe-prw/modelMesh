@@ -1658,6 +1658,43 @@ export const en = {
               label: 'Allow new registrations',
               help: 'Existing users can still sign in when disabled, while public registration is closed.',
             },
+            settlement: {
+              title: 'Merchant settlement methods',
+              description:
+                'Control which payment methods and USDT networks merchants may select for new settlement accounts. Existing accounts are not deleted when an option is disabled.',
+              loading: 'Loading merchant settlement settings…',
+              retry: 'Reload',
+              save: 'Save settlement settings',
+              methods: {
+                title: 'Available payment methods',
+                description:
+                  'Disabling a method prevents new accounts of that type while preserving existing accounts.',
+                help: {
+                  bank: 'Bank cards support CNY or USD settlement.',
+                  alipay:
+                    'Alipay settles in CNY and requires the recipient name and linked phone number.',
+                  usdt: 'USDT wallets must use one of the enabled destination networks.',
+                },
+              },
+              networks: {
+                title: 'USDT destination networks',
+                description:
+                  'These options apply to new USDT wallets. The sending platform and receiving wallet must use the same network.',
+                help: {
+                  TRC20: 'Tron network; addresses normally begin with T.',
+                  ERC20: 'Ethereum mainnet; addresses begin with 0x.',
+                  BEP20: 'BNB Smart Chain; addresses begin with 0x.',
+                  POLYGON: 'Polygon PoS network; addresses begin with 0x.',
+                },
+              },
+              feedback: {
+                saved: 'Merchant settlement methods and USDT networks were updated.',
+                invalid: 'Check the settlement settings and try again.',
+                networkRequired: 'Enable at least one destination network when USDT is enabled.',
+                loadError: 'Unable to load merchant settlement settings',
+                saveError: 'Unable to save merchant settlement settings. Try again later.',
+              },
+            },
             finance: {
               title: 'Financial policy',
               description:
@@ -2129,32 +2166,53 @@ export const en = {
             eyebrow: 'BUSINESS REQUESTS',
             title: 'Merchant requests',
             description:
-              'Submit and track channel access, model review, and quota adjustment requests.',
-            panelTitle: 'Business requests',
-            panelDescription: 'Review progress and requests for additional details appear here.',
-            create: 'New request',
-            caption: 'Merchant business requests',
+              'Track channel and model reviews together with activation, offline, and deletion records.',
+            search: 'Search subject or details',
+            statusFilter: 'Filter by status',
+            sortColumn: 'Change {{column}} sorting',
+            caption: 'Merchant business and lifecycle records',
+            empty: 'No matching merchant records',
+            emptyDescription:
+              'Submit a review or operate a channel or model to see its record here.',
             columns: {
-              request: 'Request',
+              request: 'Record',
               type: 'Type',
               status: 'Status',
-              submittedAt: 'Submitted',
+              submittedAt: 'Occurred',
               updatedAt: 'Updated',
             },
             types: {
               channelAccess: 'Channel access',
+              channelOperation: 'Channel operation',
+              modelOperation: 'Model operation',
               modelReview: 'Model review',
               quotaAdjustment: 'Quota adjustment',
             },
             subjects: {
               channelExpansion: 'Add an APAC provider channel',
-              modelPricing: 'Update the selling price for gpt-5',
+              channelReview: 'Review channel: {{name}}',
+              channelActivated: 'Activate channel: {{name}}',
+              channelOffline: 'Take channel offline: {{name}}',
+              channelDeleted: 'Delete channel: {{name}}',
+              modelReview: 'Review model: {{name}}',
+              modelPricing: 'Update the selling price for {{name}}',
+              modelActivated: 'Publish model: {{name}}',
+              modelOffline: 'Take model offline: {{name}}',
+              modelDeleted: 'Delete model: {{name}}',
               quotaIncrease: 'Increase the daily channel quota',
             },
             statuses: {
+              all: 'All statuses',
               approved: 'Approved',
+              cancelled: 'Cancelled',
               changesRequested: 'Details needed',
+              completed: 'Completed',
               pending: 'In review',
+            },
+            feedback: {
+              loading: 'Loading merchant requests…',
+              loadError: 'Merchant requests could not be loaded',
+              retry: 'Reload',
             },
           },
           profile: {
@@ -2162,6 +2220,14 @@ export const en = {
             title: 'Merchant profile',
             description: 'Maintain business, contact, and settlement account information.',
             save: 'Save profile',
+            feedback: {
+              loading: 'Loading merchant profile…',
+              loadError: 'Merchant profile could not be loaded',
+              retry: 'Reload',
+              invalid: 'Check the profile details and try again.',
+              saved: 'Merchant profile saved.',
+              saveError: 'Merchant profile could not be saved. Try again later.',
+            },
             business: {
               title: 'Business details',
               description: 'Used for platform verification and your public merchant profile.',
@@ -2189,24 +2255,49 @@ export const en = {
               entity: 'Settlement entity',
               method: 'Account type',
               currency: 'Currency',
+              network: 'Network',
               account: 'Settlement account',
+              empty: 'No settlement accounts added yet.',
+              noAvailableMethods:
+                'No settlement methods are currently enabled by an administrator.',
               methods: {
                 bank: 'Bank account',
+                alipay: 'Alipay',
                 usdt: 'USDT wallet',
+              },
+              networks: {
+                TRC20: 'TRC20 (Tron)',
+                ERC20: 'ERC20 (Ethereum)',
+                BEP20: 'BEP20 (BSC)',
+                POLYGON: 'Polygon',
               },
               dialog: {
                 title: 'Add settlement account',
-                description:
-                  'Add a bank account or USDT wallet that can be selected for withdrawals.',
-                accountPlaceholder: 'Enter a bank account or wallet address',
+                description: 'Add a bank account, Alipay, or USDT wallet for withdrawals.',
+                accountPlaceholders: {
+                  bank: 'Enter a bank card number',
+                  alipay: 'Enter the phone number linked to Alipay',
+                  usdt: 'Enter an address on the selected network',
+                },
+                alipayName: 'Recipient name',
+                alipayPhone: 'Alipay-linked phone number',
+                networkHint:
+                  'Use the same network on both platforms. Choosing the wrong network can result in lost funds.',
                 close: 'Close add settlement account dialog',
                 cancel: 'Cancel',
                 submit: 'Add account',
               },
               feedback: {
-                added: 'Settlement account added to the current preview.',
+                added: 'Settlement account added.',
+                addError: 'Settlement account could not be added. Try again later.',
                 defaultUpdated: 'Default settlement account updated.',
+                defaultError: 'Default settlement account could not be updated. Try again later.',
                 deleted: 'Settlement account deleted.',
+                deleteError: 'Settlement account could not be deleted. Try again later.',
+                limit: 'A merchant can configure up to 10 settlement accounts.',
+                notFound: 'The settlement account no longer exists.',
+                optionDisabled:
+                  'That settlement method or USDT network was disabled. Choose another option.',
               },
             },
           },

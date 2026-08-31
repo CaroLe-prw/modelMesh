@@ -10,9 +10,12 @@ mod merchant_application;
 mod merchant_channel;
 mod merchant_management;
 mod merchant_model;
+mod merchant_profile;
+mod merchant_request;
 mod model;
 mod model_catalog;
 mod price_settings;
+mod settlement_settings;
 mod user_cache;
 mod user_management;
 
@@ -40,9 +43,17 @@ pub use merchant_model::{
     MerchantModelPriceMutation, MerchantModelRepository, NewMerchantModelRecord,
     UpdateMerchantModelRecord,
 };
+pub use merchant_profile::{
+    MerchantProfileRepository, MerchantSettlementAccountWriteError,
+    NewMerchantSettlementAccountRecord, UpdateMerchantProfileRecord,
+};
+pub use merchant_request::{
+    MerchantRequestRepository, MerchantRequestSearch, NewMerchantRequestRecord,
+};
 pub use model::{ModelRepository, ModelSearch, NewModelRecord, UpdateModelPricingRecord};
 pub use model_catalog::{ModelCatalogRepository, NewModelCatalogEntry};
 pub use price_settings::PriceSettingsRepository;
+pub use settlement_settings::MerchantSettlementSettingsRepository;
 pub use user_cache::UserCacheRepository;
 pub use user_management::{
     CreateManagedUserRecord, ManagedUserBalanceAdjustmentResult, ManagedUserDeletionResult,

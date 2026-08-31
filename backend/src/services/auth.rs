@@ -1,5 +1,5 @@
 use argon2::Argon2;
-use password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng};
+use password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash};
 use std::{net::IpAddr, sync::Arc, time::Duration};
 use tokio::sync::Semaphore;
 use uuid::Uuid;
@@ -254,9 +254,8 @@ impl AuthService {
 
         tokio::task::spawn_blocking(move || {
             let _permit = permit;
-            let salt = SaltString::generate(&mut OsRng);
             Argon2::default()
-                .hash_password(password.as_bytes(), &salt)
+                .hash_password(password.as_bytes())
                 .map(|hash| hash.to_string())
                 .map_err(|_| AuthServiceError::Internal)
         })

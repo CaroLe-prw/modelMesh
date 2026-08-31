@@ -170,6 +170,59 @@ async fn merchant_models_require_a_bearer_token() {
 }
 
 #[tokio::test]
+async fn merchant_requests_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/merchant/requests")
+                .body(Body::empty())
+                .expect("merchant request should be valid"),
+        )
+        .await
+        .expect("merchant request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn merchant_profile_requires_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/merchant/profile")
+                .body(Body::empty())
+                .expect("merchant profile request should be valid"),
+        )
+        .await
+        .expect("merchant profile request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn merchant_settlement_settings_require_a_bearer_token() {
+    for uri in [
+        "/api/merchant/settlement-settings",
+        "/api/admin/settlement-settings",
+    ] {
+        let response = test_router()
+            .oneshot(
+                Request::builder()
+                    .uri(uri)
+                    .body(Body::empty())
+                    .expect("settlement settings request should be valid"),
+            )
+            .await
+            .expect("settlement settings request should complete");
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+    }
+}
+
+#[tokio::test]
 async fn merchant_model_status_updates_require_a_bearer_token() {
     let response = test_router()
         .oneshot(

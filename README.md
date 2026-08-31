@@ -112,9 +112,9 @@ operation.
 
 Merchant and administrator accounts also receive database-controlled merchant routes for the
 operations dashboard, channels, model listings, usage logs, withdrawal requests, business
-requests, merchant profile, and support tickets. Channel management is persisted in PostgreSQL and
-scoped to the authenticated merchant account. Model listings are also persisted and owner-scoped;
-the remaining merchant screens currently provide responsive UI preview data.
+requests, merchant profile, and support tickets. Channel management, model listings, business
+requests, and merchant profiles are persisted in PostgreSQL and scoped to the authenticated
+merchant account; the remaining merchant screens currently provide responsive UI preview data.
 
 Merchant channels are managed through:
 
@@ -153,6 +153,55 @@ Merchant model listings are managed through:
 - `PUT /api/merchant/models/{listing_id}`
 - `PUT /api/merchant/models/{listing_id}/status`
 - `DELETE /api/merchant/models/{listing_id}`
+
+Merchant business requests are managed through:
+
+- `GET /api/merchant/requests?page=1&pageSize=20&query=gpt-5&status=completed&sortBy=submittedAt&sortOrder=desc`
+- `POST /api/merchant/requests`
+
+Requests accept `channelAccess`, `modelReview`, or `quotaAdjustment` as their type and start in the
+`pending` review state. All manual requests, channel/model review rounds, and lifecycle operations
+are stored in the canonical `merchant_business_logs` table. Each review submission creates a log
+row; approval, rejection, or correction updates that review round, while activation, offline, and
+deletion append immutable completed rows. Deleting a pending resource marks its open review as
+`cancelled` before recording the deletion. PostgreSQL triggers write these changes atomically with
+the resource mutation and snapshot resource names, including models deleted through a channel
+cascade. Logs therefore remain available after the channel or listing is gone.
+
+The list endpoint performs database pagination and stable sorting by occurrence or update time plus
+log ID. It defaults to newest occurrence first (`sortBy=submittedAt&sortOrder=desc`), supports
+switching either time column between ascending and descending order, defaults to 20 rows per page,
+accepts page sizes from 1 to 100, searches raw log subjects/details, and filters by
+`pending`, `changesRequested`, `approved`, `completed`, or `cancelled`. Management-list timestamps
+are rendered with second precision in both supported locales. Deleting an entire user intentionally
+removes that user's private logs together with the account.
+
+Merchant profiles and settlement accounts are managed through:
+
+- `GET /api/merchant/profile`
+- `PUT /api/merchant/profile`
+- `GET /api/merchant/settlement-settings`
+- `POST /api/merchant/settlement-accounts`
+- `PUT /api/merchant/settlement-accounts/{id}/default`
+- `DELETE /api/merchant/settlement-accounts/{id}`
+
+Administrators configure which settlement methods and USDT networks may be used for new accounts
+through `GET /api/admin/settlement-settings` and `PUT /api/admin/settlement-settings`. The system
+settings page persists those switches in PostgreSQL. Disabling an option removes it from the
+merchant account form and is checked again transactionally when the account is created; existing
+settlement accounts remain available and are not deleted.
+
+The profile is created during migration or lazily on first access and receives a stable merchant
+number. A merchant can configure up to ten settlement accounts. Supported methods are bank cards,
+Alipay, and USDT wallets. Bank cards may use CNY or USD, Alipay uses CNY, and USDT wallets use USDT.
+New USDT wallets must select TRC20, ERC20, BEP20 (BNB Smart Chain), or
+Polygon; wallet addresses are validated against the selected network's address shape. The first
+account becomes the default. Switching the default and deleting an account are transactional, and
+deleting a default account automatically promotes the oldest remaining account. Full payment
+account and wallet values are encrypted with the backend credential encryption key. API responses,
+application logs, and the merchant interface receive only the stored masked representation.
+Alipay settlement accounts require both a recipient name and the phone number linked to that
+Alipay account; the normalized phone number is encrypted and only its masked form is returned.
 
 Administrator pricing settings are managed through:
 
@@ -245,23 +294,25 @@ API errors keep the HTTP status code separate from a stable numeric business cod
 
 The initial error-code ranges are:
 
-| Range         | Purpose                       |
-| ------------- | ----------------------------- |
-| `10000-10999` | Common request errors         |
-| `11000-11999` | Authentication errors         |
-| `12000-12999` | API key management errors     |
-| `13000-13999` | Account route errors          |
-| `14000-14999` | Brand management errors       |
-| `15000-15999` | Model catalog lookup errors   |
-| `16000-16999` | Model management errors       |
-| `17000-17999` | User management errors        |
-| `18000-18999` | Merchant management errors    |
-| `19000-19999` | Merchant channel errors       |
-| `20000-20999` | Merchant model listing errors |
-| `21000-21999` | Price settings errors         |
-| `22000-22999` | Catalog review errors         |
-| `90000-99998` | Infrastructure errors         |
-| `99999`       | Unknown internal server error |
+| Range         | Purpose                          |
+| ------------- | -------------------------------- |
+| `10000-10999` | Common request errors            |
+| `11000-11999` | Authentication errors            |
+| `12000-12999` | API key management errors        |
+| `13000-13999` | Account route errors             |
+| `14000-14999` | Brand management errors          |
+| `15000-15999` | Model catalog lookup errors      |
+| `16000-16999` | Model management errors          |
+| `17000-17999` | User management errors           |
+| `18000-18999` | Merchant management errors       |
+| `19000-19999` | Merchant channel errors          |
+| `20000-20999` | Merchant model listing errors    |
+| `21000-21999` | Price settings errors            |
+| `22000-22999` | Catalog review errors            |
+| `23000-23999` | Merchant business request errors |
+| `24000-24999` | Merchant profile errors          |
+| `90000-99998` | Infrastructure errors            |
+| `99999`       | Unknown internal server error    |
 
 The frontend maps these numeric codes to localized messages. Backend responses must not expose
 internal error text or use fixed Chinese or English messages as the public error contract.

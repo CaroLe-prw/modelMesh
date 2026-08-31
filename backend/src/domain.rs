@@ -7,11 +7,14 @@ mod merchant_application;
 mod merchant_channel;
 mod merchant_management;
 mod merchant_model;
+mod merchant_profile;
+mod merchant_request;
 mod model;
 mod model_catalog;
 mod model_pricing;
 mod pagination;
 mod price_settings;
+mod settlement_settings;
 mod user;
 
 pub use api_key::{ApiKey, ApiKeyId, ApiKeyStatus};
@@ -34,6 +37,14 @@ pub use merchant_model::{
     MerchantModel, MerchantModelOption, MerchantModelOptions, MerchantModelPendingPrice,
     MerchantModelReviewStatus, MerchantModelStatus, MerchantPriceCurrency,
 };
+pub use merchant_profile::{
+    MerchantProfile, MerchantProfileBundle, MerchantSettlementAccount, MerchantSettlementCurrency,
+    MerchantSettlementMethod, MerchantSettlementNetwork,
+};
+pub use merchant_request::{
+    MerchantRequest, MerchantRequestAction, MerchantRequestOrigin, MerchantRequestSortField,
+    MerchantRequestStatus, MerchantRequestType,
+};
 pub use model::{ManagedModel, ModelStatus};
 pub use model_catalog::{ModelCatalogEntry, ModelCatalogOption};
 pub use model_pricing::{
@@ -42,6 +53,7 @@ pub use model_pricing::{
 };
 pub use pagination::{Page, Pagination};
 pub use price_settings::{ModelPriceReviewSettings, PriceConfiguration, PriceSettings};
+pub use settlement_settings::MerchantSettlementSettings;
 pub use user::{
     AccountRole, AccountStatus, ManagedUser, ManagedUserBalanceAdjustment,
     ManagedUserBalanceAdjustmentKind, ManagedUserBalanceAdjustmentPage, ManagedUserSort,

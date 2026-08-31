@@ -53,6 +53,12 @@ fn public_error_codes_are_stable_and_unique() {
         (ErrorCode::CatalogReviewNotFound, 22_002),
         (ErrorCode::CatalogReviewConflict, 22_003),
         (ErrorCode::CatalogReviewModelTestFailed, 22_004),
+        (ErrorCode::InvalidMerchantRequest, 23_001),
+        (ErrorCode::InvalidMerchantProfile, 24_001),
+        (ErrorCode::MerchantSettlementAccountLimit, 24_002),
+        (ErrorCode::MerchantSettlementAccountNotFound, 24_003),
+        (ErrorCode::MerchantSettlementOptionDisabled, 24_004),
+        (ErrorCode::InvalidMerchantSettlementSettings, 24_005),
         (ErrorCode::DependencyUnavailable, 90_001),
         (ErrorCode::Internal, 99_999),
     ];

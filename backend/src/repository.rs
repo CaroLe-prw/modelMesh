@@ -6,6 +6,7 @@ mod auth;
 mod brand;
 mod brand_preset;
 mod catalog_review;
+mod marketplace;
 mod merchant_application;
 mod merchant_channel;
 mod merchant_management;
@@ -31,6 +32,7 @@ pub use auth::{AuthRepository, NewUserRecord};
 pub use brand::{BrandRepository, BrandSearch, NewBrandRecord, UpdateBrandRecord};
 pub use brand_preset::BrandPresetRepository;
 pub use catalog_review::{CatalogReviewRepository, CatalogReviewResult, CatalogReviewSearch};
+pub use marketplace::{MarketplaceRepository, MarketplaceRouteMutationResult};
 pub use merchant_application::{MerchantApplicationRepository, NewMerchantApplicationRecord};
 pub use merchant_channel::{
     MerchantChannelRepository, NewMerchantChannelRecord, UpdateMerchantChannelRecord,

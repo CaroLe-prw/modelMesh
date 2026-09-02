@@ -6,9 +6,9 @@ use super::{
     UpdateMerchantModelStatusRequest,
 };
 use crate::domain::{
-    MerchantModel, MerchantModelOption, MerchantModelOptions, MerchantModelReviewStatus,
-    MerchantModelStatus, MerchantPriceCurrency, ModelPricing, PriceCurrency, PriceExchangeRate,
-    PriceSettings,
+    MerchantBillingMode, MerchantModel, MerchantModelOption, MerchantModelOptions,
+    MerchantModelReviewStatus, MerchantModelStatus, MerchantPriceCurrency, ModelBillingMode,
+    ModelPricing, PriceCurrency, PriceExchangeRate, PriceSettings,
 };
 
 #[test]
@@ -25,6 +25,7 @@ fn merchant_model_response_uses_public_camel_case_contract() {
         model_identifier: "gpt-test".to_owned(),
         model_name: "GPT Test".to_owned(),
         context_window: 200_000,
+        billing_mode: MerchantBillingMode::Token,
         price_currency: MerchantPriceCurrency::Cny,
         input_price_nano_per_million: 125_000_000,
         output_price_nano_per_million: 1_000_000_000,
@@ -66,6 +67,7 @@ fn merchant_model_response_uses_public_camel_case_contract() {
             "modelIdentifier": "gpt-test",
             "modelName": "GPT Test",
             "contextWindow": 200000,
+            "billingMode": "token",
             "priceCurrency": "CNY",
             "inputPrice": 1.25,
             "outputPrice": 10.0,
@@ -120,6 +122,7 @@ fn merchant_model_option_exposes_complete_admin_pricing() {
             identifier: "gpt-test".to_owned(),
             name: "GPT Test".to_owned(),
             context_window: 200_000,
+            default_billing_mode: ModelBillingMode::Token,
             input_price_nano_per_million: 125_000_000,
             output_price_nano_per_million: 1_000_000_000,
             pricing: ModelPricing {
@@ -168,6 +171,7 @@ fn merchant_model_request_accepts_fast_price_overrides() {
         "conversionMode": "fixedRate",
         "exchangeRate": 7.2,
         "modelId": 9,
+        "billingMode": "token",
         "inputPrice": 1.25,
         "outputPrice": 10,
         "priceCurrency": "CNY",
@@ -201,6 +205,7 @@ fn merchant_model_request_requires_the_price_settings_snapshot() {
         "conversionMode": "fixedRate",
         "exchangeRate": 7.2,
         "modelId": 9,
+        "billingMode": "token",
         "inputPrice": 1.25,
         "outputPrice": 10,
         "priceCurrency": "CNY"

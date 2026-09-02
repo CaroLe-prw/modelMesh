@@ -38,6 +38,7 @@ pub async fn list(
             query.query,
             query.brand_id,
             query.status.map(Into::into),
+            query.sort_direction.into(),
         )
         .await?;
     let items = result.items.into_iter().map(ModelResponse::from).collect();
@@ -64,6 +65,7 @@ pub async fn create(
                 identifier: request.identifier,
                 name: request.name,
                 context_window: request.context_window,
+                billing_mode: request.billing_mode.into(),
                 input_price: request.input_price,
                 cache_read_price: request.cache_read_price,
                 cache_write_price: request.cache_write_price,
@@ -73,6 +75,7 @@ pub async fn create(
                     .into_iter()
                     .map(price_override_input)
                     .collect(),
+                sort_order: request.sort_order,
                 status: request.status.into(),
             },
         )
@@ -95,6 +98,7 @@ pub async fn create_batch(
             CreateCatalogModels {
                 brand_identifier: request.brand_id,
                 model_identifiers: request.model_ids,
+                billing_mode: request.billing_mode.into(),
                 input_price: request.input_price,
                 cache_read_price: request.cache_read_price,
                 cache_write_price: request.cache_write_price,
@@ -104,6 +108,7 @@ pub async fn create_batch(
                     .into_iter()
                     .map(price_override_input)
                     .collect(),
+                sort_order: request.sort_order,
                 status: request.status.into(),
             },
         )
@@ -185,11 +190,13 @@ pub async fn update_pricing(
             user.role,
             id,
             UpdateModelPricing {
+                billing_mode: request.billing_mode.map(Into::into),
                 price_overrides: request
                     .price_overrides
                     .into_iter()
                     .map(price_override_input)
                     .collect(),
+                sort_order: request.sort_order,
             },
         )
         .await?;

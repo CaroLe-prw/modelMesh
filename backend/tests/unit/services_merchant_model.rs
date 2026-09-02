@@ -1,12 +1,49 @@
 use super::{
     MerchantModelServiceError, MerchantPriceConversionMode, map_write_error,
     parse_exchange_rate_snapshot, parse_price, pricing_shape_is_supported,
-    require_approved_channel, resolve_conversion_exchange_rate, resolve_price_mutation,
-    resolve_runtime_status, validate_uuid,
+    request_pricing_is_complete, require_approved_channel, resolve_conversion_exchange_rate,
+    resolve_price_mutation, resolve_runtime_status, validate_uuid,
 };
+
+#[test]
+fn text_model_can_use_a_single_per_request_price() {
+    let pricing = ModelPricing {
+        base: [("request".to_owned(), 25_000_000)].into(),
+        ..Default::default()
+    };
+    assert!(request_pricing_is_complete(&pricing));
+
+    let mut mixed = pricing;
+    mixed.base.insert("input".to_owned(), 1);
+    assert!(!request_pricing_is_complete(&mixed));
+}
+
+#[test]
+fn changing_merchant_billing_mode_always_requires_review() {
+    let token_pricing = ModelPricing {
+        base: [("input".to_owned(), 100), ("output".to_owned(), 1_000)].into(),
+        ..Default::default()
+    };
+    let request_pricing = ModelPricing {
+        base: [("request".to_owned(), 1)].into(),
+        ..Default::default()
+    };
+
+    assert_eq!(
+        resolve_price_mutation(
+            true,
+            MerchantBillingMode::Token,
+            &token_pricing,
+            MerchantBillingMode::Request,
+            &request_pricing,
+            10_000,
+        ),
+        MerchantModelPriceMutation::SubmitForReview
+    );
+}
 use crate::domain::{
-    MerchantChannelStatus, MerchantModelStatus, MerchantPriceCurrency, ModelPriceTier,
-    ModelPricing, PriceCurrency, PriceExchangeRate,
+    MerchantBillingMode, MerchantChannelStatus, MerchantModelStatus, MerchantPriceCurrency,
+    ModelPriceTier, ModelPricing, PriceCurrency, PriceExchangeRate,
 };
 use crate::repository::{MerchantModelPriceMutation, RepositoryConflict, RepositoryError};
 
@@ -26,15 +63,36 @@ fn price_change_review_does_not_change_the_model_runtime_state() {
     };
 
     assert_eq!(
-        resolve_price_mutation(true, &current, &small_increase, 500),
+        resolve_price_mutation(
+            true,
+            MerchantBillingMode::Token,
+            &current,
+            MerchantBillingMode::Token,
+            &small_increase,
+            500,
+        ),
         MerchantModelPriceMutation::ApplyImmediately
     );
     assert_eq!(
-        resolve_price_mutation(true, &current, &reviewed_increase, 500),
+        resolve_price_mutation(
+            true,
+            MerchantBillingMode::Token,
+            &current,
+            MerchantBillingMode::Token,
+            &reviewed_increase,
+            500,
+        ),
         MerchantModelPriceMutation::SubmitForReview
     );
     assert_eq!(
-        resolve_price_mutation(false, &current, &reviewed_increase, 0),
+        resolve_price_mutation(
+            false,
+            MerchantBillingMode::Token,
+            &current,
+            MerchantBillingMode::Token,
+            &reviewed_increase,
+            0,
+        ),
         MerchantModelPriceMutation::ReplaceInitialSubmission
     );
 }

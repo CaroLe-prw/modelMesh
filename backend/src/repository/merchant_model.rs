@@ -10,8 +10,8 @@ use uuid::Uuid;
 
 use crate::{
     domain::{
-        MerchantModel, MerchantModelPendingPrice, MerchantModelReviewStatus, MerchantModelStatus,
-        MerchantPriceCurrency, ModelPricing, UserId,
+        MerchantBillingMode, MerchantModel, MerchantModelPendingPrice, MerchantModelReviewStatus,
+        MerchantModelStatus, MerchantPriceCurrency, ModelPricing, UserId,
     },
     entity::{merchant_channel, merchant_model_listing, model},
 };
@@ -29,6 +29,7 @@ pub struct NewMerchantModelRecord {
     pub channel_id: String,
     pub model_id: i64,
     pub context_window: i64,
+    pub billing_mode: MerchantBillingMode,
     pub price_currency: MerchantPriceCurrency,
     pub input_price_nano_per_million: i64,
     pub output_price_nano_per_million: i64,
@@ -39,6 +40,7 @@ pub struct UpdateMerchantModelRecord {
     pub channel_id: String,
     pub model_id: i64,
     pub context_window: i64,
+    pub billing_mode: MerchantBillingMode,
     pub price_currency: MerchantPriceCurrency,
     pub input_price_nano_per_million: i64,
     pub output_price_nano_per_million: i64,
@@ -97,6 +99,7 @@ impl MerchantModelRepository {
             channel_id: Set(Uuid::parse_str(&record.channel_id).map_err(invalid_data)?),
             model_id: Set(record.model_id),
             context_window: Set(record.context_window),
+            billing_mode: Set(record.billing_mode.as_str().to_owned()),
             price_currency: Set(record.price_currency.as_str().to_owned()),
             input_price_nano_per_million: Set(record.input_price_nano_per_million),
             output_price_nano_per_million: Set(record.output_price_nano_per_million),
@@ -139,24 +142,28 @@ impl MerchantModelRepository {
         };
         match mutation {
             MerchantModelPriceMutation::ApplyImmediately => {
+                update.billing_mode = Set(record.billing_mode.as_str().to_owned());
                 update.price_currency = Set(record.price_currency.as_str().to_owned());
                 update.input_price_nano_per_million = Set(record.input_price_nano_per_million);
                 update.output_price_nano_per_million = Set(record.output_price_nano_per_million);
                 update.pricing_nano = Set(pricing_nano);
                 update.review_status = Set(MerchantModelReviewStatus::Approved.as_str().to_owned());
                 update.pending_price_currency = Set(None);
+                update.pending_billing_mode = Set(None);
                 update.pending_input_price_nano_per_million = Set(None);
                 update.pending_output_price_nano_per_million = Set(None);
                 update.pending_pricing_nano = Set(None);
                 update.price_effective_at = Set(None);
             }
             MerchantModelPriceMutation::ReplaceInitialSubmission => {
+                update.billing_mode = Set(record.billing_mode.as_str().to_owned());
                 update.price_currency = Set(record.price_currency.as_str().to_owned());
                 update.input_price_nano_per_million = Set(record.input_price_nano_per_million);
                 update.output_price_nano_per_million = Set(record.output_price_nano_per_million);
                 update.pricing_nano = Set(pricing_nano);
                 update.review_status = Set(MerchantModelReviewStatus::Pending.as_str().to_owned());
                 update.pending_price_currency = Set(None);
+                update.pending_billing_mode = Set(None);
                 update.pending_input_price_nano_per_million = Set(None);
                 update.pending_output_price_nano_per_million = Set(None);
                 update.pending_pricing_nano = Set(None);
@@ -166,6 +173,7 @@ impl MerchantModelRepository {
                 update.review_status = Set(MerchantModelReviewStatus::Pending.as_str().to_owned());
                 update.pending_price_currency =
                     Set(Some(record.price_currency.as_str().to_owned()));
+                update.pending_billing_mode = Set(Some(record.billing_mode.as_str().to_owned()));
                 update.pending_input_price_nano_per_million =
                     Set(Some(record.input_price_nano_per_million));
                 update.pending_output_price_nano_per_million =
@@ -244,6 +252,10 @@ impl MerchantModelRepository {
     ) -> Result<u64, RepositoryError> {
         let mut update = merchant_model_listing::Entity::update_many()
             .col_expr(
+                merchant_model_listing::Column::BillingMode,
+                Expr::col(merchant_model_listing::Column::PendingBillingMode),
+            )
+            .col_expr(
                 merchant_model_listing::Column::PriceCurrency,
                 Expr::col(merchant_model_listing::Column::PendingPriceCurrency),
             )
@@ -260,6 +272,7 @@ impl MerchantModelRepository {
                 Expr::col(merchant_model_listing::Column::PendingPricingNano),
             )
             .set(merchant_model_listing::ActiveModel {
+                pending_billing_mode: Set(None),
                 pending_price_currency: Set(None),
                 pending_input_price_nano_per_million: Set(None),
                 pending_output_price_nano_per_million: Set(None),
@@ -345,9 +358,13 @@ fn merchant_model_from_models(
         ))
     })?;
     let status = merchant_model_status(&listing.status)?;
+    let billing_mode = MerchantBillingMode::parse(&listing.billing_mode).ok_or_else(|| {
+        RepositoryError::InvalidData(format!(
+            "invalid merchant model billing mode: {}",
+            listing.billing_mode
+        ))
+    })?;
     let review_status = merchant_model_review_status(&listing.review_status)?;
-    let default_pricing = pricing_from_json(model.default_pricing_nano_usd.clone())?;
-    let pricing_overrides = pricing_from_json(model.pricing_overrides_nano_usd.clone())?;
     let listing_pricing = pricing_from_json(listing.pricing_nano.clone())?;
     let price_currency =
         MerchantPriceCurrency::parse(&listing.price_currency).ok_or_else(|| {
@@ -356,14 +373,7 @@ fn merchant_model_from_models(
                 listing.price_currency
             ))
         })?;
-    let model_pricing = default_pricing
-        .merged_with(&pricing_overrides)
-        .with_required_base_prices(
-            model.input_price_nano_usd_per_million,
-            model.output_price_nano_usd_per_million,
-        );
-    let pricing = model_pricing.merged_with_supported(&listing_pricing);
-    let pending_price = pending_price_from_model(&listing, &model_pricing)?;
+    let pending_price = pending_price_from_model(&listing)?;
 
     Ok(MerchantModel {
         id: listing.id.hyphenated().to_string(),
@@ -374,10 +384,11 @@ fn merchant_model_from_models(
         model_identifier: model.identifier.clone(),
         model_name: model.name.clone(),
         context_window: listing.context_window,
+        billing_mode,
         price_currency,
         input_price_nano_per_million: listing.input_price_nano_per_million,
         output_price_nano_per_million: listing.output_price_nano_per_million,
-        pricing,
+        pricing: listing_pricing,
         status,
         review_status,
         has_approved_price: listing.has_approved_price,
@@ -411,17 +422,22 @@ fn merchant_model_review_status(value: &str) -> Result<MerchantModelReviewStatus
 
 fn pending_price_from_model(
     listing: &merchant_model_listing::Model,
-    model_pricing: &ModelPricing,
 ) -> Result<Option<MerchantModelPendingPrice>, RepositoryError> {
     let values = (
+        listing.pending_billing_mode.as_deref(),
         listing.pending_price_currency.as_deref(),
         listing.pending_input_price_nano_per_million,
         listing.pending_output_price_nano_per_million,
         listing.pending_pricing_nano.as_ref(),
     );
     match values {
-        (None, None, None, None) => Ok(None),
-        (Some(currency), Some(input), Some(output), Some(pricing)) => {
+        (None, None, None, None, None) => Ok(None),
+        (Some(billing_mode), Some(currency), Some(input), Some(output), Some(pricing)) => {
+            let billing_mode = MerchantBillingMode::parse(billing_mode).ok_or_else(|| {
+                RepositoryError::InvalidData(format!(
+                    "invalid pending merchant model billing mode: {billing_mode}"
+                ))
+            })?;
             let price_currency = MerchantPriceCurrency::parse(currency).ok_or_else(|| {
                 RepositoryError::InvalidData(format!(
                     "invalid pending merchant model price currency: {currency}"
@@ -429,10 +445,11 @@ fn pending_price_from_model(
             })?;
             let pricing = pricing_from_json(pricing.clone())?;
             Ok(Some(MerchantModelPendingPrice {
+                billing_mode,
                 price_currency,
                 input_price_nano_per_million: input,
                 output_price_nano_per_million: output,
-                pricing: model_pricing.merged_with_supported(&pricing),
+                pricing,
                 effective_at: listing
                     .price_effective_at
                     .map(domain_timestamp)

@@ -1,13 +1,15 @@
 import { apiClient } from '@/lib/api-client';
 import type { ModelPricing } from '@/features/account/api/model-catalog';
-import type { ModelPriceOverride } from '@/features/account/api/models';
+import type { ModelBillingMode, ModelPriceOverride } from '@/features/account/api/models';
 import type { PriceCurrency, PriceSetting } from '@/features/account/api/price-settings';
 
 export type MerchantModelStatus = 'offline' | 'published';
 export type MerchantModelReviewStatus = 'approved' | 'pending' | 'rejected';
 export type MerchantModelRuntimeStatus = 'offline' | 'published';
 export type MerchantPriceConversionMode = 'fixedRate' | 'parity';
+export type MerchantBillingMode = 'request' | 'token';
 export interface MerchantModel {
+  billingMode: MerchantBillingMode;
   channelId: string;
   channelName: string;
   contextWindow: number;
@@ -30,6 +32,7 @@ export interface MerchantModel {
 }
 
 export interface MerchantModelPendingPrice {
+  billingMode: MerchantBillingMode;
   effectiveAt: string | null;
   inputPrice: number;
   outputPrice: number;
@@ -39,6 +42,7 @@ export interface MerchantModelPendingPrice {
 
 export interface MerchantModelOption {
   contextWindow: number;
+  defaultBillingMode: ModelBillingMode;
   id: number;
   identifier: string;
   inputPrice: number;
@@ -53,6 +57,7 @@ export interface MerchantModelOptions {
 }
 
 export interface MerchantModelDraft {
+  billingMode: MerchantBillingMode;
   channelId: string;
   conversionMode: MerchantPriceConversionMode;
   exchangeRate: number;

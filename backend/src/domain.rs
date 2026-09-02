@@ -3,6 +3,7 @@ mod app_route;
 mod brand;
 mod brand_preset;
 mod catalog_review;
+mod marketplace;
 mod merchant_application;
 mod merchant_channel;
 mod merchant_management;
@@ -27,6 +28,10 @@ pub use catalog_review::{
     CatalogReviewModelCheckStatus, CatalogReviewModelIdentityRisk, CatalogReviewModelTest,
     CatalogReviewStatus,
 };
+pub use marketplace::{
+    MarketplaceBrand, MarketplaceCatalog, MarketplaceMerchant, MarketplaceModel,
+    MarketplaceRouteState,
+};
 pub use merchant_application::{MerchantApplication, MerchantApplicationStatus};
 pub use merchant_channel::{MerchantChannel, MerchantChannelStatus};
 pub use merchant_management::{
@@ -34,8 +39,9 @@ pub use merchant_management::{
     MerchantReviewDecision,
 };
 pub use merchant_model::{
-    MerchantModel, MerchantModelOption, MerchantModelOptions, MerchantModelPendingPrice,
-    MerchantModelReviewStatus, MerchantModelStatus, MerchantPriceCurrency,
+    MerchantBillingMode, MerchantModel, MerchantModelOption, MerchantModelOptions,
+    MerchantModelPendingPrice, MerchantModelReviewStatus, MerchantModelStatus,
+    MerchantPriceCurrency,
 };
 pub use merchant_profile::{
     MerchantProfile, MerchantProfileBundle, MerchantSettlementAccount, MerchantSettlementCurrency,
@@ -45,11 +51,12 @@ pub use merchant_request::{
     MerchantRequest, MerchantRequestAction, MerchantRequestOrigin, MerchantRequestSortField,
     MerchantRequestStatus, MerchantRequestType,
 };
-pub use model::{ManagedModel, ModelStatus};
+pub use model::{ManagedModel, ModelBillingMode, ModelStatus};
 pub use model_catalog::{ModelCatalogEntry, ModelCatalogOption};
 pub use model_pricing::{
-    ModelPriceRates, ModelPriceTier, ModelPricing, PriceCurrency, PriceExchangeRate,
-    price_increase_exceeds_basis_points, price_per_million_to_nano, usd_per_million_to_nano,
+    ModelPriceRates, ModelPriceTier, ModelPricing, PRICE_NANO_SCALE, PriceCurrency,
+    PriceExchangeRate, price_increase_exceeds_basis_points, price_per_million_to_nano,
+    usd_per_million_to_nano,
 };
 pub use pagination::{Page, Pagination};
 pub use price_settings::{ModelPriceReviewSettings, PriceConfiguration, PriceSettings};

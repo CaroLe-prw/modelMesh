@@ -5,6 +5,7 @@ mod brand;
 mod brand_preset;
 mod catalog_review;
 mod health;
+mod marketplace;
 mod merchant_application;
 mod merchant_channel;
 mod merchant_management;
@@ -59,6 +60,7 @@ fn api_router() -> Router<AppState> {
         .merge(merchant_model::router())
         .merge(merchant_profile::router())
         .merge(merchant_request::router())
+        .merge(marketplace::router())
         .merge(price_settings::router())
         .merge(system_settings::router())
         .merge(user_management::router())

@@ -1,8 +1,32 @@
 use jiff::Timestamp;
 
-use super::{ModelPricing, PriceCurrency, PriceSettings};
+use super::{ModelBillingMode, ModelPricing, PriceCurrency, PriceSettings};
 
 pub type MerchantPriceCurrency = PriceCurrency;
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum MerchantBillingMode {
+    #[default]
+    Token,
+    Request,
+}
+
+impl MerchantBillingMode {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Token => "token",
+            Self::Request => "request",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "token" => Some(Self::Token),
+            "request" => Some(Self::Request),
+            _ => None,
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MerchantModelStatus {
@@ -38,6 +62,7 @@ impl MerchantModelReviewStatus {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MerchantModelPendingPrice {
+    pub billing_mode: MerchantBillingMode,
     pub price_currency: MerchantPriceCurrency,
     pub input_price_nano_per_million: i64,
     pub output_price_nano_per_million: i64,
@@ -55,6 +80,7 @@ pub struct MerchantModel {
     pub model_identifier: String,
     pub model_name: String,
     pub context_window: i64,
+    pub billing_mode: MerchantBillingMode,
     pub price_currency: MerchantPriceCurrency,
     pub input_price_nano_per_million: i64,
     pub output_price_nano_per_million: i64,
@@ -74,6 +100,7 @@ pub struct MerchantModelOption {
     pub identifier: String,
     pub name: String,
     pub context_window: i64,
+    pub default_billing_mode: ModelBillingMode,
     pub input_price_nano_per_million: i64,
     pub output_price_nano_per_million: i64,
     pub pricing: ModelPricing,

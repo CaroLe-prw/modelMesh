@@ -353,21 +353,25 @@ fn apply_pending_price_immediately(
     listing: &merchant_model_listing::Model,
 ) -> Result<(), RepositoryError> {
     let values = (
+        listing.pending_billing_mode.clone(),
         listing.pending_price_currency.clone(),
         listing.pending_input_price_nano_per_million,
         listing.pending_output_price_nano_per_million,
         listing.pending_pricing_nano.clone(),
     );
-    let (Some(currency), Some(input), Some(output), Some(pricing)) = values else {
+    let (Some(billing_mode), Some(currency), Some(input), Some(output), Some(pricing)) = values
+    else {
         return Err(invalid_data(
             "merchant model pending price fields are incomplete",
         ));
     };
+    update.billing_mode = Set(billing_mode);
     update.price_currency = Set(currency);
     update.input_price_nano_per_million = Set(input);
     update.output_price_nano_per_million = Set(output);
     update.pricing_nano = Set(pricing);
     update.pending_price_currency = Set(None);
+    update.pending_billing_mode = Set(None);
     update.pending_input_price_nano_per_million = Set(None);
     update.pending_output_price_nano_per_million = Set(None);
     update.pending_pricing_nano = Set(None);

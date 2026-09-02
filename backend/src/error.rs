@@ -7,11 +7,11 @@ use serde::Serialize;
 
 use crate::services::{
     ApiKeyServiceError, AppRouteServiceError, AuthServiceError, BrandPresetServiceError,
-    BrandServiceError, CatalogReviewServiceError, MerchantApplicationServiceError,
-    MerchantChannelServiceError, MerchantManagementServiceError, MerchantModelServiceError,
-    MerchantProfileServiceError, MerchantRequestServiceError, ModelCatalogServiceError,
-    ModelServiceError, PriceSettingsServiceError, SystemSettingsServiceError,
-    UserManagementServiceError,
+    BrandServiceError, CatalogReviewServiceError, MarketplaceServiceError,
+    MerchantApplicationServiceError, MerchantChannelServiceError, MerchantManagementServiceError,
+    MerchantModelServiceError, MerchantProfileServiceError, MerchantRequestServiceError,
+    ModelCatalogServiceError, ModelServiceError, PriceSettingsServiceError,
+    SystemSettingsServiceError, UserManagementServiceError,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -326,6 +326,17 @@ impl From<MerchantRequestServiceError> for AppError {
             MerchantRequestServiceError::Forbidden => Self::Forbidden,
             MerchantRequestServiceError::InvalidInput => Self::InvalidMerchantRequest,
             MerchantRequestServiceError::Internal => Self::Internal,
+        }
+    }
+}
+
+impl From<MarketplaceServiceError> for AppError {
+    fn from(error: MarketplaceServiceError) -> Self {
+        match error {
+            MarketplaceServiceError::InvalidInput => Self::InvalidModel,
+            MarketplaceServiceError::ApiKeyNotFound => Self::ApiKeyNotFound,
+            MarketplaceServiceError::MerchantNotFound => Self::MerchantModelNotFound,
+            MarketplaceServiceError::Internal => Self::Internal,
         }
     }
 }

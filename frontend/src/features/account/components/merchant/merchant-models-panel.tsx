@@ -7,6 +7,7 @@ import {
   type ManagementListColumn,
   type ManagementListState,
 } from '@/components/common/management-list';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -41,6 +42,7 @@ import { MerchantStatusBadge } from '@/features/account/components/merchant/merc
 import { useAuth } from '@/features/auth/context/auth-context';
 import { ApiError } from '@/lib/api-client';
 import { API_ERROR_CODE } from '@/lib/api-error-codes';
+import { cn } from '@/lib/utils';
 
 type ModelStatusFilter = 'all' | MerchantModelStatus;
 type ModelReviewStatusFilter = 'all' | MerchantModelReviewStatus;
@@ -301,20 +303,56 @@ export function MerchantModelsPanel() {
       render: (model) => formatContextWindow(model.contextWindow),
     },
     {
+      key: 'billingMode',
+      label: t('pages.account.sections.merchant.models.columns.billingMode'),
+      render: (model) => (
+        <div className="grid justify-items-start gap-1">
+          <Badge variant="secondary">
+            {t(`pages.account.sections.merchant.models.billingModes.${model.billingMode}`)}
+          </Badge>
+          {model.pendingPrice && model.pendingPrice.billingMode !== model.billingMode ? (
+            <span className="text-[10px] text-warning">
+              →{' '}
+              {t(
+                `pages.account.sections.merchant.models.billingModes.${model.pendingPrice.billingMode}`,
+              )}
+            </span>
+          ) : null}
+        </div>
+      ),
+    },
+    {
       className: 'font-mono text-xs',
       key: 'inputPrice',
       label: t('pages.account.sections.merchant.models.columns.inputPrice'),
-      render: (model) => (
-        <ModelPriceCell kind="input" language={i18n.resolvedLanguage} model={model} />
-      ),
+      render: (model) =>
+        model.billingMode === 'token' ? (
+          <ModelPriceCell kind="input" language={i18n.resolvedLanguage} model={model} />
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
     },
     {
       className: 'font-mono text-xs',
       key: 'outputPrice',
       label: t('pages.account.sections.merchant.models.columns.outputPrice'),
-      render: (model) => (
-        <ModelPriceCell kind="output" language={i18n.resolvedLanguage} model={model} />
-      ),
+      render: (model) =>
+        model.billingMode === 'token' ? (
+          <ModelPriceCell kind="output" language={i18n.resolvedLanguage} model={model} />
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      className: 'min-w-48 font-mono text-xs',
+      key: 'requestPrices',
+      label: t('pages.account.sections.merchant.models.columns.requestPrices'),
+      render: (model) =>
+        model.billingMode === 'request' || model.pendingPrice?.billingMode === 'request' ? (
+          <RequestPriceSummary language={i18n.resolvedLanguage} model={model} />
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
     },
     {
       key: 'status',
@@ -468,6 +506,25 @@ export function MerchantModelsPanel() {
   );
 }
 
+function RequestPriceSummary({
+  language,
+  model,
+}: {
+  language: string | undefined;
+  model: MerchantModel;
+}) {
+  const usesPendingPrice = model.pendingPrice?.billingMode === 'request';
+  const pricing = usesPendingPrice ? model.pendingPrice?.pricing : model.pricing;
+  const requestPrice = pricing?.base?.request;
+  return (
+    <span className={cn('whitespace-nowrap', usesPendingPrice && 'text-warning')}>
+      {requestPrice === undefined
+        ? '—'
+        : formatMerchantCurrency(language, requestPrice, model.priceCurrency)}
+    </span>
+  );
+}
+
 const modelActionClassName =
   'h-auto min-w-12 flex-col gap-1 px-2 py-1.5 text-muted-foreground hover:bg-primary/8 hover:text-primary';
 
@@ -532,11 +589,12 @@ function ModelPriceCell({
 }) {
   const { t } = useTranslation();
   const current = kind === 'input' ? model.inputPrice : model.outputPrice;
-  const pending = model.pendingPrice
-    ? kind === 'input'
-      ? model.pendingPrice.inputPrice
-      : model.pendingPrice.outputPrice
-    : null;
+  const pending =
+    model.pendingPrice?.billingMode === 'token'
+      ? kind === 'input'
+        ? model.pendingPrice.inputPrice
+        : model.pendingPrice.outputPrice
+      : null;
 
   return (
     <div className="min-w-28">

@@ -2,8 +2,8 @@ use std::collections::{HashMap, HashSet};
 
 use crate::{
     domain::{
-        AccountRole, ManagedModel, ModelCatalogEntry, ModelPriceTier, ModelPricing, ModelStatus,
-        Page, Pagination, usd_per_million_to_nano,
+        AccountRole, ManagedModel, ModelBillingMode, ModelCatalogEntry, ModelPriceTier,
+        ModelPricing, ModelStatus, Page, Pagination, SortDirection, usd_per_million_to_nano,
     },
     repository::{
         ModelCatalogRepository, ModelRepository, ModelSearch, NewModelRecord, RepositoryConflict,
@@ -34,22 +34,26 @@ pub struct CreateModel {
     pub identifier: String,
     pub name: Option<String>,
     pub context_window: Option<i64>,
+    pub billing_mode: ModelBillingMode,
     pub input_price: Option<f64>,
     pub cache_read_price: Option<f64>,
     pub cache_write_price: Option<f64>,
     pub output_price: Option<f64>,
     pub price_overrides: Vec<ModelPriceOverrideInput>,
+    pub sort_order: i32,
     pub status: ModelStatus,
 }
 
 pub struct CreateCatalogModels {
     pub brand_identifier: String,
     pub model_identifiers: Vec<String>,
+    pub billing_mode: ModelBillingMode,
     pub input_price: Option<f64>,
     pub cache_read_price: Option<f64>,
     pub cache_write_price: Option<f64>,
     pub output_price: Option<f64>,
     pub price_overrides: Vec<ModelPriceOverrideInput>,
+    pub sort_order: i32,
     pub status: ModelStatus,
 }
 
@@ -61,7 +65,9 @@ pub struct ModelPriceOverrideInput {
 }
 
 pub struct UpdateModelPricing {
+    pub billing_mode: Option<ModelBillingMode>,
     pub price_overrides: Vec<ModelPriceOverrideInput>,
+    pub sort_order: Option<i32>,
 }
 
 #[derive(Clone)]
@@ -116,6 +122,7 @@ impl ModelService {
         query: Option<String>,
         brand_identifier: Option<String>,
         status: Option<ModelStatus>,
+        sort_direction: SortDirection,
     ) -> Result<Page<ManagedModel>, ModelServiceError> {
         require_admin(requester_role, ModelServiceError::Forbidden)?;
         let search = ModelSearch {
@@ -124,6 +131,7 @@ impl ModelService {
                 .map(normalize_brand_identifier)
                 .transpose()?,
             status,
+            sort_direction,
         };
 
         self.repository
@@ -142,6 +150,7 @@ impl ModelService {
     ) -> Result<ManagedModel, ModelServiceError> {
         require_admin(requester_role, ModelServiceError::Forbidden)?;
         let brand_identifier = normalize_brand_identifier(request.brand_identifier.clone())?;
+        validate_sort_order(request.sort_order)?;
         let requested_identifier = normalize_catalog_lookup_id(request.identifier.clone())?;
         let catalog_entry = self
             .catalog_repository
@@ -172,6 +181,7 @@ impl ModelService {
     ) -> Result<Vec<ManagedModel>, ModelServiceError> {
         require_admin(requester_role, ModelServiceError::Forbidden)?;
         request.brand_identifier = normalize_brand_identifier(request.brand_identifier)?;
+        validate_sort_order(request.sort_order)?;
         if request.model_identifiers.is_empty()
             || request.model_identifiers.len() > MAX_MODELS_PER_BATCH
         {
@@ -244,13 +254,29 @@ impl ModelService {
     ) -> Result<ManagedModel, ModelServiceError> {
         require_admin(requester_role, ModelServiceError::Forbidden)?;
         ensure_model_id(id)?;
+        if let Some(sort_order) = request.sort_order {
+            validate_sort_order(sort_order)?;
+        }
         let pricing_overrides_nano_usd = resolve_pricing_overrides(request.price_overrides)?;
+        let current = self
+            .repository
+            .find_by_id(id)
+            .await
+            .map_err(|error| {
+                tracing::error!(error = %error, model_id = id, "model pricing lookup failed");
+                ModelServiceError::Internal
+            })?
+            .ok_or(ModelServiceError::NotFound)?;
+        let billing_mode = request.billing_mode.unwrap_or(current.billing_mode);
+        validate_pricing_for_billing_mode(billing_mode, &pricing_overrides_nano_usd)?;
 
         self.repository
             .update_pricing(
                 id,
                 UpdateModelPricingRecord {
+                    billing_mode,
                     pricing_overrides_nano_usd,
+                    sort_order: request.sort_order,
                 },
             )
             .await
@@ -298,6 +324,7 @@ fn resolve_new_model(
         return Err(ModelServiceError::InvalidInput);
     }
     let mut submitted_pricing = resolve_pricing_overrides(request.price_overrides)?;
+    validate_pricing_for_billing_mode(request.billing_mode, &submitted_pricing)?;
     let (
         default_pricing,
         pricing_overrides,
@@ -305,7 +332,51 @@ fn resolve_new_model(
         cache_read_price,
         cache_write_price,
         output_price,
-    ) = if let Some(entry) = catalog_entry.as_ref() {
+    ) = if request.billing_mode == ModelBillingMode::Request {
+        if let Some(entry) = catalog_entry.as_ref() {
+            (
+                entry.pricing.clone(),
+                submitted_pricing,
+                ResolvedPrice {
+                    value: 0,
+                    overridden: false,
+                },
+                ResolvedPrice {
+                    value: 0,
+                    overridden: false,
+                },
+                ResolvedPrice {
+                    value: 0,
+                    overridden: false,
+                },
+                ResolvedPrice {
+                    value: 0,
+                    overridden: false,
+                },
+            )
+        } else {
+            (
+                submitted_pricing,
+                ModelPricing::default(),
+                ResolvedPrice {
+                    value: 0,
+                    overridden: false,
+                },
+                ResolvedPrice {
+                    value: 0,
+                    overridden: false,
+                },
+                ResolvedPrice {
+                    value: 0,
+                    overridden: false,
+                },
+                ResolvedPrice {
+                    value: 0,
+                    overridden: false,
+                },
+            )
+        }
+    } else if let Some(entry) = catalog_entry.as_ref() {
         let input_price = resolve_base_price(
             "input",
             &mut submitted_pricing,
@@ -375,6 +446,7 @@ fn resolve_new_model(
         catalog_provider_id,
         catalog_model_id,
         context_window,
+        billing_mode: request.billing_mode,
         input_price_nano_usd_per_million: input_price.value,
         input_price_overridden: input_price.overridden,
         cache_read_price_nano_usd_per_million: cache_read_price.value,
@@ -385,6 +457,7 @@ fn resolve_new_model(
         output_price_overridden: output_price.overridden,
         default_pricing_nano_usd: default_pricing,
         pricing_overrides_nano_usd: pricing_overrides,
+        sort_order: request.sort_order,
         status: request.status,
     })
 }
@@ -417,11 +490,13 @@ fn resolve_catalog_model_records(
                 identifier,
                 name: None,
                 context_window: None,
+                billing_mode: request.billing_mode,
                 input_price: request.input_price,
                 cache_read_price: request.cache_read_price,
                 cache_write_price: request.cache_write_price,
                 output_price: request.output_price,
                 price_overrides: request.price_overrides.clone(),
+                sort_order: request.sort_order,
                 status: request.status,
             },
             Some(catalog_entry),
@@ -429,6 +504,24 @@ fn resolve_catalog_model_records(
     }
 
     Ok(records)
+}
+
+fn validate_pricing_for_billing_mode(
+    billing_mode: ModelBillingMode,
+    pricing: &ModelPricing,
+) -> Result<(), ModelServiceError> {
+    if billing_mode == ModelBillingMode::Token {
+        return Ok(());
+    }
+    let has_fixed_request_price = pricing.base.len() == 1 && pricing.base.contains_key("request");
+    let has_other_groups = pricing.context_over_200k.is_some()
+        || !pricing.tiers.is_empty()
+        || !pricing.experimental_modes.is_empty()
+        || !pricing.experimental_mode_tiers.is_empty()
+        || !pricing.service_tiers.is_empty();
+    (has_fixed_request_price && !has_other_groups)
+        .then_some(())
+        .ok_or(ModelServiceError::InvalidInput)
 }
 
 fn resolve_base_price(
@@ -590,6 +683,12 @@ fn resolve_price(
 
 fn ensure_model_id(id: i64) -> Result<(), ModelServiceError> {
     (id > 0)
+        .then_some(())
+        .ok_or(ModelServiceError::InvalidInput)
+}
+
+fn validate_sort_order(sort_order: i32) -> Result<(), ModelServiceError> {
+    (sort_order >= 0)
         .then_some(())
         .ok_or(ModelServiceError::InvalidInput)
 }

@@ -70,6 +70,44 @@ async fn api_keys_require_a_bearer_token() {
 }
 
 #[tokio::test]
+async fn marketplace_routes_require_a_bearer_token() {
+    for uri in [
+        "/api/marketplace/catalog",
+        "/api/marketplace/models/1/merchants",
+    ] {
+        let response = test_router()
+            .oneshot(
+                Request::builder()
+                    .uri(uri)
+                    .body(Body::empty())
+                    .expect("marketplace request should be valid"),
+            )
+            .await
+            .expect("marketplace request should complete");
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+    }
+
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .method("PUT")
+                .uri(
+                    "/api/marketplace/api-keys/00000000-0000-4000-8000-000000000001/models/1/merchants/00000000-0000-4000-8000-000000000002",
+                )
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"isInRoute":true,"isPinned":false}"#))
+                .expect("marketplace route update should be valid"),
+        )
+        .await
+        .expect("marketplace route update should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
 async fn account_routes_require_a_bearer_token() {
     let response = test_router()
         .oneshot(

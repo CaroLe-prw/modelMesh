@@ -9,7 +9,9 @@ use sea_orm::{
 use time::OffsetDateTime;
 
 use crate::{
-    domain::{ManagedModel, ModelPricing, ModelStatus, Page, Pagination},
+    domain::{
+        ManagedModel, ModelBillingMode, ModelPricing, ModelStatus, Page, Pagination, SortDirection,
+    },
     entity::{brand, merchant_model_listing, model},
 };
 
@@ -28,6 +30,7 @@ pub struct NewModelRecord {
     pub catalog_provider_id: Option<String>,
     pub catalog_model_id: Option<String>,
     pub context_window: i64,
+    pub billing_mode: ModelBillingMode,
     pub input_price_nano_usd_per_million: i64,
     pub input_price_overridden: bool,
     pub cache_read_price_nano_usd_per_million: i64,
@@ -38,6 +41,7 @@ pub struct NewModelRecord {
     pub output_price_overridden: bool,
     pub default_pricing_nano_usd: ModelPricing,
     pub pricing_overrides_nano_usd: ModelPricing,
+    pub sort_order: i32,
     pub status: ModelStatus,
 }
 
@@ -45,10 +49,13 @@ pub struct ModelSearch {
     pub pattern: Option<String>,
     pub brand_identifier: Option<String>,
     pub status: Option<ModelStatus>,
+    pub sort_direction: SortDirection,
 }
 
 pub struct UpdateModelPricingRecord {
+    pub billing_mode: ModelBillingMode,
     pub pricing_overrides_nano_usd: ModelPricing,
+    pub sort_order: Option<i32>,
 }
 
 impl ModelRepository {
@@ -204,16 +211,24 @@ impl ModelRepository {
         let pricing_overrides_nano_usd = serde_json::to_value(pricing_overrides)
             .map_err(|error| RepositoryError::InvalidData(error.to_string()))?;
         let mut active: model::ActiveModel = existing.into();
-        active.input_price_nano_usd_per_million = Set(input_price.0);
-        active.input_price_overridden = Set(input_price.1);
-        active.cache_read_price_nano_usd_per_million = Set(cache_read_price.0);
-        active.cache_read_price_overridden = Set(cache_read_price.1);
-        active.cache_write_price_nano_usd_per_million = Set(cache_write_price.0);
-        active.cache_write_price_overridden = Set(cache_write_price.1);
-        active.output_price_nano_usd_per_million = Set(output_price.0);
-        active.output_price_overridden = Set(output_price.1);
+        active.billing_mode = Set(record.billing_mode.as_str().to_owned());
+        let token_prices = record.billing_mode == ModelBillingMode::Token;
+        active.input_price_nano_usd_per_million = Set(if token_prices { input_price.0 } else { 0 });
+        active.input_price_overridden = Set(token_prices && input_price.1);
+        active.cache_read_price_nano_usd_per_million =
+            Set(if token_prices { cache_read_price.0 } else { 0 });
+        active.cache_read_price_overridden = Set(token_prices && cache_read_price.1);
+        active.cache_write_price_nano_usd_per_million =
+            Set(if token_prices { cache_write_price.0 } else { 0 });
+        active.cache_write_price_overridden = Set(token_prices && cache_write_price.1);
+        active.output_price_nano_usd_per_million =
+            Set(if token_prices { output_price.0 } else { 0 });
+        active.output_price_overridden = Set(token_prices && output_price.1);
         active.default_pricing_nano_usd = Set(default_pricing_nano_usd);
         active.pricing_overrides_nano_usd = Set(pricing_overrides_nano_usd);
+        if let Some(sort_order) = record.sort_order {
+            active.sort_order = Set(sort_order);
+        }
         active.updated_at = Set(OffsetDateTime::now_utc());
         active.update(&self.database).await?;
 
@@ -248,6 +263,7 @@ impl ModelRepository {
             .find_also_related(brand::Entity)
             .filter(brand::Column::Identifier.eq(brand_identifier))
             .filter(model::Column::Status.eq(ModelStatus::Published.as_str()))
+            .order_by_asc(model::Column::SortOrder)
             .order_by_asc(model::Column::Name)
             .order_by_asc(model::Column::Id)
             .all(&self.database)
@@ -313,6 +329,7 @@ fn new_model_active(
         catalog_provider_id: Set(record.catalog_provider_id),
         catalog_model_id: Set(record.catalog_model_id),
         context_window: Set(record.context_window),
+        billing_mode: Set(record.billing_mode.as_str().to_owned()),
         input_price_nano_usd_per_million: Set(record.input_price_nano_usd_per_million),
         input_price_overridden: Set(record.input_price_overridden),
         cache_read_price_nano_usd_per_million: Set(record.cache_read_price_nano_usd_per_million),
@@ -323,6 +340,7 @@ fn new_model_active(
         output_price_overridden: Set(record.output_price_overridden),
         default_pricing_nano_usd: Set(default_pricing_nano_usd),
         pricing_overrides_nano_usd: Set(pricing_overrides_nano_usd),
+        sort_order: Set(record.sort_order),
         status: Set(record.status.as_str().to_owned()),
         ..Default::default()
     })
@@ -350,8 +368,12 @@ fn model_list_query(search: &ModelSearch) -> sea_orm::SelectTwo<model::Entity, b
         query = query.filter(model::Column::Status.eq(status.as_str()));
     }
 
+    let query = query.order_by_asc(brand::Column::SortOrder);
+    let query = match search.sort_direction {
+        SortDirection::Asc => query.order_by_asc(model::Column::SortOrder),
+        SortDirection::Desc => query.order_by_desc(model::Column::SortOrder),
+    };
     query
-        .order_by_asc(brand::Column::SortOrder)
         .order_by_asc(model::Column::Name)
         .order_by_asc(model::Column::Id)
 }
@@ -369,6 +391,12 @@ fn managed_model_from_models(
             )));
         }
     };
+    let billing_mode = ModelBillingMode::parse(&model.billing_mode).ok_or_else(|| {
+        RepositoryError::InvalidData(format!(
+            "invalid model billing mode: {}",
+            model.billing_mode
+        ))
+    })?;
 
     Ok(ManagedModel {
         id: model.id,
@@ -377,6 +405,7 @@ fn managed_model_from_models(
         name: model.name,
         catalog_source: model.catalog_source,
         context_window: model.context_window,
+        billing_mode,
         input_price_nano_usd_per_million: model.input_price_nano_usd_per_million,
         input_price_overridden: model.input_price_overridden,
         cache_read_price_nano_usd_per_million: model.cache_read_price_nano_usd_per_million,
@@ -388,6 +417,7 @@ fn managed_model_from_models(
         default_pricing: pricing_from_json(model.default_pricing_nano_usd)?,
         pricing_overrides: pricing_from_json(model.pricing_overrides_nano_usd)?,
         merchant_count: 0,
+        sort_order: model.sort_order,
         status,
         updated_at: domain_timestamp(model.updated_at)?,
     })

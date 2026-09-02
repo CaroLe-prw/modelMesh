@@ -102,6 +102,34 @@
   background: var(--color-surface-hover);
 }
 
+.marketplace-selector-scroll {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: x proximity;
+}
+
+.marketplace-selector-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.marketplace-selector-item {
+  scroll-snap-align: start;
+}
+
+.marketplace-selector-card {
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+[data-slot='radio-group-item'][data-state='checked'] + .marketplace-selector-card {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary-soft) 55%, var(--color-surface));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--color-primary) 18%, transparent),
+    0 10px 24px color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
 [data-slot='table'][data-sticky-edges='true'] > thead > tr > :first-child,
 [data-slot='table'][data-sticky-edges='true'] > tbody > tr > :first-child {
   position: sticky;

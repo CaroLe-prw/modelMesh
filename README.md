@@ -64,7 +64,11 @@ merchant can then apply a sales multiplier or per-rate overrides, and the backen
 saved listing back to USD with checked fixed-point arithmetic. `1:1` is the default and changing
 the currency only changes the unit; fixed-rate submissions must still match the current
 administrator configuration, so stale forms are rejected and refreshed. The customer-facing
-contract therefore stays in USD and never depends on a live exchange-rate provider.
+price contract remains stored and returned in USD and never depends on a live exchange-rate
+provider. The model marketplace can convert those USD values for display using the configured
+fixed rates. Marketplace merchant responses also include the official and merchant base price
+rows as exact decimal strings so the expandable channel details can compare input, output,
+cache-read, cache-write, and per-request prices without introducing floating-point rounding.
 
 `MODELMESH_ENVIRONMENT=development` and `test` write structured logs only to the console.
 Development additionally enables SeaORM database query logs at the `info` level.
@@ -80,7 +84,8 @@ pnpm --dir frontend dev
 ```
 
 The frontend keeps API requests under `/api`; the Vite development server proxies them to the
-Axum server at `http://127.0.0.1:3000`. `GET /api/health` is the process liveness endpoint.
+Axum server at `http://127.0.0.1:3000`. Set `MODELMESH_API_PROXY_TARGET` when the local backend
+uses another trusted address. `GET /api/health` is the process liveness endpoint.
 `GET /api/health/ready` verifies that both PostgreSQL and Redis are reachable.
 
 Account authentication uses Argon2 password hashes and Redis-backed access tokens. Registration
@@ -93,6 +98,27 @@ TTL. The available endpoints are:
 - `POST /api/auth/login`
 - `GET /api/auth/me`
 - `POST /api/auth/logout`
+
+The authenticated model marketplace is backed by published administrator models and only includes
+merchant listings whose price is approved, whose listing is published, and whose channel and brand
+are active. It exposes:
+
+- `GET /api/marketplace/catalog`
+- `GET /api/marketplace/models/{model_id}/merchants?apiKeyId={api_key_id}`
+- `PUT /api/marketplace/api-keys/{api_key_id}/models/{model_id}/merchants/{merchant_listing_id}`
+
+Catalog models expose an administrator-defined default `billingMode`: `token` models return input
+and output USD prices per million tokens, while `request` models return one fixed `requestFrom`
+price per call. Each merchant listing independently chooses `token` or `request`, so the same model
+can mix per-token and fixed per-request merchants. Merchant health uses the channel
+success-rate and average-latency snapshots. Route mutations accept `isInRoute` and
+`isPinned`; pinning also includes the merchant in the route, and each API key can pin at most one
+merchant per model. Ownership, live listing state, and model association are checked inside the
+transaction before the route is saved.
+
+Administrator models have a non-negative `sortOrder`. Marketplace models are ordered by brand
+order, then model order, then model name and database ID for a stable tie-break. The model list,
+create form, and model settings dialog all expose this value.
 
 Authentication responses include the account's highest `role`: `personal`, `merchant`, or
 `admin`. New accounts default to `personal`; role assignment is not exposed through public

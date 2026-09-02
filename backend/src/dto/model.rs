@@ -2,7 +2,7 @@ use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    domain::{ManagedModel, ModelStatus},
+    domain::{ManagedModel, ModelBillingMode, ModelStatus, SortDirection},
     dto::PaginationQuery,
 };
 
@@ -21,6 +21,8 @@ pub struct ListModelsQuery {
     pub brand_id: Option<String>,
     #[serde(default)]
     pub status: Option<ModelStatusValue>,
+    #[serde(default)]
+    pub sort_direction: ModelSortDirectionValue,
 }
 
 #[derive(Debug, Deserialize)]
@@ -32,6 +34,8 @@ pub struct CreateModelRequest {
     pub name: Option<String>,
     #[serde(default)]
     pub context_window: Option<i64>,
+    #[serde(default)]
+    pub billing_mode: ModelBillingModeValue,
     pub input_price: Option<f64>,
     #[serde(default)]
     pub cache_read_price: Option<f64>,
@@ -41,6 +45,8 @@ pub struct CreateModelRequest {
     pub output_price: Option<f64>,
     #[serde(default)]
     pub price_overrides: Vec<ModelPriceOverrideRequest>,
+    #[serde(default)]
+    pub sort_order: i32,
     pub status: ModelStatusValue,
 }
 
@@ -49,6 +55,8 @@ pub struct CreateModelRequest {
 pub struct BatchCreateModelsRequest {
     pub brand_id: String,
     pub model_ids: Vec<String>,
+    #[serde(default)]
+    pub billing_mode: ModelBillingModeValue,
     pub input_price: Option<f64>,
     #[serde(default)]
     pub cache_read_price: Option<f64>,
@@ -58,6 +66,8 @@ pub struct BatchCreateModelsRequest {
     pub output_price: Option<f64>,
     #[serde(default)]
     pub price_overrides: Vec<ModelPriceOverrideRequest>,
+    #[serde(default)]
+    pub sort_order: i32,
     pub status: ModelStatusValue,
 }
 
@@ -66,6 +76,10 @@ pub struct BatchCreateModelsRequest {
 pub struct UpdateModelPricingRequest {
     #[serde(default)]
     pub price_overrides: Vec<ModelPriceOverrideRequest>,
+    #[serde(default)]
+    pub billing_mode: Option<ModelBillingModeValue>,
+    #[serde(default)]
+    pub sort_order: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -113,6 +127,40 @@ pub enum ModelStatusValue {
     Disabled,
 }
 
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ModelSortDirectionValue {
+    #[default]
+    Asc,
+    Desc,
+}
+
+impl From<ModelSortDirectionValue> for SortDirection {
+    fn from(direction: ModelSortDirectionValue) -> Self {
+        match direction {
+            ModelSortDirectionValue::Asc => Self::Asc,
+            ModelSortDirectionValue::Desc => Self::Desc,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ModelBillingModeValue {
+    #[default]
+    Token,
+    Request,
+}
+
+impl From<ModelBillingModeValue> for ModelBillingMode {
+    fn from(mode: ModelBillingModeValue) -> Self {
+        match mode {
+            ModelBillingModeValue::Token => Self::Token,
+            ModelBillingModeValue::Request => Self::Request,
+        }
+    }
+}
+
 impl From<ModelStatusValue> for ModelStatus {
     fn from(status: ModelStatusValue) -> Self {
         match status {
@@ -132,6 +180,7 @@ pub struct ModelResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub catalog_source: Option<String>,
     pub context_window: i64,
+    pub billing_mode: &'static str,
     pub input_price: f64,
     pub input_price_overridden: bool,
     pub cache_read_price: f64,
@@ -144,6 +193,7 @@ pub struct ModelResponse {
     pub pricing_overrides: ModelPricingResponse,
     pub pricing: ModelPricingResponse,
     pub merchant_count: u64,
+    pub sort_order: i32,
     pub status: &'static str,
     pub updated_at: Timestamp,
 }
@@ -158,6 +208,7 @@ impl From<ManagedModel> for ModelResponse {
             name: model.name,
             catalog_source: model.catalog_source,
             context_window: model.context_window,
+            billing_mode: model.billing_mode.as_str(),
             input_price: price_from_nano_usd(model.input_price_nano_usd_per_million),
             input_price_overridden: model.input_price_overridden,
             cache_read_price: price_from_nano_usd(model.cache_read_price_nano_usd_per_million),
@@ -170,6 +221,7 @@ impl From<ManagedModel> for ModelResponse {
             pricing_overrides: ModelPricingResponse::from(model.pricing_overrides),
             pricing: ModelPricingResponse::from(effective_pricing),
             merchant_count: model.merchant_count,
+            sort_order: model.sort_order,
             status: model.status.as_str(),
             updated_at: model.updated_at,
         }

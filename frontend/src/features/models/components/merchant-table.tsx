@@ -1,17 +1,19 @@
-import { useMemo, useState } from 'react';
-import { Pin, Route, Search, SlidersHorizontal } from 'lucide-react';
+import {
+  AlertCircle,
+  ChevronDown,
+  KeyRound,
+  LoaderCircle,
+  Pin,
+  RefreshCw,
+  Route,
+} from 'lucide-react';
+import { Fragment, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { BrandAvatar } from '@/components/common/brand-avatar';
 import { SignalBars } from '@/components/common/signal-bars';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -22,20 +24,29 @@ import {
 } from '@/components/ui/table';
 import { Toggle } from '@/components/ui/toggle';
 import { cn } from '@/lib/utils';
+import type { MarketplaceRouteState } from '../api/marketplace';
 import {
-  formatUsd,
-  merchantTemplates,
+  formatRelativeTime,
+  formatMarketplacePrice,
+  merchantSignals,
+  merchantMatchesBillingMode,
+  merchantMatchesId,
+  merchantTags,
+  sortMarketplaceMerchants,
   type CatalogModel,
+  type MarketplaceDisplayCurrency,
+  type MarketplaceMerchant,
+  type MarketplacePriceRow,
+  type MerchantBillingModeFilter,
+  type MerchantSortMode,
   type MerchantTag,
+  type ModelBrand,
 } from '../data/marketplace';
-
-type SortMode = 'success' | 'price' | 'latency';
 
 const merchantHeadings = [
   'merchant',
-  'input',
-  'output',
-  'rate',
+  'billing',
+  'pricing',
   'success',
   'latency',
   'tags',
@@ -51,236 +62,673 @@ const tagClasses: Record<MerchantTag, string> = {
 };
 
 interface MerchantTableProps {
+  billingModeFilter: MerchantBillingModeFilter;
+  brand: ModelBrand;
+  canConfigureRoute: boolean;
+  merchantIdQuery: string;
+  merchantSortMode: MerchantSortMode;
+  merchants: MarketplaceMerchant[];
   model: CatalogModel;
+  selectedDisplayCurrency: MarketplaceDisplayCurrency;
+  pendingMerchantIds: ReadonlySet<string>;
+  state: 'error' | 'loading' | 'ready';
+  onRetry: () => void;
+  onRouteChange: (merchantId: string, state: MarketplaceRouteState) => Promise<void>;
 }
 
-export function MerchantTable({ model }: MerchantTableProps) {
-  const { t } = useTranslation();
-  const [query, setQuery] = useState('');
-  const [healthyOnly, setHealthyOnly] = useState(false);
-  const [sortMode, setSortMode] = useState<SortMode>('success');
-  const [pinnedMerchantId, setPinnedMerchantId] = useState<string>();
-  const [routeMerchantIds, setRouteMerchantIds] = useState<Set<string>>(() => new Set());
+export function MerchantTable({
+  billingModeFilter,
+  brand,
+  canConfigureRoute,
+  merchantIdQuery,
+  merchantSortMode,
+  merchants,
+  model,
+  selectedDisplayCurrency,
+  pendingMerchantIds,
+  state,
+  onRetry,
+  onRouteChange,
+}: MerchantTableProps) {
+  const { i18n, t } = useTranslation();
+  const [expandedMerchantId, setExpandedMerchantId] = useState<string | null>(null);
 
   const visibleMerchants = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    const result = merchantTemplates.filter((merchant) => {
-      const description = t(
-        `pages.models.merchants.descriptions.${merchant.descriptionKey}`,
-      ).toLowerCase();
-      const localizedTags = merchant.tags
-        .map((tag) => t(`pages.models.merchants.tags.${tag}`))
-        .join(' ')
-        .toLowerCase();
-      const matchesQuery =
-        !normalizedQuery ||
-        `${merchant.name} ${description} ${localizedTags}`.toLowerCase().includes(normalizedQuery);
-      const matchesHealth = !healthyOnly || merchant.successRate >= 90;
+    const filteredMerchants = merchants.filter((merchant) => {
+      const matchesMerchantId = merchantMatchesId(merchant, merchantIdQuery);
+      const matchesBillingMode = merchantMatchesBillingMode(merchant, billingModeFilter);
 
-      return matchesQuery && matchesHealth;
+      return matchesMerchantId && matchesBillingMode;
     });
 
-    return result.toSorted((first, second) => {
-      if (sortMode === 'price') {
-        return first.priceFactor - second.priceFactor;
-      }
-
-      if (sortMode === 'latency') {
-        return first.latency - second.latency;
-      }
-
-      return second.successRate - first.successRate;
-    });
-  }, [healthyOnly, query, sortMode, t]);
-
-  const toggleRouteMerchant = (merchantId: string) => {
-    setRouteMerchantIds((current) => {
-      const next = new Set(current);
-
-      if (next.has(merchantId)) {
-        next.delete(merchantId);
-      } else {
-        next.add(merchantId);
-      }
-
-      return next;
-    });
-  };
+    return sortMarketplaceMerchants(filteredMerchants, merchantSortMode);
+  }, [billingModeFilter, merchantIdQuery, merchantSortMode, merchants]);
 
   return (
     <section>
       <Card className="gap-0 overflow-hidden py-0 shadow-[0_18px_55px_color-mix(in_srgb,var(--color-text)_6%,transparent)]">
-        <div className="flex flex-col gap-2 border-b border-border p-3 lg:flex-row lg:items-center">
-          <div className="relative min-w-0 flex-1 lg:max-w-xs">
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute left-3 top-1/2 z-1 size-4 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              aria-label={t('pages.models.merchants.searchPlaceholder')}
-              className="h-10 bg-background pl-9 text-xs"
-              placeholder={t('pages.models.merchants.searchPlaceholder')}
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </div>
-
-          <div className="relative w-fit">
-            <SlidersHorizontal
-              aria-hidden="true"
-              className="pointer-events-none absolute left-3 top-1/2 z-1 size-3.5 -translate-y-1/2 text-muted-foreground"
-            />
-            <Select value={sortMode} onValueChange={(value) => setSortMode(value as SortMode)}>
-              <SelectTrigger
-                aria-label={t(`pages.models.merchants.sort.${sortMode}`)}
-                className="h-10 min-w-36 bg-card pl-9 text-xs font-semibold"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="success">{t('pages.models.merchants.sort.success')}</SelectItem>
-                <SelectItem value="price">{t('pages.models.merchants.sort.price')}</SelectItem>
-                <SelectItem value="latency">{t('pages.models.merchants.sort.latency')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Toggle
-            className="lg:ml-auto"
-            onPressedChange={setHealthyOnly}
-            pressed={healthyOnly}
-            variant="outline"
-          >
-            <span className="size-2 rounded-full bg-success" />
-            {t('pages.models.merchants.healthyOnly')}
-          </Toggle>
-        </div>
-
-        <Table className="model-table min-w-[1120px] border-collapse text-center">
-          <TableHeader>
-            <TableRow className="bg-secondary/65 hover:bg-secondary/65">
-              {merchantHeadings.map((heading) => (
-                <TableHead
-                  className="h-10 border-b border-border px-3 text-[9px] font-bold uppercase tracking-[0.06em] text-muted-foreground first:pl-5 last:pr-5"
-                  key={heading}
-                >
-                  {t(`pages.models.merchants.columns.${heading}`)}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {visibleMerchants.map((merchant) => {
-              const isPinned = pinnedMerchantId === merchant.id;
-              const isInRoute = routeMerchantIds.has(merchant.id);
-
-              return (
-                <TableRow key={merchant.id}>
-                  <TableCell className="h-18 border-b border-border px-3 pl-5 transition-colors">
-                    <div className="flex items-center justify-center gap-3">
-                      <span className="grid size-9 place-items-center rounded-lg border border-border bg-secondary font-mono text-[10px] font-bold text-primary">
-                        {merchant.name.slice(0, 1)}
-                      </span>
-                      <span className="min-w-0">
-                        <strong className="block truncate text-xs">{merchant.name}</strong>
-                        <small className="mt-1 block max-w-48 truncate text-[9px] text-muted-foreground">
-                          {t(`pages.models.merchants.descriptions.${merchant.descriptionKey}`)}
-                        </small>
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="h-18 border-b border-border px-3 font-mono text-[10px] font-semibold transition-colors">
-                    {formatUsd(model.inputFrom * merchant.priceFactor)}
-                  </TableCell>
-                  <TableCell className="h-18 border-b border-border px-3 font-mono text-[10px] font-semibold transition-colors">
-                    {formatUsd(model.outputFrom * merchant.priceFactor)}
-                  </TableCell>
-                  <TableCell className="h-18 border-b border-border px-3 transition-colors">
-                    <Badge className="h-auto min-w-16 justify-center border-primary/20 bg-primary/8 px-2 py-1.5 font-mono text-[9px] text-primary">
-                      {merchant.realtimeRate.toFixed(4)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="h-18 border-b border-border px-3 transition-colors">
-                    <div className="flex items-center justify-center gap-2">
-                      <SignalBars signals={merchant.signals} />
+        {state === 'ready' && visibleMerchants.length > 0 ? (
+          <>
+            <div className="grid gap-3 p-3 sm:hidden">
+              {visibleMerchants.map((merchant) => {
+                const isPending = pendingMerchantIds.has(merchant.id);
+                return (
+                  <article
+                    className="rounded-xl border border-border bg-background p-4"
+                    key={merchant.id}
+                  >
+                    <MerchantIdentityTrigger
+                      brand={brand}
+                      expanded={expandedMerchantId === merchant.id}
+                      merchant={merchant}
+                      model={model}
+                      onToggle={() =>
+                        setExpandedMerchantId((current) =>
+                          current === merchant.id ? null : merchant.id,
+                        )
+                      }
+                    />
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <Badge className="h-6 px-2.5 text-[10px]" variant="secondary">
+                        {t(`pages.models.merchants.billingModes.${merchant.billingMode}`)}
+                      </Badge>
                       <strong
                         className={cn(
-                          'font-mono text-[10px]',
+                          'font-mono text-xs',
                           merchant.successRate >= 90 ? 'text-success' : 'text-warning',
                         )}
                       >
-                        {merchant.successRate}%
+                        {merchant.successRate.toFixed(merchant.successRate % 1 === 0 ? 0 : 1)}%
                       </strong>
                     </div>
-                  </TableCell>
-                  <TableCell className="h-18 border-b border-border px-3 font-mono text-[10px] text-muted-foreground transition-colors">
-                    {merchant.latency.toFixed(2)}s
-                  </TableCell>
-                  <TableCell className="h-18 border-b border-border px-3 transition-colors">
-                    <div className="mx-auto flex max-w-30 flex-wrap justify-center gap-1">
-                      {merchant.tags.map((tag) => (
-                        <Badge className={cn('h-5 px-2 text-[8px]', tagClasses[tag])} key={tag}>
-                          {t(`pages.models.merchants.tags.${tag}`)}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="h-18 border-b border-border px-3 text-[10px] text-muted-foreground transition-colors">
-                    {t(`pages.models.merchants.lastSuccess.${merchant.lastSuccessKey}`)}
-                  </TableCell>
-                  <TableCell className="h-18 border-b border-border px-3 pr-5 transition-colors">
-                    <div className="flex min-w-60 justify-center gap-2.5">
-                      <Toggle
-                        className="h-10 min-w-28 rounded-lg px-4 text-[11px]"
-                        onPressedChange={(pressed) =>
-                          setPinnedMerchantId(pressed ? merchant.id : undefined)
-                        }
-                        pressed={isPinned}
-                        variant="outline"
-                      >
-                        <Pin aria-hidden="true" className="size-3.5" />
-                        {t(
-                          isPinned ? 'pages.models.merchants.pinned' : 'pages.models.merchants.pin',
-                        )}
-                      </Toggle>
-                      <Toggle
-                        className="h-10 min-w-28 rounded-lg border-primary bg-primary px-4 text-[11px] text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground data-[state=on]:border-input data-[state=on]:bg-background data-[state=on]:text-foreground"
-                        onPressedChange={() => toggleRouteMerchant(merchant.id)}
-                        pressed={isInRoute}
-                        variant="outline"
-                      >
-                        <Route aria-hidden="true" className="size-3.5" />
-                        {t(
-                          isInRoute
-                            ? 'pages.models.merchants.inRoute'
-                            : 'pages.models.merchants.addRoute',
-                        )}
-                      </Toggle>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
 
-        {visibleMerchants.length === 0 && (
-          <div className="border-t border-border px-5 py-12 text-center text-xs text-muted-foreground">
-            {t('pages.models.merchants.empty')}
-          </div>
+                    {merchant.billingMode === 'token' ? (
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <MobilePrice
+                          currency={selectedDisplayCurrency}
+                          label={t('pages.models.merchants.columns.input')}
+                          price={merchant.inputPrice}
+                        />
+                        <MobilePrice
+                          currency={selectedDisplayCurrency}
+                          label={t('pages.models.merchants.columns.output')}
+                          price={merchant.outputPrice}
+                        />
+                      </div>
+                    ) : (
+                      <div className="mt-4">
+                        <MobilePrice
+                          currency={selectedDisplayCurrency}
+                          label={t('pages.models.merchants.columns.request')}
+                          price={merchant.requestPrice}
+                        />
+                      </div>
+                    )}
+
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                      <MerchantTags merchant={merchant} />
+                      <span className="ml-auto whitespace-nowrap font-mono text-[10px] text-muted-foreground">
+                        {(merchant.latencyMs / 1_000).toFixed(2)}s ·{' '}
+                        {formatRelativeTime(merchant.healthUpdatedAt, i18n.language)}
+                      </span>
+                    </div>
+                    <MerchantRouteActions
+                      canConfigureRoute={canConfigureRoute}
+                      compact
+                      isPending={isPending}
+                      merchant={merchant}
+                      onRouteChange={onRouteChange}
+                    />
+                    {expandedMerchantId === merchant.id && (
+                      <MerchantDetails
+                        brand={brand}
+                        className="mt-4"
+                        currency={selectedDisplayCurrency}
+                        merchant={merchant}
+                      />
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+            <div className="hidden sm:block">
+              <Table className="model-table min-w-[1180px] border-collapse text-center">
+                <TableHeader>
+                  <TableRow className="bg-secondary/65 hover:bg-secondary/65">
+                    {merchantHeadings.map((heading) => (
+                      <TableHead
+                        className="h-11 border-b border-border px-4 text-[11px] font-semibold text-muted-foreground first:pl-6 last:pr-6"
+                        key={heading}
+                      >
+                        {t(`pages.models.merchants.columns.${heading}`)}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visibleMerchants.map((merchant) => {
+                    const isPending = pendingMerchantIds.has(merchant.id);
+
+                    return (
+                      <Fragment key={merchant.id}>
+                        <TableRow className="group hover:bg-secondary/30">
+                          <TableCell className="h-16 min-w-60 border-b border-border px-4 pl-6 transition-colors">
+                            <MerchantIdentityTrigger
+                              brand={brand}
+                              expanded={expandedMerchantId === merchant.id}
+                              merchant={merchant}
+                              model={model}
+                              onToggle={() =>
+                                setExpandedMerchantId((current) =>
+                                  current === merchant.id ? null : merchant.id,
+                                )
+                              }
+                            />
+                          </TableCell>
+                          <TableCell className="h-16 min-w-28 border-b border-border px-4 transition-colors">
+                            <Badge className="h-6 px-2.5 text-[10px]" variant="secondary">
+                              {t(`pages.models.merchants.billingModes.${merchant.billingMode}`)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="h-16 min-w-48 border-b border-border px-4 transition-colors">
+                            <MerchantPricingSummary
+                              currency={selectedDisplayCurrency}
+                              merchant={merchant}
+                            />
+                          </TableCell>
+                          <TableCell className="h-16 min-w-40 border-b border-border px-4 transition-colors">
+                            <div className="flex items-center justify-center gap-2">
+                              <SignalBars signals={merchantSignals(merchant.successRate)} />
+                              <strong
+                                className={cn(
+                                  'font-mono text-xs',
+                                  merchant.successRate >= 90 ? 'text-success' : 'text-warning',
+                                )}
+                              >
+                                {merchant.successRate.toFixed(
+                                  merchant.successRate % 1 === 0 ? 0 : 2,
+                                )}
+                                %
+                              </strong>
+                            </div>
+                          </TableCell>
+                          <TableCell className="h-16 min-w-24 border-b border-border px-4 font-mono text-xs text-muted-foreground transition-colors">
+                            {(merchant.latencyMs / 1_000).toFixed(2)}s
+                          </TableCell>
+                          <TableCell className="h-16 min-w-36 border-b border-border px-4 transition-colors">
+                            <div className="mx-auto flex max-w-36 flex-wrap justify-center gap-1.5">
+                              <MerchantTags merchant={merchant} />
+                            </div>
+                          </TableCell>
+                          <TableCell className="h-16 min-w-28 border-b border-border px-4 text-xs text-muted-foreground transition-colors">
+                            {formatRelativeTime(merchant.healthUpdatedAt, i18n.language)}
+                          </TableCell>
+                          <TableCell className="h-16 min-w-60 border-b border-border px-4 pr-6 transition-colors">
+                            <MerchantRouteActions
+                              canConfigureRoute={canConfigureRoute}
+                              isPending={isPending}
+                              merchant={merchant}
+                              onRouteChange={onRouteChange}
+                            />
+                          </TableCell>
+                        </TableRow>
+                        {expandedMerchantId === merchant.id && (
+                          <TableRow className="hover:bg-transparent">
+                            <TableCell
+                              className="border-b border-border p-0"
+                              colSpan={merchantHeadings.length}
+                            >
+                              <MerchantDetails
+                                brand={brand}
+                                currency={selectedDisplayCurrency}
+                                merchant={merchant}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        ) : (
+          <MerchantTableState state={state} onRetry={onRetry} />
         )}
 
-        <div className="flex items-center justify-between border-t border-border bg-secondary/45 px-5 py-3 text-[10px] text-muted-foreground">
+        {!canConfigureRoute && state === 'ready' && (
+          <div className="flex items-center gap-2.5 border-t border-border bg-primary/5 px-5 py-3 text-xs text-primary">
+            <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary/10">
+              <KeyRound aria-hidden="true" className="size-3.5" />
+            </span>
+            <p>{t('pages.models.merchants.tokenRequired')}</p>
+          </div>
+        )}
+        <div className="flex items-center justify-between border-t border-border bg-secondary/35 px-5 py-3 text-xs text-muted-foreground">
           <span>{model.name}</span>
           <span className="font-mono">
             {t('pages.models.merchants.count', {
-              visible: visibleMerchants.length,
-              total: merchantTemplates.length,
+              count: state === 'ready' ? visibleMerchants.length : 0,
+              visible: state === 'ready' ? visibleMerchants.length : 0,
+              total: merchants.length,
             })}
           </span>
         </div>
       </Card>
     </section>
+  );
+}
+
+function MerchantIdentityTrigger({
+  brand,
+  expanded,
+  merchant,
+  model,
+  onToggle,
+}: {
+  brand: ModelBrand;
+  expanded: boolean;
+  merchant: MarketplaceMerchant;
+  model: CatalogModel;
+  onToggle: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Button
+      aria-expanded={expanded}
+      aria-label={t(`pages.models.merchants.details.${expanded ? 'collapse' : 'expand'}`, {
+        id: merchant.channelId,
+      })}
+      className="h-auto w-full min-w-0 justify-start gap-2 rounded-lg p-0 text-left font-normal hover:bg-transparent"
+      onClick={onToggle}
+      type="button"
+      variant="ghost"
+    >
+      <MerchantIdentity
+        brand={brand}
+        className="min-w-0 flex-1"
+        merchant={merchant}
+        model={model}
+      />
+      <ChevronDown
+        aria-hidden="true"
+        className={cn(
+          'size-4 shrink-0 text-muted-foreground transition-transform',
+          expanded && 'rotate-180',
+        )}
+      />
+    </Button>
+  );
+}
+
+function MerchantIdentity({
+  brand,
+  className,
+  merchant,
+  model,
+}: {
+  brand: ModelBrand;
+  className?: string;
+  merchant: MarketplaceMerchant;
+  model: CatalogModel;
+}) {
+  const { t } = useTranslation();
+  const channelDescription = merchant.description.trim();
+  return (
+    <div className={cn('flex min-w-0 items-center justify-start gap-3 text-left', className)}>
+      <BrandAvatar
+        className="size-11 shrink-0 border-transparent bg-transparent"
+        src={brand.avatarUrl}
+        svg={brand.avatarSvg}
+      />
+      <span className="min-w-0">
+        <strong className="block truncate text-[13px] font-semibold sm:text-sm">
+          <span className="font-mono">{model.name}</span>
+          <span>
+            {' · '}
+            {t('pages.models.merchants.merchantId', { id: merchant.channelId })}
+          </span>
+        </strong>
+        <small
+          className="mt-1 block max-w-full truncate text-[10px] text-muted-foreground"
+          title={channelDescription || undefined}
+        >
+          {channelDescription || t('pages.models.merchants.channelDescriptionEmpty')}
+        </small>
+      </span>
+    </div>
+  );
+}
+
+function MerchantDetails({
+  brand,
+  className,
+  currency,
+  merchant,
+}: {
+  brand: ModelBrand;
+  className?: string;
+  currency: MarketplaceDisplayCurrency;
+  merchant: MarketplaceMerchant;
+}) {
+  const { i18n, t } = useTranslation();
+  const channelDescription = merchant.description.trim();
+  const successRate = `${merchant.successRate.toFixed(merchant.successRate % 1 === 0 ? 0 : 1)}%`;
+  const latency = `${(merchant.latencyMs / 1_000).toFixed(2)}s`;
+
+  return (
+    <section
+      className={cn(
+        'rounded-xl border border-border bg-secondary/20 p-3 text-left sm:p-4',
+        className,
+      )}
+    >
+      <div className="grid gap-3 lg:grid-cols-2">
+        <div className="rounded-lg border border-border bg-background p-3">
+          <small className="text-[10px] font-semibold text-muted-foreground">
+            {t('pages.models.merchants.details.channelDescription')}
+          </small>
+          <p className="mt-2 text-xs leading-5 text-foreground">
+            {channelDescription || t('pages.models.merchants.channelDescriptionEmpty')}
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-border bg-background p-3">
+          <small className="text-[10px] font-semibold text-muted-foreground">
+            {t('pages.models.merchants.details.smartTags')}
+          </small>
+          <div className="mt-2 flex min-h-5 flex-wrap items-center gap-1.5">
+            <MerchantTags merchant={merchant} />
+          </div>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          <MerchantDetailFact
+            label={t('pages.models.merchants.details.dataSource')}
+            value={t('pages.models.merchants.details.liveData')}
+          />
+          <MerchantDetailFact
+            label={t('pages.models.merchants.details.channel')}
+            value={`${merchant.name} · ${t('pages.models.merchants.merchantId', { id: merchant.channelId })}`}
+          />
+          <MerchantDetailFact
+            label={t('pages.models.merchants.details.provider')}
+            value={brand.name}
+          />
+          <MerchantDetailFact
+            label={t('pages.models.merchants.details.billing')}
+            value={t(`pages.models.merchants.billingModes.${merchant.billingMode}`)}
+          />
+          <MerchantDetailFact
+            label={t('pages.models.merchants.details.health')}
+            value={`${successRate} · ${latency}`}
+          />
+          <MerchantDetailFact
+            label={t('pages.models.merchants.details.statusUpdated')}
+            value={formatRelativeTime(merchant.healthUpdatedAt, i18n.language)}
+          />
+        </div>
+
+        <MerchantPricingDetails currency={currency} pricing={merchant.pricing} />
+      </div>
+    </section>
+  );
+}
+
+function MerchantDetailFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-primary/10 bg-primary/5 px-3 py-2">
+      <small className="block text-[9px] text-muted-foreground">{label}</small>
+      <strong className="mt-1 block truncate text-xs font-semibold text-foreground">{value}</strong>
+    </div>
+  );
+}
+
+const marketplacePriceFields = ['input', 'output', 'cacheRead', 'cacheWrite', 'request'] as const;
+
+function MerchantPricingDetails({
+  currency,
+  pricing,
+}: {
+  currency: MarketplaceDisplayCurrency;
+  pricing: MarketplaceMerchant['pricing'];
+}) {
+  const { t } = useTranslation();
+  const visibleFields = marketplacePriceFields.filter(
+    (field) => pricing.official[field] !== null || pricing.merchant[field] !== null,
+  );
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-border bg-background">
+      <div className="border-b border-border px-3 py-2 text-[10px] font-semibold text-muted-foreground">
+        {t('pages.models.merchants.details.priceComparison')}
+      </div>
+      {visibleFields.length === 0 ? (
+        <p className="px-3 py-6 text-center text-xs text-muted-foreground">—</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <div
+            className="grid items-center gap-x-3 gap-y-2 px-3 py-3 text-xs"
+            style={{
+              gridTemplateColumns: `minmax(64px,0.7fr) repeat(${visibleFields.length},minmax(88px,1fr))`,
+              minWidth: `${96 + visibleFields.length * 104}px`,
+            }}
+          >
+            <span />
+            {visibleFields.map((field) => (
+              <small className="text-center text-[9px] text-muted-foreground" key={field}>
+                {t(`pages.models.merchants.details.priceFields.${field}`)}
+              </small>
+            ))}
+            <strong className="text-[10px] text-muted-foreground">
+              {t('pages.models.merchants.details.officialPrice')}
+            </strong>
+            {visibleFields.map((field) => (
+              <MarketplaceDetailPrice
+                currency={currency}
+                key={field}
+                value={pricing.official[field]}
+              />
+            ))}
+            <strong className="text-[10px] text-muted-foreground">
+              {t('pages.models.merchants.details.merchantPrice')}
+            </strong>
+            {visibleFields.map((field) => (
+              <MarketplaceDetailPrice
+                currency={currency}
+                key={field}
+                value={pricing.merchant[field]}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MarketplaceDetailPrice({
+  currency,
+  value,
+}: {
+  currency: MarketplaceDisplayCurrency;
+  value: MarketplacePriceRow[keyof MarketplacePriceRow];
+}) {
+  const price = value === null ? null : Number(value);
+  return (
+    <strong className="text-center font-mono text-[11px]">
+      {price !== null && Number.isFinite(price) ? formatMarketplacePrice(price, currency) : '—'}
+    </strong>
+  );
+}
+
+function MobilePrice({
+  currency,
+  label,
+  price,
+}: {
+  currency: MarketplaceDisplayCurrency;
+  label: string;
+  price: number;
+}) {
+  return (
+    <span className="block rounded-lg border border-border bg-secondary/45 px-2 py-2 text-center">
+      <small className="block text-[9px] text-muted-foreground">{label}</small>
+      <strong className="mt-1 block font-mono text-[11px]">
+        {formatMarketplacePrice(price, currency)}
+      </strong>
+    </span>
+  );
+}
+
+function MerchantTags({ merchant }: { merchant: MarketplaceMerchant }) {
+  const { t } = useTranslation();
+  const tags = merchantTags(merchant);
+  if (tags.length === 0) return <span className="text-muted-foreground">—</span>;
+  return tags.map((tag) => (
+    <Badge className={cn('h-5 px-2 text-[9px]', tagClasses[tag])} key={tag}>
+      {t(`pages.models.merchants.tags.${tag}`)}
+    </Badge>
+  ));
+}
+
+function MerchantRouteActions({
+  canConfigureRoute,
+  compact = false,
+  isPending,
+  merchant,
+  onRouteChange,
+}: {
+  canConfigureRoute: boolean;
+  compact?: boolean;
+  isPending: boolean;
+  merchant: MarketplaceMerchant;
+  onRouteChange: MerchantTableProps['onRouteChange'];
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className={cn('flex justify-center gap-2', compact ? 'mt-4' : 'min-w-56')}>
+      <Toggle
+        className={cn('h-10 rounded-lg px-4 text-xs', compact ? 'min-w-0 flex-1' : 'min-w-26')}
+        disabled={!canConfigureRoute || isPending}
+        onPressedChange={(pressed) =>
+          void onRouteChange(merchant.id, {
+            isInRoute: pressed || merchant.isInRoute,
+            isPinned: pressed,
+          })
+        }
+        pressed={merchant.isPinned}
+        variant="outline"
+      >
+        {isPending ? (
+          <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" />
+        ) : (
+          <Pin aria-hidden="true" className="size-3.5" />
+        )}
+        {t(merchant.isPinned ? 'pages.models.merchants.pinned' : 'pages.models.merchants.pin')}
+      </Toggle>
+      <Toggle
+        className={cn(
+          'h-10 rounded-lg border-primary bg-primary px-4 text-xs text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground data-[state=on]:border-input data-[state=on]:bg-background data-[state=on]:text-foreground',
+          compact ? 'min-w-0 flex-1' : 'min-w-26',
+        )}
+        disabled={!canConfigureRoute || isPending}
+        onPressedChange={(pressed) =>
+          void onRouteChange(merchant.id, {
+            isInRoute: pressed,
+            isPinned: pressed && merchant.isPinned,
+          })
+        }
+        pressed={merchant.isInRoute}
+        variant="outline"
+      >
+        {isPending ? (
+          <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" />
+        ) : (
+          <Route aria-hidden="true" className="size-3.5" />
+        )}
+        {t(
+          merchant.isInRoute ? 'pages.models.merchants.inRoute' : 'pages.models.merchants.addRoute',
+        )}
+      </Toggle>
+    </div>
+  );
+}
+
+function MerchantPricingSummary({
+  currency,
+  merchant,
+}: {
+  currency: MarketplaceDisplayCurrency;
+  merchant: MarketplaceMerchant;
+}) {
+  const { t } = useTranslation();
+  if (merchant.billingMode === 'token') {
+    return (
+      <div className="grid gap-1.5 font-mono text-xs font-semibold">
+        <span>
+          {t('pages.models.merchants.priceSummary.input', {
+            price: formatMarketplacePrice(merchant.inputPrice, currency),
+          })}
+        </span>
+        <span>
+          {t('pages.models.merchants.priceSummary.output', {
+            price: formatMarketplacePrice(merchant.outputPrice, currency),
+          })}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <strong className="font-mono text-xs">
+      {formatMarketplacePrice(merchant.requestPrice, currency)}
+    </strong>
+  );
+}
+
+function MerchantTableState({
+  state,
+  onRetry,
+}: {
+  state: MerchantTableProps['state'];
+  onRetry: () => void;
+}) {
+  const { t } = useTranslation();
+
+  if (state === 'loading') {
+    return (
+      <div className="grid min-h-44 place-items-center px-5 py-10 text-center">
+        <div>
+          <LoaderCircle aria-hidden="true" className="mx-auto size-5 animate-spin text-primary" />
+          <p className="mt-3 text-xs text-muted-foreground">
+            {t('pages.models.merchants.loading')}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (state === 'error') {
+    return (
+      <div className="grid min-h-44 place-items-center px-5 py-10 text-center">
+        <div>
+          <AlertCircle aria-hidden="true" className="mx-auto size-5 text-destructive" />
+          <p className="mt-3 text-xs text-muted-foreground">
+            {t('pages.models.merchants.loadError')}
+          </p>
+          <Button className="mt-4" onClick={onRetry} size="sm" variant="outline">
+            <RefreshCw aria-hidden="true" />
+            {t('pages.models.states.retry')}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-t border-border px-5 py-12 text-center text-xs text-muted-foreground">
+      {t('pages.models.merchants.empty')}
+    </div>
   );
 }

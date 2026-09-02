@@ -39,6 +39,7 @@ import {
   readMerchantModelOptionsCache,
   refreshMerchantModelOptions,
   type MerchantModel,
+  type MerchantBillingMode,
   type MerchantModelDraft,
   type MerchantModelOption,
   type MerchantPriceConversionMode,
@@ -53,6 +54,7 @@ import {
 import { filterAvailableMerchantModelOptions } from '@/features/account/components/merchant/merchant-model-options';
 import { ApiError } from '@/lib/api-client';
 import { API_ERROR_CODE } from '@/lib/api-error-codes';
+import { cn } from '@/lib/utils';
 
 const PRICE_SCALE = 100_000_000;
 const MAX_PRICE_MULTIPLIER = 1_000_000;
@@ -85,6 +87,7 @@ export function MerchantModelDialog({
   const translationPath = 'pages.account.sections.merchant.models.dialog';
   const [channelId, setChannelId] = useState('');
   const [modelId, setModelId] = useState('');
+  const [billingMode, setBillingMode] = useState<MerchantBillingMode>('token');
   const [priceCurrency, setPriceCurrency] = useState<PriceCurrency | ''>('');
   const [conversionMode, setConversionMode] = useState<MerchantPriceConversionMode>('parity');
   const [priceMultiplier, setPriceMultiplier] = useState('1');
@@ -101,6 +104,7 @@ export function MerchantModelDialog({
     if (!open) return;
     setChannelId(model?.channelId ?? '');
     setModelId(model ? String(model.modelId) : '');
+    setBillingMode(model?.pendingPrice?.billingMode ?? model?.billingMode ?? 'token');
     setPriceCurrency('');
     setConversionMode('parity');
     setPriceMultiplier('1');
@@ -200,25 +204,23 @@ export function MerchantModelDialog({
     const exchangeRate = selectedExchangeRate;
     if (exchangeRate === undefined) return undefined;
     if (selectedOption) {
-      return scaleModelPricing(
-        completeBasePricing(
-          selectedOption.pricing,
-          selectedOption.inputPrice,
-          selectedOption.outputPrice,
-        ),
-        exchangeRate,
-      );
+      return scaleModelPricing(merchantReferencePricing(selectedOption, billingMode), exchangeRate);
     }
     if (model && model.channelId === channelId && String(model.modelId) === modelId) {
       return scaleModelPricing(merchantModelEditablePricing(model), exchangeRate);
     }
     return undefined;
-  }, [channelId, model, modelId, selectedExchangeRate, selectedOption]);
+  }, [billingMode, channelId, model, modelId, selectedExchangeRate, selectedOption]);
   const priceGroups = useMemo(
     () => (selectedPricing ? modelPricingGroups(selectedPricing) : []),
     [selectedPricing],
   );
   const isEditing = model !== null;
+  const usesPricingBaseline = Boolean(
+    selectedOption &&
+    ((billingMode === 'token' && selectedOption.defaultBillingMode === 'token') ||
+      (billingMode === 'request' && selectedOption.defaultBillingMode === 'request')),
+  );
 
   useEffect(() => {
     if (priceCurrency === 'USD' && conversionMode !== 'parity') {
@@ -244,24 +246,29 @@ export function MerchantModelDialog({
       selectedExchangeRate,
     );
     const adminPricing = scaleModelPricing(
-      completeBasePricing(
-        selectedOption.pricing,
-        selectedOption.inputPrice,
-        selectedOption.outputPrice,
-      ),
+      merchantReferencePricing(selectedOption, billingMode),
       selectedExchangeRate,
     );
     const detected = detectPriceMultiplier(adminPricing, listingPricingInConfiguredCurrency);
     setPriceValues(priceValuesFromPricing(listingPricingInConfiguredCurrency));
     setPriceMultiplier(detected.value);
     setHasManualPriceAdjustments(!detected.exact);
-  }, [channelId, model, open, selectedExchangeRate, selectedOption, selectedPriceSetting]);
+  }, [
+    billingMode,
+    channelId,
+    model,
+    open,
+    selectedExchangeRate,
+    selectedOption,
+    selectedPriceSetting,
+  ]);
 
   function selectChannel(value: string) {
     const cachedOptions = readMerchantModelOptionsCache(value);
     const cachedDefaultSettings = defaultPriceSettings(cachedOptions?.priceSettings ?? []);
     setChannelId(value);
     setModelId('');
+    setBillingMode('token');
     setPriceCurrency(cachedDefaultSettings[0]?.priceCurrency ?? '');
     setConversionMode('parity');
     setPriceMultiplier('1');
@@ -277,6 +284,7 @@ export function MerchantModelDialog({
   function selectModel(value: string) {
     const selected = options.find((option) => String(option.id) === value);
     setModelId(value);
+    setBillingMode(selected?.defaultBillingMode === 'request' ? 'request' : 'token');
     setPriceMultiplier('1');
     setHasManualPriceAdjustments(false);
     if (selected) {
@@ -284,8 +292,30 @@ export function MerchantModelDialog({
       setPriceValues(
         priceValuesFromPricing(
           scaleModelPricing(
-            completeBasePricing(selected.pricing, selected.inputPrice, selected.outputPrice),
+            merchantReferencePricing(
+              selected,
+              selected.defaultBillingMode === 'request' ? 'request' : 'token',
+            ),
             exchangeRate,
+          ),
+        ),
+      );
+    }
+    setPriceErrors(new Set());
+    setValidationError(false);
+  }
+
+  function selectBillingMode(value: string) {
+    const nextMode = value as MerchantBillingMode;
+    setBillingMode(nextMode);
+    setPriceMultiplier('1');
+    setHasManualPriceAdjustments(false);
+    if (selectedOption) {
+      setPriceValues(
+        priceValuesFromPricing(
+          scaleModelPricing(
+            merchantReferencePricing(selectedOption, nextMode),
+            selectedExchangeRate ?? 1,
           ),
         ),
       );
@@ -358,12 +388,14 @@ export function MerchantModelDialog({
     const parsedPriceMultiplier = Number(priceMultiplier);
     const nextPriceErrors = invalidPriceKeys(priceGroups, priceValues);
     const baseGroup = priceGroups.find((group) => group.group.type === 'base');
-    const parsedInputPrice = Number(
-      baseGroup ? priceValues[priceInputKey(baseGroup, 'input')] : Number.NaN,
-    );
-    const parsedOutputPrice = Number(
-      baseGroup ? priceValues[priceInputKey(baseGroup, 'output')] : Number.NaN,
-    );
+    const parsedInputPrice =
+      billingMode === 'token'
+        ? Number(baseGroup ? priceValues[priceInputKey(baseGroup, 'input')] : Number.NaN)
+        : 0;
+    const parsedOutputPrice =
+      billingMode === 'token'
+        ? Number(baseGroup ? priceValues[priceInputKey(baseGroup, 'output')] : Number.NaN)
+        : 0;
     const valid =
       channelId.length > 0 &&
       Number.isSafeInteger(parsedModelId) &&
@@ -392,6 +424,7 @@ export function MerchantModelDialog({
 
     try {
       await onSave({
+        billingMode,
         channelId,
         conversionMode,
         exchangeRate: selectedExchangeRate,
@@ -430,11 +463,7 @@ export function MerchantModelDialog({
               setPriceValues(
                 priceValuesFromPricing(
                   scaleModelPricing(
-                    completeBasePricing(
-                      refreshedOption.pricing,
-                      refreshedOption.inputPrice,
-                      refreshedOption.outputPrice,
-                    ),
+                    merchantReferencePricing(refreshedOption, billingMode),
                     refreshedExchangeRate ?? 1,
                   ),
                 ),
@@ -534,6 +563,30 @@ export function MerchantModelDialog({
                 ) : null}
               </div>
 
+              {selectedOption || model ? (
+                <div className="grid gap-2 sm:col-span-2">
+                  <Label htmlFor={`${fieldId}-billing-mode`}>
+                    {t(`${translationPath}.fields.billingMode`)}
+                  </Label>
+                  <Select disabled={disabled} onValueChange={selectBillingMode} value={billingMode}>
+                    <SelectTrigger id={`${fieldId}-billing-mode`} className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="token">
+                        {t(`${translationPath}.billingModes.token`)}
+                      </SelectItem>
+                      <SelectItem value="request">
+                        {t(`${translationPath}.billingModes.request`)}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    {t(`${translationPath}.billingModeHints.${billingMode}`)}
+                  </p>
+                </div>
+              ) : null}
+
               {priceGroups.length > 0 ? (
                 <div className="grid gap-3 sm:col-span-2">
                   <div>
@@ -545,18 +598,32 @@ export function MerchantModelDialog({
                     </p>
                   </div>
 
-                  <div className="grid gap-4 rounded-xl border border-border bg-secondary/20 p-4 sm:grid-cols-3">
-                    <div className="min-w-0 sm:col-span-3">
+                  <div
+                    className={cn(
+                      'grid gap-4 rounded-xl border border-border bg-secondary/20 p-4',
+                      usesPricingBaseline ? 'sm:grid-cols-3' : 'sm:grid-cols-2',
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'min-w-0',
+                        usesPricingBaseline ? 'sm:col-span-3' : 'sm:col-span-2',
+                      )}
+                    >
                       <strong className="text-sm font-medium">
-                        {t(`${translationPath}.pricing.multiplier.label`)}
+                        {t(
+                          `${translationPath}.pricing.${usesPricingBaseline ? 'multiplier.label' : 'manual.label'}`,
+                        )}
                       </strong>
                       <p
                         className="mt-2 text-xs leading-5 text-muted-foreground"
                         id={`${fieldId}-price-multiplier-hint`}
                       >
-                        {t(`${translationPath}.pricing.multiplier.hint`)}
+                        {t(
+                          `${translationPath}.pricing.${usesPricingBaseline ? 'multiplier.hint' : 'manual.hint'}`,
+                        )}
                       </p>
-                      {hasManualPriceAdjustments ? (
+                      {usesPricingBaseline && hasManualPriceAdjustments ? (
                         <p className="mt-1 text-xs text-warning">
                           {t(`${translationPath}.pricing.multiplier.customized`)}
                         </p>
@@ -625,32 +692,34 @@ export function MerchantModelDialog({
                       </Select>
                     </div>
 
-                    <div className="grid content-start gap-2">
-                      <Label htmlFor={`${fieldId}-price-multiplier`}>
-                        {t(`${translationPath}.pricing.multiplier.inputLabel`)}
-                      </Label>
-                      <div className="relative">
-                        <Input
-                          aria-describedby={`${fieldId}-price-multiplier-hint`}
-                          className="pr-10 font-mono"
-                          disabled={disabled || !selectedOption || !selectedPriceSetting}
-                          id={`${fieldId}-price-multiplier`}
-                          inputMode="decimal"
-                          max={MAX_PRICE_MULTIPLIER}
-                          min="0"
-                          onChange={(event) => updatePriceMultiplier(event.target.value)}
-                          step="0.01"
-                          type="number"
-                          value={priceMultiplier}
-                        />
-                        <span
-                          aria-hidden="true"
-                          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-sm text-muted-foreground"
-                        >
-                          ×
-                        </span>
+                    {usesPricingBaseline ? (
+                      <div className="grid content-start gap-2">
+                        <Label htmlFor={`${fieldId}-price-multiplier`}>
+                          {t(`${translationPath}.pricing.multiplier.inputLabel`)}
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            aria-describedby={`${fieldId}-price-multiplier-hint`}
+                            className="pr-10 font-mono"
+                            disabled={disabled || !selectedOption || !selectedPriceSetting}
+                            id={`${fieldId}-price-multiplier`}
+                            inputMode="decimal"
+                            max={MAX_PRICE_MULTIPLIER}
+                            min="0"
+                            onChange={(event) => updatePriceMultiplier(event.target.value)}
+                            step="0.01"
+                            type="number"
+                            value={priceMultiplier}
+                          />
+                          <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-sm text-muted-foreground"
+                          >
+                            ×
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    ) : null}
                   </div>
 
                   {priceGroups.map((group) => (
@@ -666,9 +735,12 @@ export function MerchantModelDialog({
                       onRemoveCustomTier={() => undefined}
                       onUpdateCustomTier={() => undefined}
                       priceErrors={priceErrors}
-                      priceUnitLabel={t(`${translationPath}.pricing.perMillionCurrency`, {
-                        currency: selectedPriceSetting?.priceCurrency ?? 'USD',
-                      })}
+                      priceUnitLabel={t(
+                        `${translationPath}.pricing.${
+                          billingMode === 'token' ? 'perMillionCurrency' : 'perRequestCurrency'
+                        }`,
+                        { currency: selectedPriceSetting?.priceCurrency ?? 'USD' },
+                      )}
                       t={t}
                       translationPath={translationPath}
                       values={priceValues}
@@ -750,7 +822,7 @@ export function MerchantModelDialog({
   );
 }
 
-function completeBasePricing(
+function completeTokenPricing(
   pricing: ModelPricing | undefined,
   inputPrice: number,
   outputPrice: number,
@@ -767,13 +839,31 @@ function completeBasePricing(
   };
 }
 
+function merchantReferencePricing(
+  option: MerchantModelOption,
+  billingMode: MerchantBillingMode,
+): ModelPricing {
+  if (billingMode === 'token') {
+    return option.defaultBillingMode === 'token'
+      ? completeTokenPricing(option.pricing, option.inputPrice, option.outputPrice)
+      : { base: { input: 0, output: 0 } };
+  }
+  return option.defaultBillingMode === 'request'
+    ? (option.pricing ?? { base: {} })
+    : { base: { request: 0 } };
+}
+
 function merchantModelEditablePricing(model: MerchantModel): ModelPricing {
   const price = model.pendingPrice;
-  return completeBasePricing(
-    price?.pricing ?? model.pricing,
-    price?.inputPrice ?? model.inputPrice,
-    price?.outputPrice ?? model.outputPrice,
-  );
+  const pricing = price?.pricing ?? model.pricing;
+  const billingMode = price?.billingMode ?? model.billingMode;
+  return billingMode === 'token'
+    ? completeTokenPricing(
+        pricing,
+        price?.inputPrice ?? model.inputPrice,
+        price?.outputPrice ?? model.outputPrice,
+      )
+    : (pricing ?? { base: {} });
 }
 
 function defaultPriceSettings(settings: PriceSetting[]): PriceSetting[] {

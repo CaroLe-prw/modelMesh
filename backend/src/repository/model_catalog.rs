@@ -101,18 +101,22 @@ UPDATE models AS managed
 SET name = payload.model_name,
     context_window = COALESCE(payload.context_window, managed.context_window),
     input_price_nano_usd_per_million = CASE
+        WHEN managed.billing_mode = 'request' THEN 0
         WHEN managed.input_price_overridden THEN managed.input_price_nano_usd_per_million
         ELSE COALESCE(payload.input_price_nano_usd_per_million, 0)
     END,
     cache_read_price_nano_usd_per_million = CASE
+        WHEN managed.billing_mode = 'request' THEN 0
         WHEN managed.cache_read_price_overridden THEN managed.cache_read_price_nano_usd_per_million
         ELSE COALESCE(payload.cache_read_price_nano_usd_per_million, 0)
     END,
     cache_write_price_nano_usd_per_million = CASE
+        WHEN managed.billing_mode = 'request' THEN 0
         WHEN managed.cache_write_price_overridden THEN managed.cache_write_price_nano_usd_per_million
         ELSE COALESCE(payload.cache_write_price_nano_usd_per_million, 0)
     END,
     output_price_nano_usd_per_million = CASE
+        WHEN managed.billing_mode = 'request' THEN 0
         WHEN managed.output_price_overridden THEN managed.output_price_nano_usd_per_million
         ELSE COALESCE(payload.output_price_nano_usd_per_million, 0)
     END,
@@ -130,21 +134,29 @@ WHERE managed.catalog_source = 'models.dev'
       )
       OR managed.default_pricing_nano_usd IS DISTINCT FROM payload.pricing_nano_usd
       OR (
+          managed.billing_mode = 'token'
+          AND
           NOT managed.input_price_overridden
           AND managed.input_price_nano_usd_per_million
               IS DISTINCT FROM COALESCE(payload.input_price_nano_usd_per_million, 0)
       )
       OR (
+          managed.billing_mode = 'token'
+          AND
           NOT managed.cache_read_price_overridden
           AND managed.cache_read_price_nano_usd_per_million
               IS DISTINCT FROM COALESCE(payload.cache_read_price_nano_usd_per_million, 0)
       )
       OR (
+          managed.billing_mode = 'token'
+          AND
           NOT managed.cache_write_price_overridden
           AND managed.cache_write_price_nano_usd_per_million
               IS DISTINCT FROM COALESCE(payload.cache_write_price_nano_usd_per_million, 0)
       )
       OR (
+          managed.billing_mode = 'token'
+          AND
           NOT managed.output_price_overridden
           AND managed.output_price_nano_usd_per_million
               IS DISTINCT FROM COALESCE(payload.output_price_nano_usd_per_million, 0)

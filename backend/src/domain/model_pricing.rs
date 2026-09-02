@@ -120,6 +120,27 @@ pub struct ModelPriceTier {
 }
 
 impl ModelPricing {
+    pub fn for_billing_mode(self, billing_mode: super::ModelBillingMode) -> Self {
+        match billing_mode {
+            super::ModelBillingMode::Token => Self {
+                base: self
+                    .base
+                    .into_iter()
+                    .filter(|(rate, _)| rate != "request")
+                    .collect(),
+                ..self
+            },
+            super::ModelBillingMode::Request => Self {
+                base: self
+                    .base
+                    .into_iter()
+                    .filter(|(rate, _)| rate == "request")
+                    .collect(),
+                ..Self::default()
+            },
+        }
+    }
+
     pub fn with_required_base_prices(mut self, input: i64, output: i64) -> Self {
         self.base.entry("input".to_owned()).or_insert(input);
         self.base.entry("output".to_owned()).or_insert(output);

@@ -190,35 +190,125 @@ export const en = {
       title: 'Model catalog',
       description:
         'Search available models and provider channels, then compare real success, latency, and pricing signals.',
+      states: {
+        loading: 'Loading the model marketplace…',
+        loadError: 'The model marketplace could not be loaded',
+        empty: 'No published models are available',
+        retry: 'Try again',
+      },
       stats: {
         models: 'Models',
         channels: 'Channels',
         refresh: 'Status refresh',
       },
       explorer: {
+        quick: {
+          hint: 'Select a card to filter quickly',
+          previous: 'View previous options',
+          next: 'View more options',
+        },
         brand: {
+          quickTitle: 'Quick brand selection',
           title: 'Choose a brand',
           description: 'Start with the company behind the model',
           merchantCount: '{{count}} merchants',
+          merchantCount_one: '{{count}} merchant',
+          merchantCount_other: '{{count}} merchants',
         },
         model: {
+          quickTitle: 'Quick model selection',
           title: 'Choose a model',
           description: 'Browse models available for this brand',
+          searchPlaceholder: 'Search model name or ID',
+          searchEmpty: 'No matching models found',
           inputFrom: 'Input from {{price}} / 1M',
+          requestFrom: 'From {{price}} / request',
           merchantCount: '{{count}} channels',
+          merchantCount_one: '{{count}} channel',
+          merchantCount_other: '{{count}} channels',
         },
         token: {
           title: 'Choose a token',
           description: 'The token determines which routing policy is used',
           active: 'Active',
           idle: 'Available',
+          empty: 'No API keys yet',
+          emptyDescription: 'Create an API key to save pinned merchants and route members.',
           create: 'Create token',
         },
+        merchantId: {
+          label: 'Merchant ID',
+          placeholder: 'Enter merchant ID',
+        },
+        billingMode: {
+          label: 'Billing mode',
+          options: {
+            all: 'All billing modes',
+            token: 'Per token',
+            request: 'Per request',
+          },
+        },
+        sort: {
+          label: 'Sort',
+          options: {
+            recent: 'Most recently successful',
+            input: 'Lowest input price',
+            output: 'Lowest output price',
+            latency: 'Lowest latency',
+            success: 'Highest success rate',
+          },
+        },
+        displayCurrency: {
+          label: 'Display currency',
+          options: {
+            USD: 'US dollar',
+            CNY: 'Renminbi',
+            EUR: 'Euro',
+            GBP: 'British pound',
+            JPY: 'Japanese yen',
+            HKD: 'Hong Kong dollar',
+            SGD: 'Singapore dollar',
+            AUD: 'Australian dollar',
+            CAD: 'Canadian dollar',
+            KRW: 'South Korean won',
+            USDT: 'USDT',
+          },
+        },
+        selected: 'Selected',
         selection: 'Current selection',
+        actions: {
+          refresh: 'Refresh',
+          reset: 'Reset',
+        },
       },
       merchants: {
         eyebrow: 'MERCHANT ROUTES',
         title: 'Merchants for {{model}}',
+        merchantId: 'Merchant ID {{id}}',
+        channelDescriptionEmpty: 'No channel description',
+        details: {
+          expand: 'Expand channel details for merchant {{id}}',
+          collapse: 'Collapse channel details for merchant {{id}}',
+          channelDescription: 'Channel description',
+          smartTags: 'Smart tags',
+          dataSource: 'Data source',
+          liveData: 'Live data',
+          channel: 'Channel',
+          provider: 'Provider',
+          billing: 'Billing mode',
+          health: 'Success and latency',
+          statusUpdated: 'Status updated',
+          priceComparison: 'Official and merchant pricing',
+          officialPrice: 'Official',
+          merchantPrice: 'Merchant',
+          priceFields: {
+            input: 'Input / 1M',
+            output: 'Output / 1M',
+            cacheRead: 'Cache read / 1M',
+            cacheWrite: 'Cache write / 1M',
+            request: 'Per request',
+          },
+        },
         description:
           'Compare pricing, live rate, success, and response latency for every merchant.',
         demo: 'Demonstration data',
@@ -232,14 +322,25 @@ export const en = {
         },
         columns: {
           merchant: 'Merchant',
+          billing: 'Billing',
+          pricing: 'Pricing',
+          request: 'Per request',
           input: 'Input / 1M',
           output: 'Output / 1M',
           rate: 'Live rate',
           success: 'Live success',
           latency: 'Latency',
           tags: 'Tags',
-          recent: 'Last success',
+          recent: 'Health updated',
           action: 'Actions',
+        },
+        billingModes: {
+          token: 'Per token',
+          request: 'Per request',
+        },
+        priceSummary: {
+          input: 'Input · {{price}}',
+          output: 'Output · {{price}}',
         },
         tags: {
           stable: 'Stable',
@@ -266,8 +367,18 @@ export const en = {
         pinned: 'Pinned',
         addRoute: 'Add to route',
         inRoute: 'In route',
+        tokenRequired:
+          'Create or select an API key to configure pinned merchants and route members.',
+        loading: 'Loading available merchants…',
+        loadError: 'Merchant data could not be loaded',
+        feedback: {
+          saved: 'Route configuration saved',
+          saveFailed: 'Route configuration could not be saved. Try again shortly.',
+        },
         empty: 'No matching merchants',
         count: '{{visible}} / {{total}} merchants',
+        count_one: '{{visible}} / {{total}} merchant',
+        count_other: '{{visible}} / {{total}} merchants',
       },
     },
     routing: {
@@ -975,6 +1086,12 @@ export const en = {
               loading: 'Loading models from the database…',
               loadError: 'The model list could not be loaded.',
               retry: 'Try again',
+              sortColumn: 'Toggle {{column}} ascending or descending',
+              sortDirection: {
+                label: 'Sort-order direction',
+                asc: 'Sort order ascending',
+                desc: 'Sort order descending',
+              },
               statuses: {
                 all: 'All statuses',
                 published: 'Published',
@@ -983,24 +1100,31 @@ export const en = {
               columns: {
                 model: 'Model',
                 brand: 'Brand',
+                sortOrder: 'Sort order',
+                billingMode: 'Billing',
                 context: 'Context',
                 inputPrice: 'Input from / 1M',
                 cacheReadPrice: 'Cache read / 1M',
                 cacheWritePrice: 'Cache write / 1M',
                 outputPrice: 'Output from / 1M',
+                requestPrice: 'Per-request price',
                 merchants: 'Merchants',
                 status: 'Status',
                 updatedAt: 'Updated',
                 actions: 'Actions',
+              },
+              billingModes: {
+                token: 'Per token',
+                request: 'Per request',
               },
               actions: {
                 manage: 'Manage model {{name}}',
                 publish: 'Publish model {{name}}',
                 unpublish: 'Unpublish model {{name}}',
                 delete: 'Delete model {{name}}',
-                manageLabel: 'Pricing',
+                manageLabel: 'Model settings',
                 manageDescription:
-                  'Edit defaults, manual overrides, and context tiers for {{name}}.',
+                  'Edit marketplace order, defaults, manual overrides, and context tiers for {{name}}.',
                 publishLabel: 'Publish',
                 publishDescription: 'Publish {{name}} in the model marketplace.',
                 unpublishLabel: 'Unpublish',
@@ -1013,7 +1137,7 @@ export const en = {
                 created: 'Model {{name}} was saved to the database.',
                 createdMany: '{{count}} models were saved to the database.',
                 deleted: 'Model {{name}} was deleted.',
-                updated: 'Pricing for {{name}} was updated.',
+                updated: 'Sort order and pricing for {{name}} were updated.',
                 published: 'Model {{name}} was published.',
                 disabled: 'Model {{name}} was unpublished.',
                 invalid: 'The model data is invalid. Check it and try again.',
@@ -1022,7 +1146,8 @@ export const en = {
                 notFound: 'The model no longer exists.',
                 createError: 'The model could not be created. Try again later.',
                 deleteError: 'The model could not be deleted. Try again later.',
-                updateError: 'The model pricing could not be updated. Try again later.',
+                updateError:
+                  'The model sort order and pricing could not be updated. Try again later.',
                 statusUpdateError: 'The model status could not be updated. Try again later.',
               },
               deleteDialog: {
@@ -1035,7 +1160,7 @@ export const en = {
               priceUnit: {
                 title: 'Price unit and fixed exchange rate',
                 description:
-                  'Administrators control the entry currency and fixed rate. The backend stores normalized USD prices, so merchants and customers always use USD.',
+                  'Administrators control entry currencies and fixed rates. The backend stores normalized USD prices, while the marketplace can display configured currencies.',
                 currencyLabel: 'Price unit',
                 exchangeRateLabel: 'Fixed exchange rate',
                 exchangeRateHint: 'Enter this as “1 USD = value {{currency}}”. USD is fixed at 1.',
@@ -1055,15 +1180,15 @@ export const en = {
                 },
               },
               editDialog: {
-                title: 'Model pricing settings',
+                title: 'Model settings',
                 description:
-                  'The official model name and ID stay fixed. Manage the complete pricing rules here.',
+                  'The official model name and ID stay fixed. Manage marketplace order and complete pricing rules here.',
                 officialHint:
                   'Entered prices are saved as manual overrides. Blank rates use default_pricing_nano_usd and continue to follow scheduled models.dev updates.',
                 customHint:
                   'Custom model prices are saved to default_pricing_nano_usd as the baseline for customer display and billing.',
                 cancel: 'Cancel',
-                save: 'Save pricing',
+                save: 'Save settings',
               },
               createDialog: {
                 title: 'Add model',
@@ -1103,6 +1228,14 @@ export const en = {
                     manualHint:
                       'Enter a model name manually only when this brand has no official catalog data.',
                   },
+                  billingMode: {
+                    label: 'Billing mode',
+                    token: 'Per-token billing',
+                    request: 'Per-request billing',
+                    tokenHint: 'Charge by input, cache, and output token usage.',
+                    requestHint:
+                      'Charge one fixed amount per call, regardless of token usage or image resolution.',
+                  },
                   inputPrice: {
                     label: 'Input from / 1M',
                   },
@@ -1114,6 +1247,10 @@ export const en = {
                   },
                   outputPrice: {
                     label: 'Output from / 1M',
+                  },
+                  sortOrder: {
+                    label: 'Sort order',
+                    hint: 'Lower values appear first within the brand and marketplace. Equal values use model name order.',
                   },
                   priceHint:
                     'All models.dev base, cache, reasoning, audio, and context-tier prices are stored in the database. Blank values follow daily updates; entered values override only that rate.',
@@ -1129,6 +1266,7 @@ export const en = {
                 pricing: {
                   title: 'Complete pricing rules',
                   perMillion: 'USD / 1M tokens',
+                  perRequest: 'USD / request',
                   perMillionCurrency: '{{currency}} / 1M tokens',
                   eachModelDefault: 'Each model default',
                   addContextTier: 'Add context tier',
@@ -1142,6 +1280,7 @@ export const en = {
                     hint: 'Requests up to this token count use the previous price; larger requests use this tier.',
                   },
                   groups: {
+                    request: 'Per-request pricing',
                     base: 'Standard pricing',
                     baseUntil: 'Standard pricing (up to {{size}} tokens)',
                     contextOver200k: 'Over 200K context (compatibility price)',
@@ -1158,6 +1297,7 @@ export const en = {
                     serviceTier: 'Service tier · {{tier}}',
                   },
                   rates: {
+                    request: 'Fixed price per request',
                     input: 'Input / 1M',
                     output: 'Output / 1M',
                     reasoning: 'Reasoning / 1M',
@@ -1174,6 +1314,9 @@ export const en = {
                   name: {
                     required: 'Enter a model name.',
                     duplicate: 'This model has already been added under the selected brand.',
+                  },
+                  sortOrder: {
+                    invalid: 'Enter an integer greater than or equal to 0.',
                   },
                   inputPrice: {
                     invalid: 'Enter a price greater than or equal to 0.',
@@ -1619,7 +1762,8 @@ export const en = {
               defaultCurrencyHelp:
                 'USD is the required default pricing currency, fixed at 1 and cannot be removed.',
               currencyLabel: 'Pricing currency',
-              currencyHelp: 'Each currency can be configured once. Customers continue to see USD.',
+              currencyHelp:
+                'Each currency can be configured once and used for merchant price entry and marketplace display conversion.',
               exchangeRateLabel: 'Fixed exchange rate',
               exchangeRateHint: 'Enter this as “1 USD = value {{currency}}”. USD is fixed at 1.',
               exchangeRateError: 'Enter a valid rate greater than 0. The USD rate must be 1.',
@@ -1963,14 +2107,20 @@ export const en = {
               model: 'Model',
               channel: 'Channel',
               context: 'Context',
+              billingMode: 'Billing',
               priceUnit: 'Price unit / rate',
               inputPrice: 'Input / 1M',
               outputPrice: 'Output / 1M',
+              requestPrices: 'Per-request pricing',
               status: 'Runtime status',
               reviewStatus: 'Review status',
               reviewIssue: 'Review issue',
               updatedAt: 'Updated',
               actions: 'Actions',
+            },
+            billingModes: {
+              token: 'Per token',
+              request: 'Per request',
             },
             priceChange: {
               pending: 'Pending review: {{price}}',
@@ -1987,10 +2137,21 @@ export const en = {
               fields: {
                 channel: 'Channel',
                 model: 'Catalog model',
+                billingMode: 'Merchant billing mode',
                 priceCurrency: 'Pricing currency',
                 inputPrice: 'Input / 1M tokens (USD)',
                 outputPrice: 'Output / 1M tokens (USD)',
                 status: 'Listing status',
+              },
+              billingModes: {
+                token: 'Per-token billing',
+                request: 'Per-request billing',
+              },
+              billingModeHints: {
+                token:
+                  'Charge by input and output token usage for text, reasoning, or other token-metered models.',
+                request:
+                  'Charge one fixed amount per call, regardless of token usage or image resolution.',
               },
               channelPlaceholder: 'Choose a channel',
               channelSearch: 'Search channels',
@@ -2012,6 +2173,10 @@ export const en = {
                   hint: 'Based on administrator pricing. Changing the multiplier recalculates every sales price below.',
                   customized:
                     'Some prices were adjusted individually. Changing the multiplier will recalculate them all.',
+                },
+                manual: {
+                  label: 'Custom billing price',
+                  hint: 'This merchant billing mode differs from the model default. Enter the sales price directly.',
                 },
                 adminExchangeRate:
                   'Current pricing configuration: 1 USD = {{rate}} {{currency}}. Edit below in {{currency}}; saved values are normalized to USD.',
@@ -2041,7 +2206,9 @@ export const en = {
                 },
                 perMillion: 'USD / 1M tokens',
                 perMillionCurrency: '{{currency}} / 1M tokens',
+                perRequestCurrency: '{{currency}} / request',
                 groups: {
+                  request: 'Per-request pricing',
                   base: 'Standard pricing',
                   baseUntil: 'Standard pricing (up to {{size}} tokens)',
                   contextOver200k: 'Over 200K context (compatibility price)',
@@ -2057,6 +2224,7 @@ export const en = {
                   serviceTier: 'Service tier · {{tier}}',
                 },
                 rates: {
+                  request: 'Request',
                   input: 'Input / 1M',
                   output: 'Output / 1M',
                   reasoning: 'Reasoning / 1M',

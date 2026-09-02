@@ -58,6 +58,11 @@ mod m0057_create_merchant_settlement_settings;
 mod m0058_remove_wechat_settlement_option;
 mod m0059_remove_wechat_settlement_schema;
 mod m0060_consolidate_system_settings;
+mod m0061_create_api_key_model_routes;
+mod m0062_add_model_sort_order;
+mod m0063_add_model_billing_mode;
+mod m0064_add_merchant_model_billing_mode;
+mod m0065_replace_image_pricing_with_fixed_request;
 
 use sea_orm_migration::prelude::*;
 
@@ -127,6 +132,11 @@ impl MigratorTrait for Migrator {
             Box::new(m0058_remove_wechat_settlement_option::Migration),
             Box::new(m0059_remove_wechat_settlement_schema::Migration),
             Box::new(m0060_consolidate_system_settings::Migration),
+            Box::new(m0061_create_api_key_model_routes::Migration),
+            Box::new(m0062_add_model_sort_order::Migration),
+            Box::new(m0063_add_model_billing_mode::Migration),
+            Box::new(m0064_add_merchant_model_billing_mode::Migration),
+            Box::new(m0065_replace_image_pricing_with_fixed_request::Migration),
         ]
     }
 }

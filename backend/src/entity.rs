@@ -1,4 +1,5 @@
 pub mod api_key;
+pub mod api_key_model_route;
 pub mod app_route;
 pub mod app_route_role;
 pub mod brand;

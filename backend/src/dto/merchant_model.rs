@@ -1,7 +1,9 @@
 use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::{MerchantModel, MerchantModelOption, MerchantModelOptions};
+use crate::domain::{
+    MerchantBillingMode, MerchantModel, MerchantModelOption, MerchantModelOptions,
+};
 
 use super::{
     model::ModelPriceOverrideRequest, model_catalog::ModelPricingResponse,
@@ -23,6 +25,7 @@ pub struct CreateMerchantModelRequest {
     pub conversion_mode: MerchantPriceConversionModeValue,
     pub exchange_rate: serde_json::Number,
     pub model_id: i64,
+    pub billing_mode: MerchantBillingModeValue,
     pub input_price: serde_json::Number,
     pub output_price: serde_json::Number,
     pub price_currency: String,
@@ -37,6 +40,7 @@ pub struct UpdateMerchantModelRequest {
     pub conversion_mode: MerchantPriceConversionModeValue,
     pub exchange_rate: serde_json::Number,
     pub model_id: i64,
+    pub billing_mode: MerchantBillingModeValue,
     pub input_price: serde_json::Number,
     pub output_price: serde_json::Number,
     pub price_currency: String,
@@ -73,6 +77,22 @@ pub enum MerchantPriceConversionModeValue {
     FixedRate,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum MerchantBillingModeValue {
+    Token,
+    Request,
+}
+
+impl From<MerchantBillingModeValue> for MerchantBillingMode {
+    fn from(mode: MerchantBillingModeValue) -> Self {
+        match mode {
+            MerchantBillingModeValue::Token => Self::Token,
+            MerchantBillingModeValue::Request => Self::Request,
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MerchantModelResponse {
@@ -84,6 +104,7 @@ pub struct MerchantModelResponse {
     pub model_identifier: String,
     pub model_name: String,
     pub context_window: i64,
+    pub billing_mode: &'static str,
     pub price_currency: &'static str,
     pub input_price: f64,
     pub output_price: f64,
@@ -100,6 +121,7 @@ pub struct MerchantModelResponse {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MerchantModelPendingPriceResponse {
+    pub billing_mode: &'static str,
     pub price_currency: &'static str,
     pub input_price: f64,
     pub output_price: f64,
@@ -118,6 +140,7 @@ impl From<MerchantModel> for MerchantModelResponse {
             model_identifier: model.model_identifier,
             model_name: model.model_name,
             context_window: model.context_window,
+            billing_mode: model.billing_mode.as_str(),
             price_currency: model.price_currency.as_str(),
             input_price: price_from_nano(model.input_price_nano_per_million),
             output_price: price_from_nano(model.output_price_nano_per_million),
@@ -128,6 +151,7 @@ impl From<MerchantModel> for MerchantModelResponse {
             pending_price: model
                 .pending_price
                 .map(|price| MerchantModelPendingPriceResponse {
+                    billing_mode: price.billing_mode.as_str(),
                     price_currency: price.price_currency.as_str(),
                     input_price: price_from_nano(price.input_price_nano_per_million),
                     output_price: price_from_nano(price.output_price_nano_per_million),
@@ -148,6 +172,7 @@ pub struct MerchantModelOptionResponse {
     pub identifier: String,
     pub name: String,
     pub context_window: i64,
+    pub default_billing_mode: &'static str,
     pub input_price: f64,
     pub output_price: f64,
     pub pricing: ModelPricingResponse,
@@ -160,6 +185,7 @@ impl From<MerchantModelOption> for MerchantModelOptionResponse {
             identifier: model.identifier,
             name: model.name,
             context_window: model.context_window,
+            default_billing_mode: model.default_billing_mode.as_str(),
             input_price: price_from_nano(model.input_price_nano_per_million),
             output_price: price_from_nano(model.output_price_nano_per_million),
             pricing: ModelPricingResponse::from(model.pricing),

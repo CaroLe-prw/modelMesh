@@ -1,10 +1,10 @@
-use crate::domain::{ModelCatalogEntry, ModelPricing, ModelStatus};
+use crate::domain::{ModelBillingMode, ModelCatalogEntry, ModelPricing, ModelStatus};
 use serde_json::json;
 
 use super::{
     CreateCatalogModels, CreateModel, DEFAULT_CUSTOM_CONTEXT_WINDOW, ModelPriceGroupInput,
     ModelPriceOverrideInput, ModelServiceError, build_search_pattern,
-    resolve_catalog_model_records, resolve_new_model, resolve_price,
+    resolve_catalog_model_records, resolve_new_model, resolve_price, validate_sort_order,
 };
 
 #[test]
@@ -29,11 +29,13 @@ fn batch_models_keep_individual_defaults_and_share_only_entered_overrides() {
         CreateCatalogModels {
             brand_identifier: "openai".to_owned(),
             model_identifiers: vec!["model-a".to_owned(), "model-b".to_owned()],
+            billing_mode: ModelBillingMode::Token,
             input_price: Some(9.0),
             cache_read_price: None,
             cache_write_price: None,
             output_price: None,
             price_overrides: Vec::new(),
+            sort_order: 30,
             status: ModelStatus::Published,
         },
         vec![
@@ -58,6 +60,7 @@ fn batch_models_keep_individual_defaults_and_share_only_entered_overrides() {
     assert_eq!(records[0].output_price_nano_usd_per_million, 1_000_000_000);
     assert_eq!(records[1].output_price_nano_usd_per_million, 2_000_000_000);
     assert!(records.iter().all(|record| !record.output_price_overridden));
+    assert!(records.iter().all(|record| record.sort_order == 30));
 }
 
 #[test]
@@ -66,11 +69,13 @@ fn batch_models_reject_duplicate_identifiers_case_insensitively() {
         CreateCatalogModels {
             brand_identifier: "openai".to_owned(),
             model_identifiers: vec!["model-a".to_owned(), "MODEL-A".to_owned()],
+            billing_mode: ModelBillingMode::Token,
             input_price: None,
             cache_read_price: None,
             cache_write_price: None,
             output_price: None,
             price_overrides: Vec::new(),
+            sort_order: 0,
             status: ModelStatus::Published,
         },
         vec![catalog_entry("model-a", 100_000_000, 1_000_000_000)],
@@ -141,6 +146,7 @@ fn official_model_keeps_catalog_identity_and_tracks_price_sources_per_field() {
             identifier: "GPT-TEST".to_owned(),
             name: Some("A name supplied by the browser".to_owned()),
             context_window: Some(64_000),
+            billing_mode: ModelBillingMode::Token,
             input_price: None,
             cache_read_price: None,
             cache_write_price: Some(2.5),
@@ -159,6 +165,7 @@ fn official_model_keeps_catalog_identity_and_tracks_price_sources_per_field() {
                     price: "10".to_owned(),
                 },
             ],
+            sort_order: 20,
             status: ModelStatus::Published,
         },
         Some(ModelCatalogEntry {
@@ -193,6 +200,7 @@ fn official_model_keeps_catalog_identity_and_tracks_price_sources_per_field() {
     assert_eq!(record.name, "GPT Test Official");
     assert_eq!(record.catalog_source.as_deref(), Some("models.dev"));
     assert_eq!(record.context_window, 1_050_000);
+    assert_eq!(record.sort_order, 20);
     assert_eq!(record.input_price_nano_usd_per_million, 125_000_000);
     assert!(!record.input_price_overridden);
     assert_eq!(record.cache_read_price_nano_usd_per_million, 12_500_000);
@@ -224,11 +232,13 @@ fn custom_model_uses_backend_context_default_when_the_browser_omits_it() {
             identifier: "custom-model".to_owned(),
             name: Some("Custom Model".to_owned()),
             context_window: None,
+            billing_mode: ModelBillingMode::Token,
             input_price: None,
             cache_read_price: None,
             cache_write_price: None,
             output_price: None,
             price_overrides: Vec::new(),
+            sort_order: 0,
             status: ModelStatus::Published,
         },
         None,
@@ -247,6 +257,7 @@ fn custom_model_stores_submitted_pricing_as_its_default_price_book() {
             identifier: "custom-model".to_owned(),
             name: Some("Custom Model".to_owned()),
             context_window: None,
+            billing_mode: ModelBillingMode::Token,
             input_price: None,
             cache_read_price: None,
             cache_write_price: None,
@@ -256,6 +267,7 @@ fn custom_model_stores_submitted_pricing_as_its_default_price_book() {
                 rate: "input".to_owned(),
                 price: "1.25".to_owned(),
             }],
+            sort_order: 0,
             status: ModelStatus::Published,
         },
         None,
@@ -266,4 +278,51 @@ fn custom_model_stores_submitted_pricing_as_its_default_price_book() {
     assert!(record.pricing_overrides_nano_usd.base.is_empty());
     assert_eq!(record.input_price_nano_usd_per_million, 125_000_000);
     assert!(!record.input_price_overridden);
+}
+
+#[test]
+fn request_billed_model_requires_and_stores_one_fixed_price() {
+    let request_prices = [("request", "0.04")];
+    let request = |prices: &[(&str, &str)]| CreateModel {
+        brand_identifier: "openai".to_owned(),
+        identifier: "gpt-image-test".to_owned(),
+        name: Some("GPT Image Test".to_owned()),
+        context_window: None,
+        billing_mode: ModelBillingMode::Request,
+        input_price: None,
+        cache_read_price: None,
+        cache_write_price: None,
+        output_price: None,
+        price_overrides: prices
+            .iter()
+            .map(|(rate, price)| ModelPriceOverrideInput {
+                group: ModelPriceGroupInput::Base,
+                rate: (*rate).to_owned(),
+                price: (*price).to_owned(),
+            })
+            .collect(),
+        sort_order: 0,
+        status: ModelStatus::Published,
+    };
+
+    let record = resolve_new_model("openai".to_owned(), request(&request_prices), None)
+        .expect("fixed request pricing should resolve");
+    assert_eq!(record.billing_mode, ModelBillingMode::Request);
+    assert_eq!(record.default_pricing_nano_usd.base["request"], 4_000_000);
+    assert_eq!(record.input_price_nano_usd_per_million, 0);
+    assert_eq!(record.output_price_nano_usd_per_million, 0);
+
+    assert!(matches!(
+        resolve_new_model("openai".to_owned(), request(&[]), None),
+        Err(ModelServiceError::InvalidInput)
+    ));
+}
+
+#[test]
+fn model_sort_order_cannot_be_negative() {
+    assert_eq!(validate_sort_order(0), Ok(()));
+    assert_eq!(
+        validate_sort_order(-1),
+        Err(ModelServiceError::InvalidInput)
+    );
 }

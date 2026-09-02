@@ -5,6 +5,7 @@ pub mod brand;
 pub mod brand_preset;
 pub mod catalog_review;
 pub mod health;
+pub mod marketplace;
 pub mod merchant_application;
 pub mod merchant_channel;
 pub mod merchant_management;

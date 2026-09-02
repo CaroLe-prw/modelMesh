@@ -8,6 +8,7 @@ mod brand_preset;
 mod catalog_review;
 mod image_source;
 mod management_search;
+mod marketplace;
 mod merchant_application;
 mod merchant_channel;
 mod merchant_management;
@@ -27,6 +28,7 @@ pub use auth::{AuthService, AuthServiceError};
 pub use brand::{BrandService, BrandServiceError, CreateBrand, UpdateBrand};
 pub use brand_preset::{BrandPresetService, BrandPresetServiceError};
 pub use catalog_review::{CatalogReviewService, CatalogReviewServiceError};
+pub use marketplace::{MarketplaceService, MarketplaceServiceError};
 pub use merchant_application::{
     MerchantApplicationService, MerchantApplicationServiceError, SubmitMerchantApplication,
 };

@@ -2,6 +2,30 @@ use super::{
     ModelPriceTier, ModelPricing, PriceCurrency, PriceExchangeRate,
     price_increase_exceeds_basis_points, usd_per_million_to_nano,
 };
+use crate::domain::ModelBillingMode;
+
+#[test]
+fn billing_mode_keeps_only_rates_that_belong_to_that_contract() {
+    let pricing = ModelPricing {
+        base: [
+            ("input".to_owned(), 100),
+            ("output".to_owned(), 1_000),
+            ("request".to_owned(), 2_000),
+        ]
+        .into(),
+        context_over_200k: Some([("input".to_owned(), 200)].into()),
+        ..Default::default()
+    };
+
+    let token = pricing.clone().for_billing_mode(ModelBillingMode::Token);
+    let request = pricing.for_billing_mode(ModelBillingMode::Request);
+
+    assert_eq!(token.base["input"], 100);
+    assert!(!token.base.contains_key("request"));
+    assert_eq!(request.base["request"], 2_000);
+    assert!(!request.base.contains_key("input"));
+    assert!(request.context_over_200k.is_none());
+}
 
 #[test]
 fn price_review_threshold_checks_every_price_group_without_rounding() {

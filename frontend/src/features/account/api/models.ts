@@ -3,8 +3,11 @@ import type { ModelPricing } from '@/features/account/api/model-catalog';
 import type { PaginatedResponse, PaginationQuery } from '@/lib/pagination';
 
 export type ModelStatus = 'disabled' | 'published';
+export type ModelBillingMode = 'request' | 'token';
+export type ModelSortDirection = 'asc' | 'desc';
 
 export interface ModelItem {
+  billingMode: ModelBillingMode;
   brandId: string;
   cacheReadPrice: number;
   cacheReadPriceOverridden: boolean;
@@ -23,11 +26,13 @@ export interface ModelItem {
   defaultPricing: ModelPricing;
   pricingOverrides: ModelPricing;
   pricing: ModelPricing;
+  sortOrder: number;
   status: ModelStatus;
   updatedAt: string;
 }
 
 export interface ModelDraft {
+  billingMode: ModelBillingMode;
   brandId: string;
   cacheReadPrice?: number;
   cacheWritePrice?: number;
@@ -37,17 +42,22 @@ export interface ModelDraft {
   name?: string;
   outputPrice?: number;
   priceOverrides?: ModelPriceOverride[];
+  sortOrder: number;
   status: ModelStatus;
 }
 
 export interface ModelPricingUpdateDraft {
+  billingMode: ModelBillingMode;
   priceOverrides: ModelPriceOverride[];
+  sortOrder: number;
 }
 
 export interface BatchModelDraft {
+  billingMode: ModelBillingMode;
   brandId: string;
   modelIds: string[];
   priceOverrides: ModelPriceOverride[];
+  sortOrder: number;
   status: ModelStatus;
 }
 
@@ -55,6 +65,7 @@ export interface ListModelsQuery extends PaginationQuery {
   brandId?: string;
   query?: string;
   status?: ModelStatus;
+  sortDirection: ModelSortDirection;
 }
 
 export type ModelPriceGroup =
@@ -87,6 +98,7 @@ export function listModels(
       pageSize: filters.pageSize,
       query: filters.query,
       status: filters.status,
+      sortDirection: filters.sortDirection,
     },
     signal,
   });

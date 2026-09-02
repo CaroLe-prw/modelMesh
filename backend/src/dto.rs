@@ -5,6 +5,7 @@ mod brand;
 mod brand_preset;
 mod catalog_review;
 mod health;
+mod marketplace;
 mod merchant_application;
 mod merchant_channel;
 mod merchant_management;
@@ -33,6 +34,10 @@ pub use catalog_review::{
     ListCatalogReviewsQuery, ReviewCatalogItemRequest,
 };
 pub use health::{DependencyStatus, HealthResponse, ReadinessResponse};
+pub use marketplace::{
+    MarketplaceCatalogResponse, MarketplaceMerchantQuery, MarketplaceMerchantResponse,
+    MarketplaceRouteStateResponse, UpdateMarketplaceRouteRequest,
+};
 pub use merchant_application::{MerchantApplicationResponse, SubmitMerchantApplicationRequest};
 pub use merchant_channel::{
     CreateMerchantChannelRequest, DiscoverMerchantChannelModelsRequest,

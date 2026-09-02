@@ -7,18 +7,19 @@ use crate::{
     repository::{
         AccessTokenRepository, ApiKeyRepository, AppRouteCacheRepository, AppRouteRepository,
         AuthRepository, BrandPresetRepository, BrandRepository, CatalogReviewRepository,
-        MerchantApplicationRepository, MerchantChannelRepository, MerchantManagementRepository,
-        MerchantModelRepository, MerchantProfileRepository, MerchantRequestRepository,
-        ModelCatalogRepository, ModelRepository, PriceSettingsRepository, SystemSettingsRepository,
-        UserCacheRepository, UserManagementRepository,
+        MarketplaceRepository, MerchantApplicationRepository, MerchantChannelRepository,
+        MerchantManagementRepository, MerchantModelRepository, MerchantProfileRepository,
+        MerchantRequestRepository, ModelCatalogRepository, ModelRepository,
+        PriceSettingsRepository, SystemSettingsRepository, UserCacheRepository,
+        UserManagementRepository,
     },
     security::CredentialCipher,
     services::{
         ApiKeyService, AppRouteService, AuthService, BrandPresetService, BrandService,
-        CatalogReviewService, MerchantApplicationService, MerchantChannelService,
-        MerchantManagementService, MerchantModelService, MerchantProfileService,
-        MerchantRequestService, ModelCatalogService, ModelService, PriceSettingsService,
-        SystemSettingsService, UserManagementService,
+        CatalogReviewService, MarketplaceService, MerchantApplicationService,
+        MerchantChannelService, MerchantManagementService, MerchantModelService,
+        MerchantProfileService, MerchantRequestService, ModelCatalogService, ModelService,
+        PriceSettingsService, SystemSettingsService, UserManagementService,
     },
 };
 
@@ -36,6 +37,7 @@ pub struct AppState {
     pub merchant_model_service: MerchantModelService,
     pub merchant_profile_service: MerchantProfileService,
     pub merchant_request_service: MerchantRequestService,
+    pub marketplace_service: MarketplaceService,
     pub system_settings_service: SystemSettingsService,
     pub model_catalog_service: ModelCatalogService,
     pub model_service: ModelService,
@@ -119,6 +121,10 @@ impl AppState {
             merchant_request_service: MerchantRequestService::new(MerchantRequestRepository::new(
                 database.clone(),
             )),
+            marketplace_service: MarketplaceService::new(
+                MarketplaceRepository::new(database.clone()),
+                price_settings_repository.clone(),
+            ),
             system_settings_service: SystemSettingsService::new(system_settings_repository),
             model_catalog_service: ModelCatalogService::new(ModelCatalogRepository::new(
                 database.clone(),

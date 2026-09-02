@@ -19,9 +19,9 @@ function App() {
   useDocumentLocale();
 
   return (
-    <div className="app min-h-screen bg-background text-foreground">
+    <div className="app flex min-h-screen flex-col bg-background text-foreground">
       <SiteHeader isDark={isDark} onToggleTheme={toggleTheme} />
-      <main>
+      <main className="flex-1">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route element={<ProtectedRoute />}>

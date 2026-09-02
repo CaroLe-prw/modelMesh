@@ -59,6 +59,7 @@ import {
   updateModelStatus,
   type ModelItem,
   type ModelPricingUpdateDraft,
+  type ModelSortDirection,
   type ModelStatus,
 } from '@/features/account/api/models';
 import { useAuth } from '@/features/auth/context/auth-context';
@@ -116,6 +117,7 @@ export function AdminModelsPanel() {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [status, setStatus] = useState<ModelStatusFilter>('all');
+  const [sortDirection, setSortDirection] = useState<ModelSortDirection>('asc');
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedQuery(query.trim()), 150);
@@ -162,6 +164,7 @@ export function AdminModelsPanel() {
         pageSize,
         query: debouncedQuery || undefined,
         status: status === 'all' ? undefined : status,
+        sortDirection,
       },
       controller.signal,
     )
@@ -190,7 +193,12 @@ export function AdminModelsPanel() {
       active = false;
       controller.abort();
     };
-  }, [brand, debouncedQuery, modelRefreshVersion, page, pageSize, setGuest, status]);
+  }, [brand, debouncedQuery, modelRefreshVersion, page, pageSize, setGuest, sortDirection, status]);
+
+  function toggleSortDirection() {
+    setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+    setPage(DEFAULT_PAGE);
+  }
 
   function reloadModels() {
     setModelRefreshVersion((version) => version + 1);
@@ -239,9 +247,11 @@ export function AdminModelsPanel() {
         models.length === 1
           ? [await createModelRequest(firstModel)]
           : await createModelsBatch({
+              billingMode: firstModel.billingMode,
               brandId: firstModel.brandId,
               modelIds: models.map((model) => model.identifier),
               priceOverrides: firstModel.priceOverrides,
+              sortOrder: firstModel.sortOrder,
               status: firstModel.status,
             });
       setBrand('all');
@@ -357,6 +367,31 @@ export function AdminModelsPanel() {
       ),
     },
     {
+      hideable: false,
+      key: 'sortOrder',
+      label: t('pages.account.sections.admin.catalogManagement.models.columns.sortOrder'),
+      render: (model) => <span className="font-mono text-xs">{model.sortOrder}</span>,
+      sort: {
+        active: true,
+        direction: sortDirection,
+        label: t('pages.account.sections.admin.catalogManagement.models.sortColumn', {
+          column: t('pages.account.sections.admin.catalogManagement.models.columns.sortOrder'),
+        }),
+        onChange: toggleSortDirection,
+      },
+    },
+    {
+      key: 'billingMode',
+      label: t('pages.account.sections.admin.catalogManagement.models.columns.billingMode'),
+      render: (model) => (
+        <Badge variant="secondary">
+          {t(
+            `pages.account.sections.admin.catalogManagement.models.billingModes.${model.billingMode}`,
+          )}
+        </Badge>
+      ),
+    },
+    {
       key: 'context',
       label: t('pages.account.sections.admin.catalogManagement.models.columns.context'),
       render: (model) => (
@@ -366,26 +401,49 @@ export function AdminModelsPanel() {
     {
       key: 'inputPrice',
       label: t('pages.account.sections.admin.catalogManagement.models.columns.inputPrice'),
-      render: (model) => <span className="font-mono text-xs">{formatUsd(model.inputPrice)}</span>,
+      render: (model) => (
+        <span className="font-mono text-xs">
+          {model.billingMode === 'token' ? formatUsd(model.inputPrice) : '—'}
+        </span>
+      ),
     },
     {
       key: 'cacheReadPrice',
       label: t('pages.account.sections.admin.catalogManagement.models.columns.cacheReadPrice'),
       render: (model) => (
-        <span className="font-mono text-xs">{formatUsd(model.cacheReadPrice)}</span>
+        <span className="font-mono text-xs">
+          {model.billingMode === 'token' ? formatUsd(model.cacheReadPrice) : '—'}
+        </span>
       ),
     },
     {
       key: 'cacheWritePrice',
       label: t('pages.account.sections.admin.catalogManagement.models.columns.cacheWritePrice'),
       render: (model) => (
-        <span className="font-mono text-xs">{formatUsd(model.cacheWritePrice)}</span>
+        <span className="font-mono text-xs">
+          {model.billingMode === 'token' ? formatUsd(model.cacheWritePrice) : '—'}
+        </span>
       ),
     },
     {
       key: 'outputPrice',
       label: t('pages.account.sections.admin.catalogManagement.models.columns.outputPrice'),
-      render: (model) => <span className="font-mono text-xs">{formatUsd(model.outputPrice)}</span>,
+      render: (model) => (
+        <span className="font-mono text-xs">
+          {model.billingMode === 'token' ? formatUsd(model.outputPrice) : '—'}
+        </span>
+      ),
+    },
+    {
+      className: 'min-w-48',
+      key: 'requestPrice',
+      label: t('pages.account.sections.admin.catalogManagement.models.columns.requestPrice'),
+      render: (model) =>
+        model.billingMode === 'request' ? (
+          <span className="font-mono text-xs">{formatUsd(model.pricing.base?.request ?? 0)}</span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
     },
     {
       key: 'merchants',
@@ -424,6 +482,11 @@ export function AdminModelsPanel() {
     },
   ];
   const mobileFields: AdminMobileField<ModelItem>[] = [
+    {
+      key: 'sortOrder',
+      label: t('pages.account.sections.admin.catalogManagement.models.columns.sortOrder'),
+      render: (model) => model.sortOrder,
+    },
     {
       key: 'context',
       label: t('pages.account.sections.admin.catalogManagement.models.columns.context'),
@@ -546,6 +609,30 @@ export function AdminModelsPanel() {
                 {t(`pages.account.sections.admin.catalogManagement.models.statuses.${value}`)}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+        <Select
+          onValueChange={(value) => {
+            setSortDirection(value as ModelSortDirection);
+            setPage(DEFAULT_PAGE);
+          }}
+          value={sortDirection}
+        >
+          <SelectTrigger
+            aria-label={t(
+              'pages.account.sections.admin.catalogManagement.models.sortDirection.label',
+            )}
+            className="w-full md:hidden"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="asc">
+              {t('pages.account.sections.admin.catalogManagement.models.sortDirection.asc')}
+            </SelectItem>
+            <SelectItem value="desc">
+              {t('pages.account.sections.admin.catalogManagement.models.sortDirection.desc')}
+            </SelectItem>
           </SelectContent>
         </Select>
       </AdminFilterToolbar>

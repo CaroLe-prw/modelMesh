@@ -4,10 +4,10 @@ use uuid::Uuid;
 
 use crate::{
     domain::{
-        AccountRole, MerchantChannelStatus, MerchantModel, MerchantModelOption,
-        MerchantModelOptions, MerchantModelStatus, MerchantPriceCurrency, ModelPriceRates,
-        ModelPricing, ModelStatus, PriceCurrency, PriceExchangeRate, UserId,
-        price_increase_exceeds_basis_points, price_per_million_to_nano,
+        AccountRole, MerchantBillingMode, MerchantChannelStatus, MerchantModel,
+        MerchantModelOption, MerchantModelOptions, MerchantModelStatus, MerchantPriceCurrency,
+        ModelBillingMode, ModelPriceRates, ModelPricing, ModelStatus, PriceCurrency,
+        PriceExchangeRate, UserId, price_increase_exceeds_basis_points, price_per_million_to_nano,
     },
     repository::{
         MerchantChannelRepository, MerchantModelPriceMutation, MerchantModelRepository,
@@ -68,6 +68,7 @@ pub struct CreateMerchantModel {
     pub conversion_mode: MerchantPriceConversionMode,
     pub exchange_rate: String,
     pub model_id: i64,
+    pub billing_mode: MerchantBillingMode,
     pub input_price: String,
     pub output_price: String,
     pub price_currency: String,
@@ -79,6 +80,7 @@ pub struct UpdateMerchantModel {
     pub conversion_mode: MerchantPriceConversionMode,
     pub exchange_rate: String,
     pub model_id: i64,
+    pub billing_mode: MerchantBillingMode,
     pub input_price: String,
     pub output_price: String,
     pub price_currency: String,
@@ -171,6 +173,7 @@ impl MerchantModelService {
                     identifier: model.identifier,
                     name: model.name,
                     context_window: model.context_window,
+                    default_billing_mode: model.billing_mode,
                     input_price_nano_per_million: model.input_price_nano_usd_per_million,
                     output_price_nano_per_million: model.output_price_nano_usd_per_million,
                     pricing,
@@ -199,6 +202,7 @@ impl MerchantModelService {
                 request.price_currency,
                 request.exchange_rate,
                 request.model_id,
+                request.billing_mode,
                 request.input_price,
                 request.output_price,
                 request.price_overrides,
@@ -215,6 +219,7 @@ impl MerchantModelService {
                 price_currency: record.price_currency,
                 input_price_nano_per_million: record.input_price_nano_per_million,
                 output_price_nano_per_million: record.output_price_nano_per_million,
+                billing_mode: record.billing_mode,
                 pricing_nano: record.pricing_nano,
             })
             .await
@@ -247,6 +252,7 @@ impl MerchantModelService {
                 request.price_currency,
                 request.exchange_rate,
                 request.model_id,
+                request.billing_mode,
                 request.input_price,
                 request.output_price,
                 request.price_overrides,
@@ -266,12 +272,21 @@ impl MerchantModelService {
                 })?;
             resolve_price_mutation(
                 true,
+                current.billing_mode,
                 &current.pricing,
+                record.billing_mode,
                 &record.pricing_nano,
                 review_settings.price_increase_review_threshold_bps,
             )
         } else {
-            resolve_price_mutation(false, &current.pricing, &record.pricing_nano, 0)
+            resolve_price_mutation(
+                false,
+                current.billing_mode,
+                &current.pricing,
+                record.billing_mode,
+                &record.pricing_nano,
+                0,
+            )
         };
 
         self.repository
@@ -341,6 +356,7 @@ impl MerchantModelService {
         price_currency: String,
         submitted_exchange_rate: String,
         model_id: i64,
+        billing_mode: MerchantBillingMode,
         input_price: String,
         output_price: String,
         price_overrides: Vec<ModelPriceOverrideInput>,
@@ -377,16 +393,23 @@ impl MerchantModelService {
             &submitted_exchange_rate,
             conversion_mode,
         )?;
-        let input_price_nano = parse_price(&input_price)?;
-        let output_price_nano = parse_price(&output_price)?;
         let mut submitted_pricing = resolve_pricing_overrides(price_overrides)
             .map_err(|_| MerchantModelServiceError::InvalidInput)?;
-        submitted_pricing
-            .base
-            .insert("input".to_owned(), input_price_nano);
-        submitted_pricing
-            .base
-            .insert("output".to_owned(), output_price_nano);
+        let (input_price_nano, output_price_nano) = match billing_mode {
+            MerchantBillingMode::Token => {
+                let input = parse_price(&input_price)?;
+                let output = parse_price(&output_price)?;
+                submitted_pricing.base.insert("input".to_owned(), input);
+                submitted_pricing.base.insert("output".to_owned(), output);
+                (input, output)
+            }
+            MerchantBillingMode::Request => {
+                if !request_pricing_is_complete(&submitted_pricing) {
+                    return Err(MerchantModelServiceError::InvalidInput);
+                }
+                (0, 0)
+            }
+        };
         let submitted_pricing = exchange_rate
             .pricing_currency_to_usd(submitted_pricing)
             .ok_or(MerchantModelServiceError::InvalidInput)?;
@@ -396,7 +419,7 @@ impl MerchantModelService {
         let output_price_nano_per_million = exchange_rate
             .currency_nano_to_usd(output_price_nano)
             .ok_or(MerchantModelServiceError::InvalidInput)?;
-        let model_pricing = effective_model_pricing(&model);
+        let model_pricing = merchant_pricing_reference(&model, billing_mode);
         if !pricing_shape_is_supported(&model_pricing, &submitted_pricing) {
             return Err(MerchantModelServiceError::InvalidInput);
         }
@@ -406,6 +429,7 @@ impl MerchantModelService {
             channel_id,
             model_id,
             context_window: model.context_window,
+            billing_mode,
             price_currency: MerchantPriceCurrency::Usd,
             input_price_nano_per_million,
             output_price_nano_per_million,
@@ -474,13 +498,16 @@ fn resolve_runtime_status(
 
 fn resolve_price_mutation(
     has_approved_price: bool,
+    current_billing_mode: MerchantBillingMode,
     current: &ModelPricing,
+    proposed_billing_mode: MerchantBillingMode,
     proposed: &ModelPricing,
     review_threshold_basis_points: i64,
 ) -> MerchantModelPriceMutation {
     if !has_approved_price {
         MerchantModelPriceMutation::ReplaceInitialSubmission
-    } else if price_increase_exceeds_basis_points(current, proposed, review_threshold_basis_points)
+    } else if current_billing_mode != proposed_billing_mode
+        || price_increase_exceeds_basis_points(current, proposed, review_threshold_basis_points)
     {
         MerchantModelPriceMutation::SubmitForReview
     } else {
@@ -526,13 +553,44 @@ fn resolve_conversion_exchange_rate(
 }
 
 fn effective_model_pricing(model: &crate::domain::ManagedModel) -> ModelPricing {
-    model
+    let pricing = model
         .default_pricing
         .merged_with(&model.pricing_overrides)
-        .with_required_base_prices(
+        .for_billing_mode(model.billing_mode);
+    match model.billing_mode {
+        ModelBillingMode::Token => pricing.with_required_base_prices(
             model.input_price_nano_usd_per_million,
             model.output_price_nano_usd_per_million,
-        )
+        ),
+        ModelBillingMode::Request => pricing,
+    }
+}
+
+fn merchant_pricing_reference(
+    model: &crate::domain::ManagedModel,
+    billing_mode: MerchantBillingMode,
+) -> ModelPricing {
+    match (billing_mode, model.billing_mode) {
+        (MerchantBillingMode::Token, ModelBillingMode::Token) => effective_model_pricing(model),
+        (MerchantBillingMode::Token, ModelBillingMode::Request) => {
+            ModelPricing::default().with_required_base_prices(0, 0)
+        }
+        (MerchantBillingMode::Request, ModelBillingMode::Request) => effective_model_pricing(model),
+        (MerchantBillingMode::Request, ModelBillingMode::Token) => ModelPricing {
+            base: [("request".to_owned(), 0)].into(),
+            ..Default::default()
+        },
+    }
+}
+
+fn request_pricing_is_complete(pricing: &ModelPricing) -> bool {
+    pricing.base.len() == 1
+        && pricing.base.contains_key("request")
+        && pricing.context_over_200k.is_none()
+        && pricing.tiers.is_empty()
+        && pricing.experimental_modes.is_empty()
+        && pricing.experimental_mode_tiers.is_empty()
+        && pricing.service_tiers.is_empty()
 }
 
 fn pricing_shape_is_supported(reference: &ModelPricing, submitted: &ModelPricing) -> bool {

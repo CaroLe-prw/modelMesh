@@ -17,6 +17,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import type { BrandItem } from '@/features/account/api/brands';
 import {
@@ -24,7 +31,7 @@ import {
   type ModelCatalogEntry,
   type ModelCatalogOption,
 } from '@/features/account/api/model-catalog';
-import type { ModelPriceOverride } from '@/features/account/api/models';
+import type { ModelBillingMode, ModelPriceOverride } from '@/features/account/api/models';
 import { BrandAvatar } from '@/features/account/components/admin/brand-avatar';
 import {
   type CustomPriceTierForm,
@@ -39,26 +46,30 @@ import { useAuth } from '@/features/auth/context/auth-context';
 import { ApiError } from '@/lib/api-client';
 
 export interface NewModelDraft {
+  billingMode: ModelBillingMode;
   brandId: string;
   identifier: string;
   name: string;
   priceOverrides: ModelPriceOverride[];
+  sortOrder: number;
   status: 'disabled' | 'published';
 }
 
-type ModelFormField = 'brandId' | 'name';
+type ModelFormField = 'brandId' | 'name' | 'sortOrder';
 type ModelFormError = 'duplicate' | 'invalid' | 'required';
 type ModelFormErrors = Partial<Record<ModelFormField, ModelFormError>>;
 type CustomPriceTierError = 'duplicate' | 'invalid';
 type CustomPriceTierErrors = Partial<Record<number, CustomPriceTierError>>;
 
 interface ModelFormState {
+  billingMode: ModelBillingMode;
   brandId: string;
   customPriceTiers: CustomPriceTierForm[];
   ids: string[];
   isPublished: boolean;
   name: string;
   priceOverrides: Record<string, string>;
+  sortOrder: string;
 }
 
 const MAX_MODELS_PER_BATCH = 100;
@@ -70,12 +81,14 @@ type CatalogDetailState =
 
 function createInitialForm(): ModelFormState {
   return {
+    billingMode: 'token',
     brandId: '',
     customPriceTiers: [],
     ids: [],
     isPublished: true,
     name: '',
     priceOverrides: {},
+    sortOrder: '0',
   };
 }
 
@@ -149,10 +162,19 @@ export function AddModelDialog({
     Boolean(selectedModelId) && selectedCatalogEntry === undefined && !isCatalogDetailError;
   const usesSharedCatalogPricing = selectedCatalogEntries.length > 1;
   const supportsCustomContextTiers = isCustomPricing || usesSharedCatalogPricing;
-  const priceGroups = modelPriceGroups(
-    selectedCatalogEntry,
-    supportsCustomContextTiers ? form.customPriceTiers : [],
-  );
+  const priceGroups: PriceGroupView[] =
+    form.billingMode === 'request'
+      ? [
+          {
+            group: { type: 'base' },
+            id: 'request',
+            rates: { request: undefined },
+          },
+        ]
+      : modelPriceGroups(
+          selectedCatalogEntry,
+          supportsCustomContextTiers ? form.customPriceTiers : [],
+        );
   const modelNameHint = hasOfficialModels
     ? 'catalogHint'
     : brandStatus === 'ready' && catalogEntries !== undefined
@@ -306,16 +328,36 @@ export function AddModelDialog({
     });
   }
 
+  function updateBillingMode(billingMode: ModelBillingMode) {
+    setForm((current) => ({
+      ...current,
+      billingMode,
+      customPriceTiers: [],
+      priceOverrides: {},
+    }));
+    setCustomTierErrors({});
+    setPriceErrors(new Set());
+  }
+
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     const name = form.name.trim();
     const customModelId = modelIdentifierFromName(name);
+    const sortOrder = Number.parseInt(form.sortOrder, 10);
     const nextErrors: ModelFormErrors = {};
     const nextCustomTierErrors: CustomPriceTierErrors = {};
     const nextPriceErrors = new Set<string>();
     const priceOverrides: ModelPriceOverride[] = [];
 
     if (!form.brandId) nextErrors.brandId = 'required';
+    if (
+      !Number.isInteger(sortOrder) ||
+      sortOrder < 0 ||
+      sortOrder > 2_147_483_647 ||
+      String(sortOrder) !== form.sortOrder.trim()
+    ) {
+      nextErrors.sortOrder = 'invalid';
+    }
     if (!name && !hasOfficialModels) nextErrors.name = 'required';
     if (hasOfficialModels && selectedCatalogEntries.length === 0) {
       nextErrors.name = 'required';
@@ -350,7 +392,10 @@ export function AddModelDialog({
       for (const rate of Object.keys(priceGroup.rates)) {
         const key = priceInputKey(priceGroup, rate);
         const value = optionalPrice(form.priceOverrides[key] ?? '');
-        if (value === undefined) continue;
+        if (value === undefined) {
+          if (form.billingMode === 'request') nextPriceErrors.add(key);
+          continue;
+        }
         if (!Number.isFinite(value) || value < 0) {
           nextPriceErrors.add(key);
         } else {
@@ -363,9 +408,9 @@ export function AddModelDialog({
     if (firstInvalidField) {
       setErrors(nextErrors);
       const invalidControl =
-        firstInvalidField === 'name'
-          ? document.getElementById(`${fieldId}-name`)
-          : event.currentTarget.elements.namedItem(firstInvalidField);
+        firstInvalidField === 'brandId'
+          ? event.currentTarget.elements.namedItem(firstInvalidField)
+          : document.getElementById(`${fieldId}-${firstInvalidField}`);
       if (invalidControl instanceof HTMLElement) invalidControl.focus();
       return;
     }
@@ -387,18 +432,22 @@ export function AddModelDialog({
       const status: NewModelDraft['status'] = form.isPublished ? 'published' : 'disabled';
       const drafts: NewModelDraft[] = hasOfficialModels
         ? selectedCatalogEntries.map((entry) => ({
+            billingMode: form.billingMode,
             brandId: form.brandId,
             identifier: entry.modelId,
             name: entry.name,
             priceOverrides,
+            sortOrder,
             status,
           }))
         : [
             {
+              billingMode: form.billingMode,
               brandId: form.brandId,
               identifier: customModelId,
               name,
               priceOverrides,
+              sortOrder,
               status,
             },
           ];
@@ -589,6 +638,27 @@ export function AddModelDialog({
 
             {(isCustomPricing || selectedCatalogEntries.length > 0) && (
               <div className="grid gap-3">
+                <div className="grid gap-2">
+                  <Label htmlFor={`${fieldId}-billing-mode`}>
+                    {t(`${translationPath}.fields.billingMode.label`)}
+                  </Label>
+                  <Select value={form.billingMode} onValueChange={updateBillingMode}>
+                    <SelectTrigger id={`${fieldId}-billing-mode`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="token">
+                        {t(`${translationPath}.fields.billingMode.token`)}
+                      </SelectItem>
+                      <SelectItem value="request">
+                        {t(`${translationPath}.fields.billingMode.request`)}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    {t(`${translationPath}.fields.billingMode.${form.billingMode}Hint`)}
+                  </p>
+                </div>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h3 className="text-sm font-semibold">
@@ -600,7 +670,7 @@ export function AddModelDialog({
                       )}
                     </p>
                   </div>
-                  {supportsCustomContextTiers && (
+                  {form.billingMode === 'token' && supportsCustomContextTiers && (
                     <Button onClick={addCustomPriceTier} size="sm" type="button" variant="outline">
                       <Plus aria-hidden="true" />
                       {t(`${translationPath}.pricing.addContextTier`)}
@@ -608,7 +678,7 @@ export function AddModelDialog({
                   )}
                 </div>
 
-                {isCatalogDetailPending ? (
+                {form.billingMode === 'token' && isCatalogDetailPending ? (
                   <div
                     aria-live="polite"
                     className="flex min-h-24 items-center justify-center gap-2 rounded-xl border border-border text-sm text-muted-foreground"
@@ -617,7 +687,7 @@ export function AddModelDialog({
                     <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
                     <span>{t(`${translationPath}.pricing.loading`)}</span>
                   </div>
-                ) : isCatalogDetailError ? (
+                ) : form.billingMode === 'token' && isCatalogDetailError ? (
                   <div className="flex min-h-24 flex-wrap items-center justify-center gap-2 rounded-xl border border-border px-4 text-sm text-warning">
                     <AlertCircle aria-hidden="true" className="size-4" />
                     <span>{t(`${translationPath}.pricing.loadError`)}</span>
@@ -652,7 +722,9 @@ export function AddModelDialog({
                       onUpdateCustomTier={updateCustomPriceTier}
                       priceErrors={priceErrors}
                       currencySymbol="$"
-                      priceUnitLabel={t(`${translationPath}.pricing.perMillion`)}
+                      priceUnitLabel={t(
+                        `${translationPath}.pricing.${form.billingMode === 'request' ? 'perRequest' : 'perMillion'}`,
+                      )}
                       t={t}
                       translationPath={translationPath}
                       values={form.priceOverrides}
@@ -661,6 +733,39 @@ export function AddModelDialog({
                 )}
               </div>
             )}
+
+            <div className="grid gap-2">
+              <Label htmlFor={`${fieldId}-sortOrder`}>
+                {t(`${translationPath}.fields.sortOrder.label`)}
+              </Label>
+              <Input
+                aria-describedby={`${fieldId}-sortOrder-hint${errors.sortOrder ? ` ${fieldId}-sortOrder-error` : ''}`}
+                aria-invalid={errors.sortOrder ? true : undefined}
+                id={`${fieldId}-sortOrder`}
+                inputMode="numeric"
+                min={0}
+                name="sortOrder"
+                onChange={(event) => updateField('sortOrder', event.target.value)}
+                step={1}
+                type="number"
+                value={form.sortOrder}
+              />
+              <p
+                className="text-xs leading-5 text-muted-foreground"
+                id={`${fieldId}-sortOrder-hint`}
+              >
+                {t(`${translationPath}.fields.sortOrder.hint`)}
+              </p>
+              {errors.sortOrder && (
+                <p
+                  className="text-xs text-destructive"
+                  id={`${fieldId}-sortOrder-error`}
+                  role="alert"
+                >
+                  {errorMessage('sortOrder')}
+                </p>
+              )}
+            </div>
 
             <div className="flex items-center justify-between gap-4 rounded-xl border border-border p-4">
               <div className="min-w-0">
@@ -805,7 +910,7 @@ export function PriceGroupFields({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <strong className="text-sm">{priceGroupTitle(group, t, translationPath)}</strong>
         <div className="flex items-center gap-2">
-          {group.group.type !== 'base' && (
+          {(group.group.type !== 'base' || priceUnitLabel) && (
             <Badge variant="secondary">
               {priceUnitLabel ?? t(`${translationPath}.pricing.perMillion`)}
             </Badge>
@@ -890,6 +995,7 @@ export function PriceGroupFields({
 }
 
 const standardRateOrder = [
+  'request',
   'input',
   'cache_read',
   'cache_write',
@@ -918,6 +1024,9 @@ function priceRateLabel(rate: string, t: TFunction, translationPath: string): st
 
 function priceGroupTitle(groupView: PriceGroupView, t: TFunction, translationPath: string): string {
   const { group, maximumInclusive } = groupView;
+  if ('request' in groupView.rates) {
+    return t(`${translationPath}.pricing.groups.request`);
+  }
   switch (group.type) {
     case 'base':
       if (maximumInclusive !== undefined) {

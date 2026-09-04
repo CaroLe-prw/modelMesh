@@ -83,11 +83,20 @@ export async function listAdminMerchants(
 
   return {
     ...response,
-    items: response.items.map((merchant) => ({
-      ...merchant,
-      concurrencyLimit: normalizeRequestLimit(merchant.concurrencyLimit),
-      rpmLimit: normalizeRequestLimit(merchant.rpmLimit),
-    })),
+    items: response.items.map(normalizeAdminMerchant),
+  };
+}
+
+export async function getAdminMerchant(id: number, signal?: AbortSignal): Promise<AdminMerchant> {
+  const merchant = await apiClient.get<AdminMerchantPayload>(`/admin/merchants/${id}`, { signal });
+  return normalizeAdminMerchant(merchant);
+}
+
+function normalizeAdminMerchant(merchant: AdminMerchantPayload): AdminMerchant {
+  return {
+    ...merchant,
+    concurrencyLimit: normalizeRequestLimit(merchant.concurrencyLimit),
+    rpmLimit: normalizeRequestLimit(merchant.rpmLimit),
   };
 }
 

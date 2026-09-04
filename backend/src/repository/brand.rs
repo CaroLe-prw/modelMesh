@@ -9,7 +9,7 @@ use sea_orm::{
 use time::OffsetDateTime;
 
 use crate::{
-    domain::{Brand, BrandStatus},
+    domain::{Brand, BrandStatus, Page, Pagination},
     entity::{brand, brand_preset, model},
 };
 
@@ -67,6 +67,38 @@ impl BrandRepository {
                 brand_from_models(brand, preset, model_count)
             })
             .collect()
+    }
+
+    pub async fn list_page(
+        &self,
+        search: &BrandSearch,
+        pagination: Pagination,
+    ) -> Result<Page<Brand>, RepositoryError> {
+        let model_counts_query = model::Entity::find()
+            .select_only()
+            .column(model::Column::BrandId)
+            .column_as(model::Column::Id.count(), "model_count")
+            .group_by(model::Column::BrandId)
+            .into_tuple::<(i64, i64)>()
+            .all(&self.database);
+        let total_query = brand_list_query(search).count(&self.database);
+        let brands_query = brand_page_query(search, pagination)
+            .find_also_related(brand_preset::Entity)
+            .all(&self.database);
+        let (model_counts, total, brands) =
+            tokio::try_join!(model_counts_query, total_query, brands_query)?;
+        let model_counts = model_counts.into_iter().collect::<HashMap<_, _>>();
+        let items = brands
+            .into_iter()
+            .map(|(brand, preset)| {
+                let model_count = model_counts.get(&brand.id).copied().unwrap_or(0);
+                let model_count = u64::try_from(model_count)
+                    .map_err(|error| RepositoryError::InvalidData(error.to_string()))?;
+                brand_from_models(brand, preset, model_count)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Page::new(items, pagination, total))
     }
 
     pub async fn is_active_identifier(&self, identifier: &str) -> Result<bool, RepositoryError> {
@@ -193,6 +225,15 @@ fn brand_list_query(search: &BrandSearch) -> sea_orm::Select<brand::Entity> {
     query
         .order_by_asc(brand::Column::SortOrder)
         .order_by_asc(brand::Column::Id)
+}
+
+fn brand_page_query(
+    search: &BrandSearch,
+    pagination: Pagination,
+) -> sea_orm::Select<brand::Entity> {
+    brand_list_query(search)
+        .limit(u64::from(pagination.page_size()))
+        .offset(u64::from(pagination.page_index()) * u64::from(pagination.page_size()))
 }
 
 fn brand_from_models(

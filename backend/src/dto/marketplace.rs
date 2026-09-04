@@ -3,8 +3,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain::{
     MarketplaceBrand, MarketplaceCatalog, MarketplaceMerchant, MarketplaceModel,
-    MarketplaceRouteState, ModelPricing, PRICE_NANO_SCALE, PriceSettings,
+    MarketplaceRouteState, PRICE_NANO_SCALE, PriceSettings,
 };
+
+use super::model_catalog::ModelPricingResponse;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -84,18 +86,8 @@ pub struct MarketplaceMerchantResponse {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketplacePricingComparisonResponse {
-    pub official: MarketplacePriceRowResponse,
-    pub merchant: MarketplacePriceRowResponse,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MarketplacePriceRowResponse {
-    pub request: Option<String>,
-    pub input: Option<String>,
-    pub output: Option<String>,
-    pub cache_read: Option<String>,
-    pub cache_write: Option<String>,
+    pub official: ModelPricingResponse,
+    pub merchant: ModelPricingResponse,
 }
 
 #[derive(Debug, Serialize)]
@@ -175,8 +167,8 @@ impl From<MarketplaceMerchant> for MarketplaceMerchantResponse {
             output_price: price_from_nano(merchant.output_price_nano_usd_per_million),
             request_price: price_from_nano(merchant.request_price_nano_usd),
             pricing: MarketplacePricingComparisonResponse {
-                official: MarketplacePriceRowResponse::from(&merchant.official_pricing_nano_usd),
-                merchant: MarketplacePriceRowResponse::from(&merchant.merchant_pricing_nano_usd),
+                official: ModelPricingResponse::from(merchant.official_pricing_nano_usd),
+                merchant: ModelPricingResponse::from(merchant.merchant_pricing_nano_usd),
             },
             price_multiplier: merchant
                 .price_multiplier_basis_points
@@ -186,26 +178,6 @@ impl From<MarketplaceMerchant> for MarketplaceMerchantResponse {
             health_updated_at: merchant.health_updated_at,
             is_in_route: merchant.is_in_route,
             is_pinned: merchant.is_pinned,
-        }
-    }
-}
-
-impl From<&ModelPricing> for MarketplacePriceRowResponse {
-    fn from(pricing: &ModelPricing) -> Self {
-        Self {
-            request: pricing.base.get("request").copied().map(decimal_from_nano),
-            input: pricing.base.get("input").copied().map(decimal_from_nano),
-            output: pricing.base.get("output").copied().map(decimal_from_nano),
-            cache_read: pricing
-                .base
-                .get("cache_read")
-                .copied()
-                .map(decimal_from_nano),
-            cache_write: pricing
-                .base
-                .get("cache_write")
-                .copied()
-                .map(decimal_from_nano),
         }
     }
 }

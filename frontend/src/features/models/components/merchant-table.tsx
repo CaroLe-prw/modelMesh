@@ -7,6 +7,7 @@ import {
   RefreshCw,
   Route,
 } from 'lucide-react';
+import type { TFunction } from 'i18next';
 import { Fragment, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BrandAvatar } from '@/components/common/brand-avatar';
@@ -23,6 +24,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Toggle } from '@/components/ui/toggle';
+import {
+  modelPricingGroups,
+  orderedRateNames,
+  priceGroupTitle,
+  type PriceGroupView,
+} from '@/features/account/components/admin/model-pricing';
 import { cn } from '@/lib/utils';
 import type { MarketplaceRouteState } from '../api/marketplace';
 import {
@@ -36,7 +43,7 @@ import {
   type CatalogModel,
   type MarketplaceDisplayCurrency,
   type MarketplaceMerchant,
-  type MarketplacePriceRow,
+  type MarketplacePricing,
   type MerchantBillingModeFilter,
   type MerchantSortMode,
   type MerchantTag,
@@ -485,8 +492,6 @@ function MerchantDetailFact({ label, value }: { label: string; value: string }) 
   );
 }
 
-const marketplacePriceFields = ['input', 'output', 'cacheRead', 'cacheWrite', 'request'] as const;
-
 function MerchantPricingDetails({
   currency,
   pricing,
@@ -495,57 +500,133 @@ function MerchantPricingDetails({
   pricing: MarketplaceMerchant['pricing'];
 }) {
   const { t } = useTranslation();
-  const visibleFields = marketplacePriceFields.filter(
-    (field) => pricing.official[field] !== null || pricing.merchant[field] !== null,
-  );
+  const groups = marketplacePricingGroupComparisons(pricing.official, pricing.merchant);
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-background">
       <div className="border-b border-border px-3 py-2 text-[10px] font-semibold text-muted-foreground">
         {t('pages.models.merchants.details.priceComparison')}
       </div>
-      {visibleFields.length === 0 ? (
+      {groups.length === 0 ? (
         <p className="px-3 py-6 text-center text-xs text-muted-foreground">—</p>
       ) : (
-        <div className="overflow-x-auto">
-          <div
-            className="grid items-center gap-x-3 gap-y-2 px-3 py-3 text-xs"
-            style={{
-              gridTemplateColumns: `minmax(64px,0.7fr) repeat(${visibleFields.length},minmax(88px,1fr))`,
-              minWidth: `${96 + visibleFields.length * 104}px`,
-            }}
-          >
-            <span />
-            {visibleFields.map((field) => (
-              <small className="text-center text-[9px] text-muted-foreground" key={field}>
-                {t(`pages.models.merchants.details.priceFields.${field}`)}
-              </small>
-            ))}
-            <strong className="text-[10px] text-muted-foreground">
-              {t('pages.models.merchants.details.officialPrice')}
-            </strong>
-            {visibleFields.map((field) => (
-              <MarketplaceDetailPrice
-                currency={currency}
-                key={field}
-                value={pricing.official[field]}
-              />
-            ))}
-            <strong className="text-[10px] text-muted-foreground">
-              {t('pages.models.merchants.details.merchantPrice')}
-            </strong>
-            {visibleFields.map((field) => (
-              <MarketplaceDetailPrice
-                currency={currency}
-                key={field}
-                value={pricing.merchant[field]}
-              />
-            ))}
-          </div>
+        <div className="grid gap-3 p-3 xl:grid-cols-2">
+          {groups.map(({ group, merchantRates, officialRates, rates }) => {
+            const perRequest = rates.includes('request');
+            return (
+              <section
+                className="overflow-hidden rounded-lg border border-border bg-muted/20"
+                key={group.id}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
+                  <strong className="text-xs">{marketplacePriceGroupTitle(group, t)}</strong>
+                  <Badge variant="secondary">
+                    {t(
+                      `pages.models.merchants.details.pricing.${perRequest ? 'perRequest' : 'perMillion'}`,
+                      { currency: currency.code },
+                    )}
+                  </Badge>
+                </div>
+                <div className="overflow-x-auto bg-background">
+                  <div
+                    className="grid items-center gap-x-3 gap-y-2 px-3 py-3 text-xs"
+                    style={{
+                      gridTemplateColumns: `minmax(64px,0.7fr) repeat(${rates.length},minmax(88px,1fr))`,
+                      minWidth: `${96 + rates.length * 104}px`,
+                    }}
+                  >
+                    <span />
+                    {rates.map((rate) => (
+                      <small className="text-center text-[9px] text-muted-foreground" key={rate}>
+                        {t(`pages.models.merchants.details.pricing.rates.${rate}`, {
+                          defaultValue: rate,
+                        })}
+                      </small>
+                    ))}
+                    <strong className="text-[10px] text-muted-foreground">
+                      {t('pages.models.merchants.details.officialPrice')}
+                    </strong>
+                    {rates.map((rate) => (
+                      <MarketplaceDetailPrice
+                        currency={currency}
+                        key={rate}
+                        value={officialRates[rate]}
+                      />
+                    ))}
+                    <strong className="text-[10px] text-muted-foreground">
+                      {t('pages.models.merchants.details.merchantPrice')}
+                    </strong>
+                    {rates.map((rate) => (
+                      <MarketplaceDetailPrice
+                        currency={currency}
+                        key={rate}
+                        value={merchantRates[rate]}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </section>
+            );
+          })}
         </div>
       )}
     </div>
   );
+}
+
+function marketplacePricingGroupComparisons(
+  officialPricing: MarketplacePricing,
+  merchantPricing: MarketplacePricing,
+) {
+  const officialGroups = new Map(
+    modelPricingGroups(officialPricing).map((group) => [group.id, group] as const),
+  );
+  const merchantGroups = new Map(
+    modelPricingGroups(merchantPricing).map((group) => [group.id, group] as const),
+  );
+  const groupIds = new Set([...officialGroups.keys(), ...merchantGroups.keys()]);
+
+  return [...groupIds].flatMap((id) => {
+    const officialGroup = officialGroups.get(id);
+    const merchantGroup = merchantGroups.get(id);
+    const group = officialGroup ?? merchantGroup;
+    if (!group) return [];
+    const officialRates = officialGroup?.rates ?? {};
+    const merchantRates = merchantGroup?.rates ?? {};
+    const rates = orderedRateNames({ ...officialRates, ...merchantRates }).filter(
+      (rate) => typeof officialRates[rate] === 'number' || typeof merchantRates[rate] === 'number',
+    );
+    return rates.length === 0 ? [] : [{ group, merchantRates, officialRates, rates }];
+  });
+}
+
+function marketplacePriceGroupTitle(groupView: PriceGroupView, t: TFunction): string {
+  const translationPath = 'pages.models.merchants.details';
+  const group = groupView.group;
+  if (group.type === 'experimentalMode' && group.mode === 'fast') {
+    return groupView.maximumInclusive === undefined
+      ? t(`${translationPath}.pricing.groups.fastMode`)
+      : t(`${translationPath}.pricing.groups.fastModeUntil`, {
+          maximum: formatTokenThreshold(groupView.maximumInclusive),
+        });
+  }
+  if (group.type === 'experimentalModeTier' && group.mode === 'fast') {
+    return groupView.maximumInclusive === undefined
+      ? t(`${translationPath}.pricing.groups.fastModeTier`, {
+          minimum: formatTokenThreshold(group.size),
+        })
+      : t(`${translationPath}.pricing.groups.fastModeRange`, {
+          maximum: formatTokenThreshold(groupView.maximumInclusive),
+          minimum: formatTokenThreshold(group.size),
+        });
+  }
+  return priceGroupTitle(groupView, t, translationPath);
+}
+
+function formatTokenThreshold(value: number): string {
+  if (value >= 1_000_000) return `${value / 1_000_000}M`;
+  if (value >= 1_000) return `${value / 1_000}K`;
+  return String(value);
 }
 
 function MarketplaceDetailPrice({
@@ -553,12 +634,13 @@ function MarketplaceDetailPrice({
   value,
 }: {
   currency: MarketplaceDisplayCurrency;
-  value: MarketplacePriceRow[keyof MarketplacePriceRow];
+  value?: number;
 }) {
-  const price = value === null ? null : Number(value);
   return (
     <strong className="text-center font-mono text-[11px]">
-      {price !== null && Number.isFinite(price) ? formatMarketplacePrice(price, currency) : '—'}
+      {value !== undefined && Number.isFinite(value)
+        ? formatMarketplacePrice(value, currency)
+        : '—'}
     </strong>
   );
 }

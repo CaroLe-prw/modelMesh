@@ -1,7 +1,8 @@
 use jiff::Timestamp;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
-    QueryOrder, QuerySelect, Set, TransactionTrait, sea_query::Expr,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, FromQueryResult,
+    PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Set, Statement, TransactionTrait,
+    sea_query::{Expr, ExprTrait},
 };
 use time::OffsetDateTime;
 use uuid::Uuid;
@@ -9,10 +10,12 @@ use uuid::Uuid;
 use crate::{
     domain::{
         MerchantProfile, MerchantProfileBundle, MerchantSettlementAccount,
-        MerchantSettlementCurrency, MerchantSettlementMethod, MerchantSettlementNetwork, UserId,
+        MerchantSettlementCurrency, MerchantSettlementMethod, MerchantSettlementNetwork,
+        MerchantWithdrawal, MerchantWithdrawalBundle, MerchantWithdrawalStatus, UserId,
     },
     entity::{
-        merchant_application, merchant_profile, merchant_settlement_account, system_setting, user,
+        merchant_application, merchant_profile, merchant_settlement_account, merchant_withdrawal,
+        system_setting, user,
     },
 };
 
@@ -50,6 +53,21 @@ pub enum MerchantSettlementAccountWriteError {
     DisabledOption,
     LimitReached,
     Repository,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MerchantWithdrawalWriteError {
+    BelowMinimum,
+    FeeConsumesAmount,
+    InsufficientBalance,
+    SettlementAccountNotFound,
+    Repository,
+}
+
+#[derive(Debug, FromQueryResult)]
+struct MerchantWithdrawalSummaryRow {
+    processing_microusd: i64,
+    paid_microusd: i64,
 }
 
 impl MerchantProfileRepository {
@@ -262,6 +280,145 @@ impl MerchantProfileRepository {
         Ok(true)
     }
 
+    pub async fn get_withdrawal_bundle(
+        &self,
+        user_id: UserId,
+    ) -> Result<MerchantWithdrawalBundle, RepositoryError> {
+        let user = user::Entity::find_by_id(user_id)
+            .one(&self.database)
+            .await?
+            .ok_or_else(|| {
+                RepositoryError::InvalidData("merchant user was not found".to_owned())
+            })?;
+        let settings = system_setting::Entity::find_by_id(1_i16)
+            .one(&self.database)
+            .await?
+            .ok_or_else(|| {
+                RepositoryError::InvalidData("system settings singleton was not found".to_owned())
+            })?;
+        let summary = MerchantWithdrawalSummaryRow::find_by_statement(
+            Statement::from_sql_and_values(
+                sea_orm::DatabaseBackend::Postgres,
+                r#"
+SELECT
+    COALESCE(SUM(amount_microusd) FILTER (WHERE status = 'processing'), 0)::BIGINT
+        AS processing_microusd,
+    COALESCE(SUM(amount_microusd) FILTER (WHERE status = 'paid'), 0)::BIGINT
+        AS paid_microusd
+FROM merchant_withdrawals
+WHERE merchant_user_id = $1
+"#,
+                [user_id.into()],
+            ),
+        )
+        .one(&self.database)
+        .await?
+        .ok_or_else(|| {
+            RepositoryError::InvalidData("merchant withdrawal summary was not returned".to_owned())
+        })?;
+        let withdrawals = merchant_withdrawal::Entity::find()
+            .filter(merchant_withdrawal::Column::MerchantUserId.eq(user_id))
+            .order_by_desc(merchant_withdrawal::Column::CreatedAt)
+            .order_by_desc(merchant_withdrawal::Column::Id)
+            .limit(50)
+            .all(&self.database)
+            .await?
+            .into_iter()
+            .map(merchant_withdrawal_from_model)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(MerchantWithdrawalBundle {
+            available_balance_microusd: user.balance_microusd,
+            processing_microusd: summary.processing_microusd,
+            paid_microusd: summary.paid_microusd,
+            minimum_withdrawal_microusd: settings.withdrawal_minimum_microusd,
+            withdrawal_fee_bps: settings.withdrawal_fee_bps,
+            settlement_accounts: self.list_settlement_accounts(user_id).await?,
+            withdrawals,
+        })
+    }
+
+    pub async fn create_withdrawal(
+        &self,
+        user_id: UserId,
+        settlement_account_id: &str,
+        amount_microusd: i64,
+    ) -> Result<(), MerchantWithdrawalWriteError> {
+        let settlement_account_id = Uuid::parse_str(settlement_account_id)
+            .map_err(|_| MerchantWithdrawalWriteError::SettlementAccountNotFound)?;
+        let transaction = self
+            .database
+            .begin()
+            .await
+            .map_err(|_| MerchantWithdrawalWriteError::Repository)?;
+        let settings = system_setting::Entity::find_by_id(1_i16)
+            .lock_shared()
+            .one(&transaction)
+            .await
+            .map_err(|_| MerchantWithdrawalWriteError::Repository)?
+            .ok_or(MerchantWithdrawalWriteError::Repository)?;
+        if amount_microusd < settings.withdrawal_minimum_microusd {
+            return Err(MerchantWithdrawalWriteError::BelowMinimum);
+        }
+        let account = merchant_settlement_account::Entity::find_by_id(settlement_account_id)
+            .filter(merchant_settlement_account::Column::MerchantUserId.eq(user_id))
+            .lock_shared()
+            .one(&transaction)
+            .await
+            .map_err(|_| MerchantWithdrawalWriteError::Repository)?
+            .ok_or(MerchantWithdrawalWriteError::SettlementAccountNotFound)?;
+        let fee_microusd = calculate_withdrawal_fee(amount_microusd, settings.withdrawal_fee_bps)
+            .ok_or(MerchantWithdrawalWriteError::FeeConsumesAmount)?;
+        let net_amount_microusd = amount_microusd
+            .checked_sub(fee_microusd)
+            .filter(|value| *value > 0)
+            .ok_or(MerchantWithdrawalWriteError::FeeConsumesAmount)?;
+        let updated_user = user::Entity::update_many()
+            .col_expr(
+                user::Column::BalanceMicrousd,
+                Expr::col(user::Column::BalanceMicrousd).sub(amount_microusd),
+            )
+            .col_expr(user::Column::UpdatedAt, Expr::current_timestamp())
+            .filter(user::Column::Id.eq(user_id))
+            .filter(user::Column::BalanceMicrousd.gte(amount_microusd))
+            .exec_with_returning(&transaction)
+            .await
+            .map_err(|_| MerchantWithdrawalWriteError::Repository)?
+            .into_iter()
+            .next()
+            .ok_or(MerchantWithdrawalWriteError::InsufficientBalance)?;
+
+        merchant_withdrawal::ActiveModel {
+            id: Set(Uuid::new_v4()),
+            merchant_user_id: Set(user_id),
+            settlement_account_id: Set(Some(account.id)),
+            entity_name: Set(account.entity_name),
+            method: Set(account.method),
+            currency: Set(account.currency),
+            network: Set(account.network),
+            account_ciphertext: Set(account.account_ciphertext),
+            account_encryption_context: Set(format!("merchant-settlement:{}", account.id)),
+            account_masked: Set(account.account_masked),
+            amount_microusd: Set(amount_microusd),
+            fee_microusd: Set(fee_microusd),
+            net_amount_microusd: Set(net_amount_microusd),
+            balance_after_microusd: Set(updated_user.balance_microusd),
+            status: Set(MerchantWithdrawalStatus::Processing.as_str().to_owned()),
+            review_note: Set(String::new()),
+            reviewed_by: Set(None),
+            reviewed_at: Set(None),
+            ..Default::default()
+        }
+        .insert(&transaction)
+        .await
+        .map_err(|_| MerchantWithdrawalWriteError::Repository)?;
+        transaction
+            .commit()
+            .await
+            .map_err(|_| MerchantWithdrawalWriteError::Repository)?;
+        Ok(())
+    }
+
     async fn ensure_profile(&self, user_id: UserId) -> Result<MerchantProfile, RepositoryError> {
         if let Some(profile) = merchant_profile::Entity::find_by_id(user_id)
             .one(&self.database)
@@ -377,6 +534,52 @@ fn merchant_settlement_account_from_model(
         is_default: model.is_default,
         created_at: domain_timestamp(model.created_at)?,
     })
+}
+
+fn merchant_withdrawal_from_model(
+    model: merchant_withdrawal::Model,
+) -> Result<MerchantWithdrawal, RepositoryError> {
+    let network = model
+        .network
+        .as_deref()
+        .map(|value| {
+            MerchantSettlementNetwork::from_database(value).ok_or_else(|| {
+                RepositoryError::InvalidData(format!("unknown settlement network `{value}`"))
+            })
+        })
+        .transpose()?;
+    Ok(MerchantWithdrawal {
+        id: format!("wd_{}", model.id.simple()),
+        settlement_account_id: model
+            .settlement_account_id
+            .map(|id| id.hyphenated().to_string()),
+        entity_name: model.entity_name,
+        method: MerchantSettlementMethod::from_database(&model.method).ok_or_else(|| {
+            RepositoryError::InvalidData(format!("unknown settlement method `{}`", model.method))
+        })?,
+        currency: MerchantSettlementCurrency::from_database(&model.currency).ok_or_else(|| {
+            RepositoryError::InvalidData(format!(
+                "unknown settlement currency `{}`",
+                model.currency
+            ))
+        })?,
+        network,
+        account_masked: model.account_masked,
+        amount_microusd: model.amount_microusd,
+        fee_microusd: model.fee_microusd,
+        net_amount_microusd: model.net_amount_microusd,
+        status: MerchantWithdrawalStatus::from_database(&model.status).ok_or_else(|| {
+            RepositoryError::InvalidData(format!("unknown withdrawal status `{}`", model.status))
+        })?,
+        review_note: model.review_note,
+        created_at: domain_timestamp(model.created_at)?,
+        updated_at: domain_timestamp(model.updated_at)?,
+    })
+}
+
+fn calculate_withdrawal_fee(amount_microusd: i64, fee_bps: i32) -> Option<i64> {
+    let rounded = (i128::from(amount_microusd) * i128::from(fee_bps) + 5_000) / 10_000;
+    i64::try_from(rounded).ok()
 }
 
 fn domain_timestamp(value: OffsetDateTime) -> Result<Timestamp, RepositoryError> {

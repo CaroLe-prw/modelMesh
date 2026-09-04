@@ -2,7 +2,21 @@ use sea_orm::{DatabaseBackend, QueryTrait};
 
 use crate::domain::ManagedMerchantStatus;
 
-use super::{MerchantSearch, merchant_list_query};
+use super::{MerchantSearch, merchant_detail_query, merchant_list_query};
+
+#[test]
+fn merchant_detail_query_uses_the_canonical_user_id() {
+    let query = merchant_detail_query(47)
+        .build(DatabaseBackend::Postgres)
+        .to_string();
+
+    assert!(query.contains(r#""users"."id" = 47"#), "{query}");
+    assert!(query.contains(r#""users"."role" = 'merchant'"#), "{query}");
+    assert!(
+        query.contains(r#""merchant_applications"."status" = 'pending'"#),
+        "{query}"
+    );
+}
 
 #[test]
 fn merchant_list_combines_accounts_and_reviewed_applications() {
@@ -23,6 +37,13 @@ fn merchant_list_combines_accounts_and_reviewed_applications() {
     assert!(query.contains("ELSE 'pending' END"));
     assert!(query.contains(r#""merchant_applications"."status" = 'rejected'"#));
     assert!(query.contains(r#"COUNT(*) OVER() AS "total_count""#));
+    assert!(query.contains(
+        r#"(SELECT COUNT(*) FROM merchant_channels WHERE merchant_channels.merchant_user_id = users.id) AS "channel_count""#,
+    ));
+    assert!(query.contains(
+        r#"(SELECT COUNT(*) FROM merchant_model_listings WHERE merchant_model_listings.merchant_user_id = users.id) AS "model_count""#,
+    ));
+    assert!(!query.contains("NULL::BIGINT"));
     assert!(query.contains(r#""users"."concurrency_limit""#));
     assert!(query.contains(r#""users"."rpm_limit""#));
     assert!(query.contains(r#"ORDER BY "users"."created_at" DESC"#));

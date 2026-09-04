@@ -1,5 +1,7 @@
 use jiff::Timestamp;
 
+use super::UserId;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MerchantRequestSortField {
     SubmittedAt,
@@ -13,6 +15,43 @@ pub enum MerchantRequestOrigin {
     ModelReview,
     ChannelLifecycle,
     ModelLifecycle,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MerchantOperationSource {
+    Merchant,
+    Admin,
+    System,
+}
+
+impl MerchantOperationSource {
+    pub const fn as_api_str(self) -> &'static str {
+        match self {
+            Self::Merchant => "merchant",
+            Self::Admin => "admin",
+            Self::System => "system",
+        }
+    }
+
+    pub const fn as_database_str(self) -> &'static str {
+        self.as_api_str()
+    }
+
+    pub fn from_database(value: &str) -> Option<Self> {
+        match value {
+            "merchant" => Some(Self::Merchant),
+            "admin" => Some(Self::Admin),
+            "system" => Some(Self::System),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MerchantOperationAudit {
+    pub operator_user_id: UserId,
+    pub source: MerchantOperationSource,
+    pub reason: String,
 }
 
 impl MerchantRequestOrigin {
@@ -163,6 +202,7 @@ impl MerchantRequestStatus {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MerchantRequest {
     pub id: String,
+    pub resource_id: String,
     pub origin: MerchantRequestOrigin,
     pub action: Option<MerchantRequestAction>,
     pub request_type: MerchantRequestType,
@@ -170,6 +210,9 @@ pub struct MerchantRequest {
     pub description: String,
     pub status: MerchantRequestStatus,
     pub review_note: String,
+    pub operator_user_id: Option<UserId>,
+    pub operator_source: MerchantOperationSource,
+    pub operation_reason: String,
     pub submitted_at: Timestamp,
     pub updated_at: Timestamp,
 }

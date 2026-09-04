@@ -4,7 +4,8 @@ use crate::domain::{
 
 use super::{
     CreateMerchantSettlementAccount, MerchantProfileServiceError, UpdateMerchantProfile,
-    mask_settlement_account, validate_profile, validate_settlement_account,
+    mask_settlement_account, parse_withdrawal_amount, validate_profile,
+    validate_settlement_account,
 };
 
 #[test]
@@ -116,4 +117,16 @@ fn settlement_accounts_are_masked_without_exposing_the_full_value() {
         mask_settlement_account(MerchantSettlementMethod::Alipay, "13800000000"),
         "138••••0000"
     );
+}
+
+#[test]
+fn withdrawal_amounts_are_parsed_as_exact_microusd() {
+    assert_eq!(parse_withdrawal_amount(" 1280.123456 "), Ok(1_280_123_456));
+    assert_eq!(parse_withdrawal_amount("10"), Ok(10_000_000));
+    for invalid in ["", "0", "-1", "+1", "1e3", "1.1234567", ".50"] {
+        assert_eq!(
+            parse_withdrawal_amount(invalid),
+            Err(MerchantProfileServiceError::InvalidWithdrawal)
+        );
+    }
 }

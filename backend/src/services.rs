@@ -15,6 +15,7 @@ mod merchant_management;
 mod merchant_model;
 mod merchant_profile;
 mod merchant_request;
+mod merchant_resource_operation;
 mod model;
 mod model_catalog;
 mod price_settings;
@@ -45,11 +46,12 @@ pub use merchant_model::{
     MerchantModelServiceError, MerchantPriceConversionMode, UpdateMerchantModel,
 };
 pub use merchant_profile::{
-    CreateMerchantSettlementAccount, MerchantProfileService, MerchantProfileServiceError,
-    UpdateMerchantProfile,
+    CreateMerchantSettlementAccount, CreateMerchantWithdrawal, MerchantProfileService,
+    MerchantProfileServiceError, UpdateMerchantProfile,
 };
 pub use merchant_request::{
-    CreateMerchantRequest, MerchantRequestService, MerchantRequestServiceError,
+    AdminMerchantModelLogQuery, CreateMerchantRequest, MerchantRequestService,
+    MerchantRequestServiceError,
 };
 pub use model::{
     CreateCatalogModels, CreateModel, ModelPriceGroupInput, ModelPriceOverrideInput, ModelService,

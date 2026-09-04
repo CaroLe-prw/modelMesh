@@ -52,6 +52,8 @@ pub struct UpdateMerchantModelRequest {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateMerchantModelStatusRequest {
     pub status: MerchantModelRuntimeStatusValue,
+    #[serde(default)]
+    pub reason: String,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize)]
@@ -99,6 +101,7 @@ pub struct MerchantModelResponse {
     pub id: String,
     pub channel_id: String,
     pub channel_name: String,
+    pub channel_status: &'static str,
     pub provider_id: String,
     pub model_id: i64,
     pub model_identifier: String,
@@ -135,6 +138,7 @@ impl From<MerchantModel> for MerchantModelResponse {
             id: model.id,
             channel_id: model.channel_id,
             channel_name: model.channel_name,
+            channel_status: model.channel_status.as_str(),
             provider_id: model.provider_id,
             model_id: model.model_id,
             model_identifier: model.model_identifier,

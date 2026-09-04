@@ -49,6 +49,24 @@ pub async fn list(
     }))
 }
 
+pub async fn list_latest_channel_operations(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<MerchantRequestResponse>>, AppError> {
+    let user = authenticate_user(&state, &headers).await?;
+    let operations = state
+        .merchant_request_service
+        .list_latest_channel_operations(user.id, user.role)
+        .await?;
+
+    Ok(Json(
+        operations
+            .into_iter()
+            .map(MerchantRequestResponse::from)
+            .collect(),
+    ))
+}
+
 pub async fn create(
     State(state): State<AppState>,
     headers: HeaderMap,

@@ -3,20 +3,23 @@ use std::collections::HashMap;
 use jiff::Timestamp;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, QueryOrder,
-    Set, sea_query::Expr,
+    Set, TransactionTrait, sea_query::Expr,
 };
 use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::{
     domain::{
-        MerchantBillingMode, MerchantModel, MerchantModelPendingPrice, MerchantModelReviewStatus,
-        MerchantModelStatus, MerchantPriceCurrency, ModelPricing, UserId,
+        MerchantBillingMode, MerchantChannelStatus, MerchantModel, MerchantModelPendingPrice,
+        MerchantModelReviewStatus, MerchantModelStatus, MerchantOperationAudit,
+        MerchantPriceCurrency, ModelPricing, UserId,
     },
     entity::{merchant_channel, merchant_model_listing, model},
 };
 
-use super::{RepositoryConflict, RepositoryError, database_constraint};
+use super::{
+    RepositoryConflict, RepositoryError, database_constraint, set_merchant_operation_context,
+};
 
 #[derive(Clone)]
 pub struct MerchantModelRepository {
@@ -211,23 +214,17 @@ impl MerchantModelRepository {
         user_id: UserId,
         listing_id: &str,
         status: MerchantModelStatus,
+        audit: &MerchantOperationAudit,
     ) -> Result<Option<MerchantModel>, RepositoryError> {
         let listing_id = Uuid::parse_str(listing_id).map_err(invalid_data)?;
-        let updated = merchant_model_listing::Entity::update_many()
-            .set(merchant_model_listing::ActiveModel {
-                status: Set(status.as_str().to_owned()),
-                ..Default::default()
-            })
-            .col_expr(
-                merchant_model_listing::Column::UpdatedAt,
-                Expr::current_timestamp(),
-            )
-            .filter(merchant_model_listing::Column::MerchantUserId.eq(user_id))
-            .filter(merchant_model_listing::Column::Id.eq(listing_id))
-            .exec_with_returning(&self.database)
+        let transaction = self.database.begin().await?;
+        set_merchant_operation_context(&transaction, audit).await?;
+        let updated = merchant_model_status_update(user_id, listing_id, status)
+            .exec_with_returning(&transaction)
             .await?
             .into_iter()
             .next();
+        transaction.commit().await?;
 
         let Some(updated) = updated else {
             return Ok(None);
@@ -340,6 +337,24 @@ fn merchant_model_list_query(user_id: UserId) -> sea_orm::Select<merchant_model_
         .order_by_desc(merchant_model_listing::Column::Id)
 }
 
+fn merchant_model_status_update(
+    user_id: UserId,
+    listing_id: Uuid,
+    status: MerchantModelStatus,
+) -> sea_orm::UpdateMany<merchant_model_listing::Entity> {
+    merchant_model_listing::Entity::update_many()
+        .set(merchant_model_listing::ActiveModel {
+            status: Set(status.as_str().to_owned()),
+            ..Default::default()
+        })
+        .col_expr(
+            merchant_model_listing::Column::UpdatedAt,
+            Expr::current_timestamp(),
+        )
+        .filter(merchant_model_listing::Column::MerchantUserId.eq(user_id))
+        .filter(merchant_model_listing::Column::Id.eq(listing_id))
+}
+
 fn merchant_model_from_models(
     listing: merchant_model_listing::Model,
     channels: &HashMap<Uuid, merchant_channel::Model>,
@@ -358,6 +373,7 @@ fn merchant_model_from_models(
         ))
     })?;
     let status = merchant_model_status(&listing.status)?;
+    let channel_status = merchant_channel_status(&channel.status)?;
     let billing_mode = MerchantBillingMode::parse(&listing.billing_mode).ok_or_else(|| {
         RepositoryError::InvalidData(format!(
             "invalid merchant model billing mode: {}",
@@ -379,6 +395,7 @@ fn merchant_model_from_models(
         id: listing.id.hyphenated().to_string(),
         channel_id: listing.channel_id.hyphenated().to_string(),
         channel_name: channel.name.clone(),
+        channel_status,
         provider_id: channel.provider_identifier.clone(),
         model_id: model.id,
         model_identifier: model.identifier.clone(),
@@ -405,6 +422,18 @@ fn merchant_model_status(value: &str) -> Result<MerchantModelStatus, RepositoryE
         "published" => Ok(MerchantModelStatus::Published),
         value => Err(RepositoryError::InvalidData(format!(
             "invalid merchant model status: {value}"
+        ))),
+    }
+}
+
+fn merchant_channel_status(value: &str) -> Result<MerchantChannelStatus, RepositoryError> {
+    match value {
+        "active" => Ok(MerchantChannelStatus::Active),
+        "offline" => Ok(MerchantChannelStatus::Offline),
+        "pending" => Ok(MerchantChannelStatus::Pending),
+        "rejected" => Ok(MerchantChannelStatus::Rejected),
+        value => Err(RepositoryError::InvalidData(format!(
+            "invalid merchant model channel status: {value}"
         ))),
     }
 }

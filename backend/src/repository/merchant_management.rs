@@ -107,6 +107,18 @@ impl MerchantManagementRepository {
         Ok(Page::new(items, pagination, total))
     }
 
+    pub async fn find_by_id(
+        &self,
+        user_id: UserId,
+    ) -> Result<Option<ManagedMerchant>, RepositoryError> {
+        merchant_detail_query(user_id)
+            .into_model::<ManagedMerchantRow>()
+            .one(&self.database)
+            .await?
+            .map(managed_merchant_from_row)
+            .transpose()
+    }
+
     pub async fn update(
         &self,
         user_id: UserId,
@@ -468,8 +480,18 @@ fn merchant_list_query(search: &MerchantSearch) -> Select<user::Entity> {
             ),
             "status",
         )
-        .column_as(Expr::cust("NULL::BIGINT"), "channel_count")
-        .column_as(Expr::cust("NULL::BIGINT"), "model_count")
+        .column_as(
+            Expr::cust(
+                "(SELECT COUNT(*) FROM merchant_channels WHERE merchant_channels.merchant_user_id = users.id)",
+            ),
+            "channel_count",
+        )
+        .column_as(
+            Expr::cust(
+                "(SELECT COUNT(*) FROM merchant_model_listings WHERE merchant_model_listings.merchant_user_id = users.id)",
+            ),
+            "model_count",
+        )
         .column(user::Column::BalanceMicrousd)
         .column(user::Column::ConcurrencyLimit)
         .column(user::Column::RpmLimit)
@@ -523,6 +545,14 @@ fn merchant_list_query(search: &MerchantSearch) -> Select<user::Entity> {
         .column_as(Expr::cust("COUNT(*) OVER()"), "total_count")
         .order_by_desc(user::Column::CreatedAt)
         .order_by_desc(user::Column::Id)
+}
+
+fn merchant_detail_query(user_id: UserId) -> Select<user::Entity> {
+    merchant_list_query(&MerchantSearch {
+        exact_user_id: Some(user_id),
+        pattern: None,
+        status: None,
+    })
 }
 
 fn managed_merchant_from_row(row: ManagedMerchantRow) -> Result<ManagedMerchant, RepositoryError> {

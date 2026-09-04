@@ -58,16 +58,25 @@ export interface MarketplaceMerchant {
 }
 
 export interface MarketplacePricingComparison {
-  official: MarketplacePriceRow;
-  merchant: MarketplacePriceRow;
+  official: MarketplacePricing;
+  merchant: MarketplacePricing;
 }
 
-export interface MarketplacePriceRow {
-  cacheRead: string | null;
-  cacheWrite: string | null;
-  input: string | null;
-  output: string | null;
-  request: string | null;
+export type MarketplacePriceRates = Record<string, number>;
+
+export interface MarketplacePriceTier {
+  rates: MarketplacePriceRates;
+  size: number;
+  tierType: string;
+}
+
+export interface MarketplacePricing {
+  base?: MarketplacePriceRates;
+  contextOver200k?: MarketplacePriceRates;
+  experimentalModes?: Record<string, MarketplacePriceRates>;
+  experimentalModeTiers?: Record<string, MarketplacePriceTier[]>;
+  serviceTiers?: Record<string, MarketplacePriceRates>;
+  tiers?: MarketplacePriceTier[];
 }
 
 export function formatUsd(value: number) {

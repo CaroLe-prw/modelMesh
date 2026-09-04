@@ -14,14 +14,14 @@ use super::{
 };
 
 #[test]
-fn merchant_response_uses_camel_case_and_nullable_statistics() {
+fn merchant_response_exposes_camel_case_channel_and_model_statistics() {
     let response = ManagedMerchantResponse::from(ManagedMerchant {
         id: 47,
         name: "Northstar AI".to_owned(),
         email: "ops@northstar.example".to_owned(),
         status: ManagedMerchantStatus::Pending,
-        channel_count: None,
-        model_count: None,
+        channel_count: Some(3),
+        model_count: Some(9),
         balance_microusd: 4_826_720_000,
         concurrency_limit: 12,
         rpm_limit: 600,
@@ -46,8 +46,8 @@ fn merchant_response_uses_camel_case_and_nullable_statistics() {
     assert_eq!(value["id"], json!(47));
     assert_eq!(value["name"], json!("Northstar AI"));
     assert_eq!(value["status"], json!("pending"));
-    assert_eq!(value["channelCount"], json!(null));
-    assert_eq!(value["modelCount"], json!(null));
+    assert_eq!(value["channelCount"], json!(3));
+    assert_eq!(value["modelCount"], json!(9));
     assert_eq!(value["balanceMicrousd"], json!(4_826_720_000_i64));
     assert_eq!(value["concurrencyLimit"], json!(12));
     assert_eq!(value["rpmLimit"], json!(600));

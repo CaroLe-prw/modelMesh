@@ -8,6 +8,7 @@ import {
   type ManagementListState,
 } from '@/components/common/management-list';
 import { TruncatedText } from '@/components/common/truncated-text';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -190,6 +191,37 @@ export function MerchantRequestsPanel() {
       label: t('pages.account.sections.merchant.requests.columns.status'),
       mobile: false,
       render: (request) => <MerchantStatusBadge namespace="requests" status={request.status} />,
+    },
+    {
+      className: 'min-w-36',
+      key: 'operator',
+      label: t('pages.account.sections.merchant.requests.columns.operator'),
+      render: (request) => (
+        <div className="grid gap-1">
+          <Badge variant="secondary">
+            {t(
+              `pages.account.sections.merchant.requests.operatorSources.${request.operatorSource}`,
+            )}
+          </Badge>
+          {request.operatorUserId ? (
+            <span className="font-mono text-xs text-muted-foreground">
+              {t('pages.account.sections.merchant.requests.operatorId', {
+                id: request.operatorUserId,
+              })}
+            </span>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      className: 'min-w-56 text-xs text-muted-foreground',
+      key: 'details',
+      label: t('pages.account.sections.merchant.requests.columns.details'),
+      render: (request) => (
+        <TruncatedText
+          text={request.operationReason || request.reviewNote || request.description || '—'}
+        />
+      ),
     },
     {
       className: 'font-mono text-xs text-muted-foreground',

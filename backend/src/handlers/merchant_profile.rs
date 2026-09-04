@@ -6,12 +6,12 @@ use axum::{
 
 use crate::{
     dto::{
-        CreateMerchantSettlementAccountRequest, MerchantProfileResponse,
-        UpdateMerchantProfileRequest,
+        CreateMerchantSettlementAccountRequest, CreateMerchantWithdrawalRequest,
+        MerchantProfileResponse, MerchantWithdrawalBundleResponse, UpdateMerchantProfileRequest,
     },
     error::AppError,
     handlers::auth::authenticate_user,
-    services::{CreateMerchantSettlementAccount, UpdateMerchantProfile},
+    services::{CreateMerchantSettlementAccount, CreateMerchantWithdrawal, UpdateMerchantProfile},
     state::AppState,
 };
 
@@ -103,4 +103,40 @@ pub async fn delete_settlement_account(
         .delete_settlement_account(user.id, user.role, &account_id)
         .await?;
     Ok(Json(MerchantProfileResponse::from(profile)))
+}
+
+pub async fn withdrawals(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<MerchantWithdrawalBundleResponse>, AppError> {
+    let user = authenticate_user(&state, &headers).await?;
+    let withdrawals = state
+        .merchant_profile_service
+        .withdrawals(user.id, user.role)
+        .await?;
+    Ok(Json(MerchantWithdrawalBundleResponse::from(withdrawals)))
+}
+
+pub async fn create_withdrawal(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    payload: Result<Json<CreateMerchantWithdrawalRequest>, JsonRejection>,
+) -> Result<(StatusCode, Json<MerchantWithdrawalBundleResponse>), AppError> {
+    let user = authenticate_user(&state, &headers).await?;
+    let Json(request) = payload.map_err(|_| AppError::InvalidRequest)?;
+    let withdrawals = state
+        .merchant_profile_service
+        .create_withdrawal(
+            user.id,
+            user.role,
+            CreateMerchantWithdrawal {
+                amount_usd: request.amount_usd,
+                settlement_account_id: request.settlement_account_id,
+            },
+        )
+        .await?;
+    Ok((
+        StatusCode::CREATED,
+        Json(MerchantWithdrawalBundleResponse::from(withdrawals)),
+    ))
 }

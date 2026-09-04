@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { AdminMerchant } from '@/features/account/api/admin-merchants';
+import { adminMerchantResourceUrl } from '@/features/account/components/admin/admin-merchant-resource-navigation';
 import { formatMicrousd } from '@/features/account/components/admin/admin-demo-data';
 import { AdminStatusBadge } from '@/features/account/components/admin/admin-status-badge';
 import { MerchantAvatar } from '@/features/account/components/merchant-application/merchant-avatar';
@@ -126,7 +127,7 @@ export function MerchantDetailsDialog({
                 <Button asChild className="justify-start" variant="outline">
                   <Link
                     onClick={() => onOpenChange(false)}
-                    to={`/merchant/channels?merchantId=${merchant.id}`}
+                    to={adminMerchantResourceUrl(merchant.id, 'channels')}
                   >
                     <RadioTower aria-hidden="true" />
                     {t(`${translationPath}.channels`)}
@@ -135,7 +136,7 @@ export function MerchantDetailsDialog({
                 <Button asChild className="justify-start" variant="outline">
                   <Link
                     onClick={() => onOpenChange(false)}
-                    to={`/merchant/models?merchantId=${merchant.id}`}
+                    to={adminMerchantResourceUrl(merchant.id, 'models')}
                   >
                     <PackagePlus aria-hidden="true" />
                     {t(`${translationPath}.models`)}
@@ -144,7 +145,7 @@ export function MerchantDetailsDialog({
                 <Button asChild className="justify-start" variant="outline">
                   <Link
                     onClick={() => onOpenChange(false)}
-                    to={`/admin/usage-logs?merchant=${encodeURIComponent(merchant.name)}`}
+                    to={adminMerchantResourceUrl(merchant.id, 'modelLogs')}
                   >
                     <ScrollText aria-hidden="true" />
                     {t(`${translationPath}.usageLogs`)}

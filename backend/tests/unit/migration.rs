@@ -77,6 +77,8 @@ fn migrations_are_registered_in_schema_order() {
             "m0063_add_model_billing_mode",
             "m0064_add_merchant_model_billing_mode",
             "m0065_replace_image_pricing_with_fixed_request",
+            "m0066_add_merchant_operation_audit",
+            "m0067_create_merchant_withdrawals",
         ]
     );
 }

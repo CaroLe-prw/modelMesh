@@ -11,6 +11,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { DataPagination } from '@/components/common/data-pagination';
 import { Badge } from '@/components/ui/badge';
 import { useManagementDataColumns as useAdminDataColumns } from '@/components/common/use-management-data-columns';
 import {
@@ -60,6 +61,12 @@ import { useBrandPresets } from '@/features/account/hooks/use-brand-presets';
 import { useAuth } from '@/features/auth/context/auth-context';
 import { API_ERROR_CODE } from '@/lib/api-error-codes';
 import { ApiError } from '@/lib/api-client';
+import {
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_SIZE,
+  emptyPagination,
+  type PaginationMetadata,
+} from '@/lib/pagination';
 
 type BrandStatusFilter = 'all' | BrandStatus;
 
@@ -93,6 +100,9 @@ export function AdminBrandsPanel() {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [status, setStatus] = useState<BrandStatusFilter>('all');
+  const [page, setPage] = useState(DEFAULT_PAGE);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [pagination, setPagination] = useState<PaginationMetadata>(emptyPagination);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -115,17 +125,26 @@ export function AdminBrandsPanel() {
     setLoadError(false);
     void listBrands(
       {
+        page,
+        pageSize,
         query: debouncedQuery || undefined,
         status: status === 'all' ? undefined : status,
       },
       controller.signal,
     )
-      .then((brands) => {
+      .then((response) => {
         if (!active) return;
-        setBrandsState(brands);
-        setExistingIds((current) => [...new Set([...current, ...brands.map((brand) => brand.id)])]);
+        if (response.pagination.totalPages > 0 && page > response.pagination.totalPages) {
+          setPage(response.pagination.totalPages);
+          return;
+        }
+        setBrandsState(response.items);
+        setPagination(response.pagination);
+        setExistingIds((current) => [
+          ...new Set([...current, ...response.items.map((brand) => brand.id)]),
+        ]);
         setMaxSortOrder((current) =>
-          Math.max(current, ...brands.map((brand) => brand.sortOrder), 0),
+          Math.max(current, ...response.items.map((brand) => brand.sortOrder), 0),
         );
       })
       .catch((error: unknown) => {
@@ -144,7 +163,7 @@ export function AdminBrandsPanel() {
       active = false;
       controller.abort();
     };
-  }, [debouncedQuery, refreshVersion, setGuest, status]);
+  }, [debouncedQuery, page, pageSize, refreshVersion, setGuest, status]);
 
   function reload() {
     setRefreshVersion((version) => version + 1);
@@ -169,6 +188,7 @@ export function AdminBrandsPanel() {
       const filtersAreDefault = query.trim().length === 0 && status === 'all';
       setQuery('');
       setStatus('all');
+      setPage(DEFAULT_PAGE);
       if (filtersAreDefault) reload();
     } catch (error: unknown) {
       if (error instanceof ApiError && error.status === 401) setGuest();
@@ -379,7 +399,10 @@ export function AdminBrandsPanel() {
         disabled={isMutating}
         isRefreshing={isLoading}
         onColumnVisibilityChange={setColumnVisibility}
-        onQueryChange={setQuery}
+        onQueryChange={(value) => {
+          setQuery(value);
+          setPage(DEFAULT_PAGE);
+        }}
         onRefresh={reload}
         placeholder={t('pages.account.sections.admin.catalogManagement.brands.search')}
         primaryAction={
@@ -395,7 +418,13 @@ export function AdminBrandsPanel() {
         query={query}
         visibleColumnKeys={visibleColumnKeys}
       >
-        <Select onValueChange={(value) => setStatus(value as BrandStatusFilter)} value={status}>
+        <Select
+          onValueChange={(value) => {
+            setStatus(value as BrandStatusFilter);
+            setPage(DEFAULT_PAGE);
+          }}
+          value={status}
+        >
           <SelectTrigger
             aria-label={t('pages.account.sections.admin.catalogManagement.brands.statusFilter')}
             className="w-full md:w-40"
@@ -439,6 +468,19 @@ export function AdminBrandsPanel() {
           columns={visibleColumns}
           emptyIcon={Building2}
           emptyText={t('pages.account.sections.admin.catalogManagement.brands.empty')}
+          footer={
+            pagination.total > 0 ? (
+              <DataPagination
+                disabled={isLoading || isMutating}
+                metadata={pagination}
+                onPageChange={setPage}
+                onPageSizeChange={(value) => {
+                  setPageSize(value);
+                  setPage(DEFAULT_PAGE);
+                }}
+              />
+            ) : undefined
+          }
           getKey={(brand) => brand.id}
           items={brandsState}
           mobileFields={mobileFields.filter((field) => isColumnVisible(field.key))}

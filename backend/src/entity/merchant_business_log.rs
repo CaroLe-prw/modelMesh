@@ -15,6 +15,9 @@ pub struct Model {
     pub action: Option<String>,
     pub status: String,
     pub review_note: String,
+    pub operator_user_id: Option<i64>,
+    pub operator_source: String,
+    pub operation_reason: String,
     pub submitted_at: TimeDateTimeWithTimeZone,
     pub updated_at: TimeDateTimeWithTimeZone,
 }

@@ -1,4 +1,4 @@
-import { Check, ChevronsUpDown, LoaderCircle, Search } from 'lucide-react';
+import { Check, ChevronDown, LoaderCircle, Search } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { RadioCardItem } from '@/components/common/radio-card-item';
 import {
@@ -68,7 +68,10 @@ export function SearchableSelect({
           aria-describedby={ariaDescribedBy}
           aria-busy={loading || undefined}
           aria-invalid={ariaInvalid}
-          className={cn('w-full justify-between px-3 font-normal', className)}
+          className={cn(
+            'w-full justify-between border-input bg-transparent px-3 font-normal shadow-xs hover:bg-transparent hover:text-foreground dark:bg-input/30 dark:hover:bg-input/50',
+            className,
+          )}
           disabled={disabled}
           id={id}
           name={name}
@@ -84,7 +87,7 @@ export function SearchableSelect({
               className="size-4 animate-spin text-muted-foreground"
             />
           ) : (
-            <ChevronsUpDown aria-hidden="true" className="size-4 text-muted-foreground" />
+            <ChevronDown aria-hidden="true" className="size-4 opacity-50" />
           )}
         </Button>
       </PopoverTrigger>
@@ -97,6 +100,7 @@ export function SearchableSelect({
           <Input
             aria-label={searchPlaceholder}
             autoComplete="off"
+            autoFocus
             className="pl-9"
             disabled={loading}
             onChange={(event) => setQuery(event.target.value)}

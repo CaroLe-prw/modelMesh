@@ -5,9 +5,10 @@ use uuid::Uuid;
 use crate::{
     domain::{
         AccountRole, MerchantBillingMode, MerchantChannelStatus, MerchantModel,
-        MerchantModelOption, MerchantModelOptions, MerchantModelStatus, MerchantPriceCurrency,
-        ModelBillingMode, ModelPriceRates, ModelPricing, ModelStatus, PriceCurrency,
-        PriceExchangeRate, UserId, price_increase_exceeds_basis_points, price_per_million_to_nano,
+        MerchantModelOption, MerchantModelOptions, MerchantModelStatus, MerchantOperationAudit,
+        MerchantOperationSource, MerchantPriceCurrency, ModelBillingMode, ModelPriceRates,
+        ModelPricing, ModelStatus, PriceCurrency, PriceExchangeRate, UserId,
+        price_increase_exceeds_basis_points, price_per_million_to_nano,
     },
     repository::{
         MerchantChannelRepository, MerchantModelPriceMutation, MerchantModelRepository,
@@ -17,7 +18,8 @@ use crate::{
 };
 
 use super::{
-    authorization::require_merchant,
+    authorization::{require_admin, require_merchant},
+    merchant_resource_operation::admin_operation_audit,
     model::{ModelPriceOverrideInput, resolve_pricing_overrides},
 };
 
@@ -133,6 +135,24 @@ impl MerchantModelService {
             .await
             .map_err(|error| {
                 tracing::error!(error = %error, user_id, "merchant model list failed");
+                MerchantModelServiceError::Internal
+            })
+    }
+
+    pub async fn list_for_admin(
+        &self,
+        requester_role: AccountRole,
+        merchant_user_id: UserId,
+    ) -> Result<Vec<MerchantModel>, MerchantModelServiceError> {
+        require_admin(requester_role, MerchantModelServiceError::Forbidden)?;
+        if merchant_user_id <= 0 {
+            return Err(MerchantModelServiceError::InvalidInput);
+        }
+        self.repository
+            .list_by_user(merchant_user_id)
+            .await
+            .map_err(|error| {
+                tracing::error!(error = %error, merchant_user_id, "admin merchant model list failed");
                 MerchantModelServiceError::Internal
             })
     }
@@ -326,6 +346,22 @@ impl MerchantModelService {
         requested_status: MerchantModelStatus,
     ) -> Result<MerchantModel, MerchantModelServiceError> {
         require_merchant(requester_role, MerchantModelServiceError::Forbidden)?;
+        let audit = MerchantOperationAudit {
+            operator_user_id: user_id,
+            source: MerchantOperationSource::Merchant,
+            reason: String::new(),
+        };
+        self.update_status_with_audit(user_id, listing_id, requested_status, &audit)
+            .await
+    }
+
+    async fn update_status_with_audit(
+        &self,
+        user_id: UserId,
+        listing_id: &str,
+        requested_status: MerchantModelStatus,
+        audit: &MerchantOperationAudit,
+    ) -> Result<MerchantModel, MerchantModelServiceError> {
         validate_uuid(listing_id)?;
         let current = self
             .repository
@@ -339,13 +375,36 @@ impl MerchantModelService {
         let status = resolve_runtime_status(current.has_approved_price, requested_status)?;
 
         self.repository
-            .update_status(user_id, listing_id, status)
+            .update_status(user_id, listing_id, status, audit)
             .await
             .map_err(|error| {
                 tracing::error!(error = %error, user_id, listing_id, "merchant model status update failed");
                 MerchantModelServiceError::Internal
             })?
             .ok_or(MerchantModelServiceError::NotFound)
+    }
+
+    pub async fn update_status_for_admin(
+        &self,
+        requester_id: UserId,
+        requester_role: AccountRole,
+        merchant_user_id: UserId,
+        listing_id: &str,
+        requested_status: MerchantModelStatus,
+        operation_reason: String,
+    ) -> Result<MerchantModel, MerchantModelServiceError> {
+        require_admin(requester_role, MerchantModelServiceError::Forbidden)?;
+        if merchant_user_id <= 0 {
+            return Err(MerchantModelServiceError::InvalidInput);
+        }
+        let audit = admin_operation_audit(
+            requester_id,
+            requested_status == MerchantModelStatus::Offline,
+            operation_reason,
+        )
+        .map_err(|()| MerchantModelServiceError::InvalidInput)?;
+        self.update_status_with_audit(merchant_user_id, listing_id, requested_status, &audit)
+            .await
     }
 
     async fn resolve_record(

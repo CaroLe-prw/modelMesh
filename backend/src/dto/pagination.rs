@@ -53,7 +53,7 @@ const fn default_page() -> u32 {
 }
 
 const fn default_page_size() -> u32 {
-    20
+    10
 }
 
 fn deserialize_u32<'de, D>(deserializer: D) -> Result<u32, D::Error>

@@ -6,9 +6,9 @@ use super::{
     UpdateMerchantModelStatusRequest,
 };
 use crate::domain::{
-    MerchantBillingMode, MerchantModel, MerchantModelOption, MerchantModelOptions,
-    MerchantModelReviewStatus, MerchantModelStatus, MerchantPriceCurrency, ModelBillingMode,
-    ModelPricing, PriceCurrency, PriceExchangeRate, PriceSettings,
+    MerchantBillingMode, MerchantChannelStatus, MerchantModel, MerchantModelOption,
+    MerchantModelOptions, MerchantModelReviewStatus, MerchantModelStatus, MerchantPriceCurrency,
+    ModelBillingMode, ModelPricing, PriceCurrency, PriceExchangeRate, PriceSettings,
 };
 
 #[test]
@@ -20,6 +20,7 @@ fn merchant_model_response_uses_public_camel_case_contract() {
         id: "00000000-0000-4000-8000-000000000001".to_owned(),
         channel_id: "00000000-0000-4000-8000-000000000002".to_owned(),
         channel_name: "Northstar".to_owned(),
+        channel_status: MerchantChannelStatus::Offline,
         provider_id: "openai".to_owned(),
         model_id: 9,
         model_identifier: "gpt-test".to_owned(),
@@ -62,6 +63,7 @@ fn merchant_model_response_uses_public_camel_case_contract() {
             "id": "00000000-0000-4000-8000-000000000001",
             "channelId": "00000000-0000-4000-8000-000000000002",
             "channelName": "Northstar",
+            "channelStatus": "offline",
             "providerId": "openai",
             "modelId": 9,
             "modelIdentifier": "gpt-test",

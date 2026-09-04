@@ -1,9 +1,48 @@
+use crate::{
+    domain::{AccountRole, MerchantModelStatus},
+    state::AppState,
+};
+
 use super::{
     MerchantModelServiceError, MerchantPriceConversionMode, map_write_error,
     parse_exchange_rate_snapshot, parse_price, pricing_shape_is_supported,
     request_pricing_is_complete, require_approved_channel, resolve_conversion_exchange_rate,
     resolve_price_mutation, resolve_runtime_status, validate_uuid,
 };
+
+#[tokio::test]
+async fn merchant_cannot_use_the_admin_model_status_operation() {
+    let result = AppState::for_test()
+        .merchant_model_service
+        .update_status_for_admin(
+            1,
+            AccountRole::Merchant,
+            47,
+            "00000000-0000-4000-8000-000000000002",
+            MerchantModelStatus::Offline,
+            "Repeated upstream failures".to_owned(),
+        )
+        .await;
+
+    assert_eq!(result, Err(MerchantModelServiceError::Forbidden));
+}
+
+#[tokio::test]
+async fn administrator_cannot_stop_a_model_without_a_reason() {
+    let result = AppState::for_test()
+        .merchant_model_service
+        .update_status_for_admin(
+            1,
+            AccountRole::Admin,
+            47,
+            "00000000-0000-4000-8000-000000000002",
+            MerchantModelStatus::Offline,
+            String::new(),
+        )
+        .await;
+
+    assert_eq!(result, Err(MerchantModelServiceError::InvalidInput));
+}
 
 #[test]
 fn text_model_can_use_a_single_per_request_price() {
@@ -42,8 +81,8 @@ fn changing_merchant_billing_mode_always_requires_review() {
     );
 }
 use crate::domain::{
-    MerchantBillingMode, MerchantChannelStatus, MerchantModelStatus, MerchantPriceCurrency,
-    ModelPriceTier, ModelPricing, PriceCurrency, PriceExchangeRate,
+    MerchantBillingMode, MerchantChannelStatus, MerchantPriceCurrency, ModelPriceTier,
+    ModelPricing, PriceCurrency, PriceExchangeRate,
 };
 use crate::repository::{MerchantModelPriceMutation, RepositoryConflict, RepositoryError};
 

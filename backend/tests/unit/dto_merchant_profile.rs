@@ -2,12 +2,13 @@ use serde_json::json;
 
 use crate::domain::{
     MerchantProfile, MerchantProfileBundle, MerchantSettlementAccount, MerchantSettlementCurrency,
-    MerchantSettlementMethod, MerchantSettlementNetwork,
+    MerchantSettlementMethod, MerchantSettlementNetwork, MerchantWithdrawal,
+    MerchantWithdrawalBundle, MerchantWithdrawalStatus,
 };
 
 use super::{
     CreateMerchantSettlementAccountRequest, MerchantProfileResponse, MerchantSettlementMethodValue,
-    MerchantSettlementNetworkValue,
+    MerchantSettlementNetworkValue, MerchantWithdrawalBundleResponse,
 };
 
 #[test]
@@ -92,4 +93,42 @@ fn merchant_profile_response_uses_camel_case_and_masked_accounts() {
     let value = serde_json::to_value(super::MerchantSettlementAccountResponse::from(networked))
         .expect("networked account should serialize");
     assert_eq!(value["network"], json!("BEP20"));
+}
+
+#[test]
+fn withdrawal_bundle_uses_exact_decimal_strings_and_masked_destinations() {
+    let timestamp = "2026-08-31T02:00:03Z"
+        .parse()
+        .expect("timestamp should be valid");
+    let response = MerchantWithdrawalBundleResponse::from(MerchantWithdrawalBundle {
+        available_balance_microusd: 4_826_720_000,
+        processing_microusd: 1_280_000_000,
+        paid_microusd: 12_460_500_000,
+        minimum_withdrawal_microusd: 10_000_000,
+        withdrawal_fee_bps: 150,
+        settlement_accounts: Vec::new(),
+        withdrawals: vec![MerchantWithdrawal {
+            id: "wd_00000000000040008000000000000099".to_owned(),
+            settlement_account_id: None,
+            entity_name: "ModelMesh Labs".to_owned(),
+            method: MerchantSettlementMethod::Bank,
+            currency: MerchantSettlementCurrency::Usd,
+            network: None,
+            account_masked: "•••• 4821".to_owned(),
+            amount_microusd: 1_280_000_000,
+            fee_microusd: 19_200_000,
+            net_amount_microusd: 1_260_800_000,
+            status: MerchantWithdrawalStatus::Processing,
+            review_note: String::new(),
+            created_at: timestamp,
+            updated_at: timestamp,
+        }],
+    });
+    let value = serde_json::to_value(response).expect("response should serialize");
+
+    assert_eq!(value["availableBalanceUsd"], json!("4826.72"));
+    assert_eq!(value["withdrawalFeePercent"], json!("1.50"));
+    assert_eq!(value["withdrawals"][0]["amountUsd"], json!("1280.00"));
+    assert_eq!(value["withdrawals"][0]["accountMasked"], json!("•••• 4821"));
+    assert!(value["withdrawals"][0].get("accountCiphertext").is_none());
 }

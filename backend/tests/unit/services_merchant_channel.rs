@@ -1,8 +1,43 @@
 use crate::{
-    domain::MerchantChannelStatus,
+    domain::{AccountRole, MerchantChannelStatus},
     repository::{RepositoryConflict, RepositoryError},
     services::MerchantChannelServiceError,
+    state::AppState,
 };
+
+#[tokio::test]
+async fn merchant_cannot_use_the_admin_channel_status_operation() {
+    let result = AppState::for_test()
+        .merchant_channel_service
+        .update_status_for_admin(
+            1,
+            AccountRole::Merchant,
+            47,
+            "00000000-0000-4000-8000-000000000001",
+            MerchantChannelStatus::Offline,
+            "Repeated upstream failures".to_owned(),
+        )
+        .await;
+
+    assert_eq!(result, Err(MerchantChannelServiceError::Forbidden));
+}
+
+#[tokio::test]
+async fn administrator_cannot_take_a_channel_offline_without_a_reason() {
+    let result = AppState::for_test()
+        .merchant_channel_service
+        .update_status_for_admin(
+            1,
+            AccountRole::Admin,
+            47,
+            "00000000-0000-4000-8000-000000000001",
+            MerchantChannelStatus::Offline,
+            "   ".to_owned(),
+        )
+        .await;
+
+    assert_eq!(result, Err(MerchantChannelServiceError::InvalidInput));
+}
 
 use super::{
     map_write_error, normalize_api_key, normalize_available_models, normalize_base_url,

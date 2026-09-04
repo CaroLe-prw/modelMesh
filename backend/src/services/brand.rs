@@ -1,5 +1,5 @@
 use crate::{
-    domain::{AccountRole, Brand, BrandStatus},
+    domain::{AccountRole, Brand, BrandStatus, Page, Pagination},
     repository::{
         BrandPresetRepository, BrandRepository, BrandSearch, NewBrandRecord, RepositoryConflict,
         RepositoryError, UpdateBrandRecord,
@@ -67,6 +67,28 @@ impl BrandService {
             tracing::error!(error = %error, "brand list failed");
             BrandServiceError::Internal
         })
+    }
+
+    pub async fn list_page(
+        &self,
+        requester_role: AccountRole,
+        pagination: Pagination,
+        query: Option<String>,
+        status: Option<BrandStatus>,
+    ) -> Result<Page<Brand>, BrandServiceError> {
+        require_admin(requester_role, BrandServiceError::Forbidden)?;
+        let search = BrandSearch {
+            pattern: build_search_pattern(query)?,
+            status,
+        };
+
+        self.repository
+            .list_page(&search, pagination)
+            .await
+            .map_err(|error| {
+                tracing::error!(error = %error, "paginated brand list failed");
+                BrandServiceError::Internal
+            })
     }
 
     pub async fn list_channel_providers(

@@ -347,13 +347,18 @@ export function AdminModelsPanel() {
 
   const columns: AdminDataColumn<ModelItem>[] = [
     {
-      className: 'min-w-52 px-4',
+      className: 'w-64 min-w-64 max-w-64 overflow-hidden px-4',
       key: 'model',
       label: t('pages.account.sections.admin.catalogManagement.models.columns.model'),
       render: (model) => (
-        <div>
-          <strong className="block font-mono text-sm">{model.name}</strong>
-          <span className="mt-1 block font-mono text-xs text-muted-foreground">
+        <div className="w-full min-w-0 max-w-full overflow-hidden">
+          <strong className="block truncate font-mono text-sm" title={model.name}>
+            {model.name}
+          </strong>
+          <span
+            className="mt-1 block truncate font-mono text-xs text-muted-foreground"
+            title={model.identifier}
+          >
             {model.identifier}
           </span>
         </div>

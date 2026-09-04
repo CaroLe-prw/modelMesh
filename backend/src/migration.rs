@@ -63,6 +63,8 @@ mod m0062_add_model_sort_order;
 mod m0063_add_model_billing_mode;
 mod m0064_add_merchant_model_billing_mode;
 mod m0065_replace_image_pricing_with_fixed_request;
+mod m0066_add_merchant_operation_audit;
+mod m0067_create_merchant_withdrawals;
 
 use sea_orm_migration::prelude::*;
 
@@ -137,6 +139,8 @@ impl MigratorTrait for Migrator {
             Box::new(m0063_add_model_billing_mode::Migration),
             Box::new(m0064_add_merchant_model_billing_mode::Migration),
             Box::new(m0065_replace_image_pricing_with_fixed_request::Migration),
+            Box::new(m0066_add_merchant_operation_audit::Migration),
+            Box::new(m0067_create_merchant_withdrawals::Migration),
         ]
     }
 }

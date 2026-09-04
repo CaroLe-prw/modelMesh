@@ -1,15 +1,16 @@
 use jiff::Timestamp;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait,
-    QueryFilter, QueryOrder, Select, Set, sea_query::LikeExpr,
+    QueryFilter, QueryOrder, QuerySelect, Select, Set, sea_query::LikeExpr,
 };
 use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::{
     domain::{
-        MerchantRequest, MerchantRequestAction, MerchantRequestOrigin, MerchantRequestSortField,
-        MerchantRequestStatus, MerchantRequestType, Page, Pagination, SortDirection, UserId,
+        MerchantOperationSource, MerchantRequest, MerchantRequestAction, MerchantRequestOrigin,
+        MerchantRequestSortField, MerchantRequestStatus, MerchantRequestType, Page, Pagination,
+        SortDirection, UserId,
     },
     entity::merchant_business_log,
 };
@@ -23,6 +24,7 @@ pub struct MerchantRequestRepository {
 
 pub struct MerchantRequestSearch {
     pub exact_id: Option<i64>,
+    pub model_only: bool,
     pub pattern: Option<String>,
     pub status: Option<MerchantRequestStatus>,
 }
@@ -75,6 +77,11 @@ impl MerchantRequestRepository {
             description: Set(record.description),
             action: Set(None),
             status: Set(MerchantRequestStatus::Pending.as_database_str().to_owned()),
+            operator_user_id: Set(Some(record.merchant_user_id)),
+            operator_source: Set(MerchantOperationSource::Merchant
+                .as_database_str()
+                .to_owned()),
+            operation_reason: Set(String::new()),
             ..Default::default()
         }
         .insert(&self.database)
@@ -82,6 +89,79 @@ impl MerchantRequestRepository {
 
         merchant_request_from_model(request)
     }
+
+    pub async fn latest_channel_operation(
+        &self,
+        user_id: UserId,
+        channel_id: Uuid,
+    ) -> Result<Option<MerchantRequest>, RepositoryError> {
+        latest_channel_operation_query(user_id, channel_id)
+            .one(&self.database)
+            .await?
+            .map(merchant_request_from_model)
+            .transpose()
+    }
+
+    pub async fn latest_channel_operations(
+        &self,
+        user_id: UserId,
+    ) -> Result<Vec<MerchantRequest>, RepositoryError> {
+        latest_channel_operations_query(user_id)
+            .all(&self.database)
+            .await?
+            .into_iter()
+            .map(merchant_request_from_model)
+            .collect()
+    }
+
+    pub async fn latest_model_operation(
+        &self,
+        user_id: UserId,
+        listing_id: Uuid,
+    ) -> Result<Option<MerchantRequest>, RepositoryError> {
+        latest_model_operation_query(user_id, listing_id)
+            .one(&self.database)
+            .await?
+            .map(merchant_request_from_model)
+            .transpose()
+    }
+}
+
+fn latest_channel_operation_query(
+    user_id: UserId,
+    channel_id: Uuid,
+) -> Select<merchant_business_log::Entity> {
+    merchant_business_log::Entity::find()
+        .filter(merchant_business_log::Column::MerchantUserId.eq(user_id))
+        .filter(merchant_business_log::Column::ResourceType.eq("channel"))
+        .filter(merchant_business_log::Column::ResourceId.eq(channel_id))
+        .filter(merchant_business_log::Column::Origin.eq("channel_lifecycle"))
+        .order_by_desc(merchant_business_log::Column::SubmittedAt)
+        .order_by_desc(merchant_business_log::Column::Id)
+}
+
+fn latest_channel_operations_query(user_id: UserId) -> Select<merchant_business_log::Entity> {
+    merchant_business_log::Entity::find()
+        .filter(merchant_business_log::Column::MerchantUserId.eq(user_id))
+        .filter(merchant_business_log::Column::ResourceType.eq("channel"))
+        .filter(merchant_business_log::Column::Origin.eq("channel_lifecycle"))
+        .distinct_on([merchant_business_log::Column::ResourceId])
+        .order_by_asc(merchant_business_log::Column::ResourceId)
+        .order_by_desc(merchant_business_log::Column::SubmittedAt)
+        .order_by_desc(merchant_business_log::Column::Id)
+}
+
+fn latest_model_operation_query(
+    user_id: UserId,
+    listing_id: Uuid,
+) -> Select<merchant_business_log::Entity> {
+    merchant_business_log::Entity::find()
+        .filter(merchant_business_log::Column::MerchantUserId.eq(user_id))
+        .filter(merchant_business_log::Column::ResourceType.eq("model"))
+        .filter(merchant_business_log::Column::ResourceId.eq(listing_id))
+        .filter(merchant_business_log::Column::Origin.eq("model_lifecycle"))
+        .order_by_desc(merchant_business_log::Column::SubmittedAt)
+        .order_by_desc(merchant_business_log::Column::Id)
 }
 
 fn merchant_business_log_query(
@@ -100,7 +180,8 @@ fn merchant_business_log_query(
             condition = condition
                 .add(merchant_business_log::Column::Subject.ilike(like.clone()))
                 .add(merchant_business_log::Column::Description.ilike(like.clone()))
-                .add(merchant_business_log::Column::ReviewNote.ilike(like));
+                .add(merchant_business_log::Column::ReviewNote.ilike(like.clone()))
+                .add(merchant_business_log::Column::OperationReason.ilike(like));
         }
         if let Some(exact_id) = search.exact_id {
             condition = condition.add(merchant_business_log::Column::Id.eq(exact_id));
@@ -109,6 +190,9 @@ fn merchant_business_log_query(
     }
     if let Some(status) = search.status {
         query = query.filter(merchant_business_log::Column::Status.eq(status.as_database_str()));
+    }
+    if search.model_only {
+        query = query.filter(merchant_business_log::Column::ResourceType.eq("model"));
     }
 
     let sort_column = match sort_by {
@@ -130,6 +214,7 @@ fn merchant_request_from_model(
 ) -> Result<MerchantRequest, RepositoryError> {
     Ok(MerchantRequest {
         id: format!("log_{}", model.id),
+        resource_id: model.resource_id.hyphenated().to_string(),
         origin: MerchantRequestOrigin::from_database(&model.origin).ok_or_else(|| {
             RepositoryError::InvalidData(format!(
                 "unknown merchant business log origin `{}`",
@@ -152,6 +237,15 @@ fn merchant_request_from_model(
             ))
         })?,
         review_note: model.review_note,
+        operator_user_id: model.operator_user_id,
+        operator_source: MerchantOperationSource::from_database(&model.operator_source)
+            .ok_or_else(|| {
+                RepositoryError::InvalidData(format!(
+                    "unknown merchant operation source `{}`",
+                    model.operator_source
+                ))
+            })?,
+        operation_reason: model.operation_reason,
         submitted_at: domain_timestamp(model.submitted_at)?,
         updated_at: domain_timestamp(model.updated_at)?,
     })

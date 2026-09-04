@@ -1,8 +1,27 @@
 use sea_orm::{DatabaseBackend, QueryTrait};
+use uuid::Uuid;
 
 use crate::domain::{MerchantModelReviewStatus, MerchantModelStatus};
 
-use super::{merchant_model_list_query, merchant_model_review_status, merchant_model_status};
+use super::{
+    merchant_model_list_query, merchant_model_review_status, merchant_model_status,
+    merchant_model_status_update,
+};
+
+#[test]
+fn model_status_update_requires_both_owner_and_listing_id() {
+    let listing_id = Uuid::parse_str("00000000-0000-4000-8000-000000000002")
+        .expect("listing id should be valid");
+    let sql = merchant_model_status_update(47, listing_id, MerchantModelStatus::Offline)
+        .build(DatabaseBackend::Postgres)
+        .to_string();
+
+    assert!(sql.contains(r#""merchant_user_id" = 47"#), "{sql}");
+    assert!(
+        sql.contains(r#""id" = '00000000-0000-4000-8000-000000000002'"#),
+        "{sql}"
+    );
+}
 
 #[test]
 fn merchant_model_list_is_owner_scoped_and_stably_sorted() {

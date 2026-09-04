@@ -54,6 +54,11 @@ import {
   type MerchantChannelProvider,
   type MerchantChannelStatus,
 } from '@/features/account/api/merchant-channels';
+import {
+  listLatestMerchantChannelOperations,
+  type MerchantRequest,
+} from '@/features/account/api/merchant-requests';
+import { merchantChannelDisplayNote } from '@/features/account/components/merchant/merchant-channel-note';
 import { MerchantChannelDialog } from '@/features/account/components/merchant/merchant-channel-dialog';
 import { formatMerchantDate } from '@/features/account/components/merchant/merchant-demo-data';
 import { MerchantStatusBadge } from '@/features/account/components/merchant/merchant-status-badge';
@@ -107,6 +112,9 @@ export function MerchantChannelsPanel() {
   const { t } = useTranslation();
   const { setGuest } = useAuth();
   const [channels, setChannels] = useState<MerchantChannel[]>([]);
+  const [latestOperations, setLatestOperations] = useState<ReadonlyMap<string, MerchantRequest>>(
+    () => new Map(),
+  );
   const [editor, setEditor] = useState<ChannelEditorState>({ mode: 'create', open: false });
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<ChannelStatusFilter>('all');
@@ -128,9 +136,16 @@ export function MerchantChannelsPanel() {
 
     setIsLoading(true);
     setLoadError(false);
-    void listMerchantChannels(controller.signal)
-      .then((items) => {
-        if (active) setChannels(items);
+    void Promise.all([
+      listMerchantChannels(controller.signal),
+      listLatestMerchantChannelOperations(controller.signal),
+    ])
+      .then(([items, operations]) => {
+        if (!active) return;
+        setChannels(items);
+        setLatestOperations(
+          new Map(operations.map((operation) => [operation.resourceId, operation])),
+        );
       })
       .catch((error: unknown) => {
         if (!active || (error instanceof DOMException && error.name === 'AbortError')) return;
@@ -213,6 +228,14 @@ export function MerchantChannelsPanel() {
     setRefreshVersion((version) => version + 1);
   }
 
+  function clearLatestOperation(channelId: string) {
+    setLatestOperations((current) => {
+      const next = new Map(current);
+      next.delete(channelId);
+      return next;
+    });
+  }
+
   function handleColumnVisibilityChange(column: MerchantChannelOptionalColumnId, visible: boolean) {
     setVisibleColumns((current) => {
       const next = new Set(current);
@@ -230,10 +253,12 @@ export function MerchantChannelsPanel() {
     setIsMutating(true);
     try {
       if (editingId) {
+        const previousStatus = channels.find((channel) => channel.id === editingId)?.status;
         const updated = await updateMerchantChannel(editingId, draft);
         setChannels((current) =>
           current.map((channel) => (channel.id === updated.id ? updated : channel)),
         );
+        if (previousStatus !== updated.status) clearLatestOperation(updated.id);
         toast.success(
           t(
             resubmitting
@@ -277,6 +302,7 @@ export function MerchantChannelsPanel() {
     try {
       await deleteMerchantChannel(channel.id);
       setChannels((current) => current.filter((item) => item.id !== channel.id));
+      clearLatestOperation(channel.id);
       toast.success(t('pages.account.sections.merchant.channels.feedback.deleted'));
     } catch (error: unknown) {
       if (error instanceof ApiError && error.status === 401) setGuest();
@@ -300,6 +326,7 @@ export function MerchantChannelsPanel() {
     try {
       const updated = await updateMerchantChannelStatus(channel.id, nextStatus);
       setChannels((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      clearLatestOperation(updated.id);
       toast.success(
         t(
           nextStatus === 'active'
@@ -477,6 +504,7 @@ export function MerchantChannelsPanel() {
                         channel={channel}
                         disabled={isMutating}
                         key={channel.id}
+                        latestOperation={latestOperations.get(channel.id)}
                         onDelete={setDeleteTarget}
                         onEdit={openManageDialog}
                         onToggleStatus={(item) => void handleToggleStatus(item)}
@@ -493,6 +521,7 @@ export function MerchantChannelsPanel() {
                     channel={channel}
                     disabled={isMutating}
                     key={channel.id}
+                    latestOperation={latestOperations.get(channel.id)}
                     onDelete={setDeleteTarget}
                     onEdit={openManageDialog}
                     onToggleStatus={(item) => void handleToggleStatus(item)}
@@ -570,6 +599,7 @@ export function MerchantChannelsPanel() {
 function ChannelTableRow({
   channel,
   disabled,
+  latestOperation,
   onDelete,
   onEdit,
   onToggleStatus,
@@ -577,6 +607,7 @@ function ChannelTableRow({
 }: {
   channel: MerchantChannel;
   disabled: boolean;
+  latestOperation: MerchantRequest | undefined;
   onDelete: (channel: MerchantChannel) => void;
   onEdit: (channel: MerchantChannel) => void;
   onToggleStatus: (channel: MerchantChannel) => void;
@@ -600,7 +631,7 @@ function ChannelTableRow({
       )}
       {visibleColumns.has('reviewReason') && (
         <TableCell className="max-w-72 whitespace-normal text-sm leading-5">
-          <ChannelReviewReason channel={channel} />
+          <ChannelNote channel={channel} latestOperation={latestOperation} />
         </TableCell>
       )}
       {visibleColumns.has('models') && (
@@ -635,6 +666,7 @@ function ChannelTableRow({
 function ChannelMobileCard({
   channel,
   disabled,
+  latestOperation,
   onDelete,
   onEdit,
   onToggleStatus,
@@ -642,6 +674,7 @@ function ChannelMobileCard({
 }: {
   channel: MerchantChannel;
   disabled: boolean;
+  latestOperation: MerchantRequest | undefined;
   onDelete: (channel: MerchantChannel) => void;
   onEdit: (channel: MerchantChannel) => void;
   onToggleStatus: (channel: MerchantChannel) => void;
@@ -684,7 +717,7 @@ function ChannelMobileCard({
             {t('pages.account.sections.merchant.channels.columns.reviewReason')}
           </dt>
           <dd className="mt-1 whitespace-normal leading-5">
-            <ChannelReviewReason channel={channel} />
+            <ChannelNote channel={channel} latestOperation={latestOperation} />
           </dd>
         </dl>
       )}
@@ -801,12 +834,27 @@ function ChannelActions({
   );
 }
 
-function ChannelReviewReason({ channel }: { channel: MerchantChannel }) {
-  if (!channel.reviewNote) return <span className="text-muted-foreground">—</span>;
+function ChannelNote({
+  channel,
+  latestOperation,
+}: {
+  channel: MerchantChannel;
+  latestOperation: MerchantRequest | undefined;
+}) {
+  const note = merchantChannelDisplayNote(channel.reviewNote, latestOperation?.operationReason);
+  if (!note) return <span className="text-muted-foreground">—</span>;
 
   return (
-    <span className={channel.status === 'rejected' ? 'text-destructive' : undefined}>
-      {channel.reviewNote}
+    <span
+      className={
+        latestOperation?.operationReason
+          ? 'text-foreground'
+          : channel.status === 'rejected'
+            ? 'text-destructive'
+            : undefined
+      }
+    >
+      {note}
     </span>
   );
 }

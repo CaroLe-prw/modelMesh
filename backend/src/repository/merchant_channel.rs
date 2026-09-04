@@ -1,17 +1,19 @@
 use jiff::Timestamp;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, ModelTrait, QueryFilter,
-    QueryOrder, Select, Set, sea_query::Expr,
+    QueryOrder, Select, Set, TransactionTrait, sea_query::Expr,
 };
 use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::{
-    domain::{MerchantChannel, MerchantChannelStatus, UserId},
+    domain::{MerchantChannel, MerchantChannelStatus, MerchantOperationAudit, UserId},
     entity::{brand, merchant_channel},
 };
 
-use super::{RepositoryConflict, RepositoryError, database_constraint};
+use super::{
+    RepositoryConflict, RepositoryError, database_constraint, set_merchant_operation_context,
+};
 
 #[derive(Clone)]
 pub struct MerchantChannelRepository {
@@ -179,23 +181,17 @@ impl MerchantChannelRepository {
         user_id: UserId,
         channel_id: &str,
         status: MerchantChannelStatus,
+        audit: &MerchantOperationAudit,
     ) -> Result<Option<MerchantChannel>, RepositoryError> {
         let channel_id = Uuid::parse_str(channel_id).map_err(invalid_data)?;
-        let updated = merchant_channel::Entity::update_many()
-            .set(merchant_channel::ActiveModel {
-                status: Set(status.as_str().to_owned()),
-                ..Default::default()
-            })
-            .col_expr(
-                merchant_channel::Column::UpdatedAt,
-                Expr::current_timestamp(),
-            )
-            .filter(merchant_channel::Column::MerchantUserId.eq(user_id))
-            .filter(merchant_channel::Column::Id.eq(channel_id))
-            .exec_with_returning(&self.database)
+        let transaction = self.database.begin().await?;
+        set_merchant_operation_context(&transaction, audit).await?;
+        let updated = merchant_channel_status_update(user_id, channel_id, status)
+            .exec_with_returning(&transaction)
             .await?
             .into_iter()
             .next();
+        transaction.commit().await?;
         let Some(channel) = updated else {
             return Ok(None);
         };
@@ -224,6 +220,24 @@ fn merchant_channel_list_query(user_id: UserId) -> Select<merchant_channel::Enti
         .filter(merchant_channel::Column::MerchantUserId.eq(user_id))
         .order_by_desc(merchant_channel::Column::UpdatedAt)
         .order_by_desc(merchant_channel::Column::Id)
+}
+
+fn merchant_channel_status_update(
+    user_id: UserId,
+    channel_id: Uuid,
+    status: MerchantChannelStatus,
+) -> sea_orm::UpdateMany<merchant_channel::Entity> {
+    merchant_channel::Entity::update_many()
+        .set(merchant_channel::ActiveModel {
+            status: Set(status.as_str().to_owned()),
+            ..Default::default()
+        })
+        .col_expr(
+            merchant_channel::Column::UpdatedAt,
+            Expr::current_timestamp(),
+        )
+        .filter(merchant_channel::Column::MerchantUserId.eq(user_id))
+        .filter(merchant_channel::Column::Id.eq(channel_id))
 }
 
 fn merchant_channel_from_models(

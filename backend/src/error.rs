@@ -71,6 +71,9 @@ pub enum ErrorCode {
     MerchantSettlementAccountLimit = 24_002,
     MerchantSettlementAccountNotFound = 24_003,
     MerchantSettlementOptionDisabled = 24_004,
+    InvalidMerchantWithdrawal = 24_005,
+    MerchantWithdrawalBelowMinimum = 24_006,
+    MerchantWithdrawalInsufficientBalance = 24_007,
     InvalidSystemSettings = 25_001,
     DependencyUnavailable = 90_001,
     Internal = 99_999,
@@ -138,6 +141,9 @@ pub enum AppError {
     MerchantSettlementAccountLimit,
     MerchantSettlementAccountNotFound,
     MerchantSettlementOptionDisabled,
+    InvalidMerchantWithdrawal,
+    MerchantWithdrawalBelowMinimum,
+    MerchantWithdrawalInsufficientBalance,
     InvalidSystemSettings,
     DependencyUnavailable,
     Internal,
@@ -355,6 +361,16 @@ impl From<MerchantProfileServiceError> for AppError {
             MerchantProfileServiceError::SettlementOptionDisabled => {
                 Self::MerchantSettlementOptionDisabled
             }
+            MerchantProfileServiceError::InvalidWithdrawal
+            | MerchantProfileServiceError::WithdrawalFeeConsumesAmount => {
+                Self::InvalidMerchantWithdrawal
+            }
+            MerchantProfileServiceError::WithdrawalBelowMinimum => {
+                Self::MerchantWithdrawalBelowMinimum
+            }
+            MerchantProfileServiceError::WithdrawalInsufficientBalance => {
+                Self::MerchantWithdrawalInsufficientBalance
+            }
             MerchantProfileServiceError::Internal => Self::Internal,
         }
     }
@@ -531,6 +547,18 @@ impl IntoResponse for AppError {
             Self::MerchantSettlementOptionDisabled => (
                 StatusCode::CONFLICT,
                 ErrorCode::MerchantSettlementOptionDisabled,
+            ),
+            Self::InvalidMerchantWithdrawal => (
+                StatusCode::BAD_REQUEST,
+                ErrorCode::InvalidMerchantWithdrawal,
+            ),
+            Self::MerchantWithdrawalBelowMinimum => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                ErrorCode::MerchantWithdrawalBelowMinimum,
+            ),
+            Self::MerchantWithdrawalInsufficientBalance => (
+                StatusCode::CONFLICT,
+                ErrorCode::MerchantWithdrawalInsufficientBalance,
             ),
             Self::InvalidSystemSettings => {
                 (StatusCode::BAD_REQUEST, ErrorCode::InvalidSystemSettings)

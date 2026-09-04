@@ -10,6 +10,7 @@ pub mod merchant_channel;
 pub mod merchant_model_listing;
 pub mod merchant_profile;
 pub mod merchant_settlement_account;
+pub mod merchant_withdrawal;
 pub mod model;
 pub mod model_catalog_entry;
 pub mod model_catalog_sync_state;

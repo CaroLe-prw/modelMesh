@@ -114,3 +114,58 @@ pub struct MerchantProfileBundle {
     pub profile: MerchantProfile,
     pub settlement_accounts: Vec<MerchantSettlementAccount>,
 }
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MerchantWithdrawalStatus {
+    Processing,
+    Paid,
+    Rejected,
+}
+
+impl MerchantWithdrawalStatus {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Processing => "processing",
+            Self::Paid => "paid",
+            Self::Rejected => "rejected",
+        }
+    }
+
+    pub fn from_database(value: &str) -> Option<Self> {
+        match value {
+            "processing" => Some(Self::Processing),
+            "paid" => Some(Self::Paid),
+            "rejected" => Some(Self::Rejected),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MerchantWithdrawal {
+    pub id: String,
+    pub settlement_account_id: Option<String>,
+    pub entity_name: String,
+    pub method: MerchantSettlementMethod,
+    pub currency: MerchantSettlementCurrency,
+    pub network: Option<MerchantSettlementNetwork>,
+    pub account_masked: String,
+    pub amount_microusd: i64,
+    pub fee_microusd: i64,
+    pub net_amount_microusd: i64,
+    pub status: MerchantWithdrawalStatus,
+    pub review_note: String,
+    pub created_at: Timestamp,
+    pub updated_at: Timestamp,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MerchantWithdrawalBundle {
+    pub available_balance_microusd: i64,
+    pub processing_microusd: i64,
+    pub paid_microusd: i64,
+    pub minimum_withdrawal_microusd: i64,
+    pub withdrawal_fee_bps: i32,
+    pub settlement_accounts: Vec<MerchantSettlementAccount>,
+    pub withdrawals: Vec<MerchantWithdrawal>,
+}

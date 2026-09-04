@@ -224,6 +224,22 @@ async fn merchant_requests_require_a_bearer_token() {
 }
 
 #[tokio::test]
+async fn latest_merchant_channel_operations_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/merchant/channel-operations/latest")
+                .body(Body::empty())
+                .expect("merchant channel operation request should be valid"),
+        )
+        .await
+        .expect("merchant channel operation request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
 async fn merchant_profile_requires_a_bearer_token() {
     let response = test_router()
         .oneshot(
@@ -234,6 +250,22 @@ async fn merchant_profile_requires_a_bearer_token() {
         )
         .await
         .expect("merchant profile request should complete");
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn merchant_withdrawals_require_a_bearer_token() {
+    let response = test_router()
+        .oneshot(
+            Request::builder()
+                .uri("/api/merchant/withdrawals")
+                .body(Body::empty())
+                .expect("merchant withdrawals request should be valid"),
+        )
+        .await
+        .expect("merchant withdrawals request should complete");
 
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
@@ -488,6 +520,60 @@ async fn managed_merchants_require_a_bearer_token() {
 
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+}
+
+#[tokio::test]
+async fn managed_merchant_resource_routes_require_a_bearer_token() {
+    for uri in [
+        "/api/admin/merchants/47",
+        "/api/admin/merchants/47/channels",
+        "/api/admin/merchants/47/channels/00000000-0000-4000-8000-000000000003/latest-operation",
+        "/api/admin/merchants/47/models",
+        "/api/admin/merchants/47/models/00000000-0000-4000-8000-000000000004/latest-operation",
+        "/api/admin/merchants/47/model-logs?page=1&pageSize=20",
+    ] {
+        let response = test_router()
+            .oneshot(
+                Request::builder()
+                    .uri(uri)
+                    .body(Body::empty())
+                    .expect("managed merchant resource request should be valid"),
+            )
+            .await
+            .expect("managed merchant resource request should complete");
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{uri}");
+        assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+    }
+}
+
+#[tokio::test]
+async fn managed_merchant_resource_status_updates_require_a_bearer_token() {
+    for (uri, body) in [
+        (
+            "/api/admin/merchants/47/channels/00000000-0000-4000-8000-000000000001/status",
+            r#"{"status":"offline","reason":"Repeated upstream failures"}"#,
+        ),
+        (
+            "/api/admin/merchants/47/models/00000000-0000-4000-8000-000000000002/status",
+            r#"{"status":"offline","reason":"Repeated upstream failures"}"#,
+        ),
+    ] {
+        let response = test_router()
+            .oneshot(
+                Request::builder()
+                    .method("PUT")
+                    .uri(uri)
+                    .header("content-type", "application/json")
+                    .body(Body::from(body))
+                    .expect("managed merchant status request should be valid"),
+            )
+            .await
+            .expect("managed merchant status request should complete");
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{uri}");
+        assert_eq!(response_body(response).await, r#"{"error":{"code":11005}}"#);
+    }
 }
 
 #[tokio::test]
@@ -896,7 +982,7 @@ async fn pagination_query_uses_camel_case_and_defaults() {
         .expect("default pagination request should complete");
 
     assert_eq!(response_body(explicit).await, "3:40:codex:active");
-    assert_eq!(response_body(defaults).await, "1:20::all");
+    assert_eq!(response_body(defaults).await, "1:10::all");
 }
 
 #[tokio::test]

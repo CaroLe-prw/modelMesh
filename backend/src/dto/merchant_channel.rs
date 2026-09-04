@@ -68,6 +68,8 @@ pub struct DiscoverMerchantChannelModelsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateMerchantChannelStatusRequest {
     pub status: MerchantChannelStatusValue,
+    #[serde(default)]
+    pub reason: String,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize)]

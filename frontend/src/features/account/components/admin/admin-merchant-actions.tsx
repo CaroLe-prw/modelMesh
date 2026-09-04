@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { AdminMerchant } from '@/features/account/api/admin-merchants';
 import { AdminListActionButton } from '@/features/account/components/admin/admin-list-action-button';
+import { adminMerchantResourceUrl } from '@/features/account/components/admin/admin-merchant-resource-navigation';
 
 export function AdminMerchantActions({
   disabled,
@@ -89,23 +90,21 @@ export function AdminMerchantActions({
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="gap-3 px-3 py-2"
-            onSelect={() => navigate(`/merchant/channels?merchantId=${merchant.id}`)}
+            onSelect={() => navigate(adminMerchantResourceUrl(merchant.id, 'channels'))}
           >
             <RadioTower aria-hidden="true" />
             {t(`${translationPath}.channels`)}
           </DropdownMenuItem>
           <DropdownMenuItem
             className="gap-3 px-3 py-2"
-            onSelect={() => navigate(`/merchant/models?merchantId=${merchant.id}`)}
+            onSelect={() => navigate(adminMerchantResourceUrl(merchant.id, 'models'))}
           >
             <PackagePlus aria-hidden="true" />
             {t(`${translationPath}.models`)}
           </DropdownMenuItem>
           <DropdownMenuItem
             className="gap-3 px-3 py-2"
-            onSelect={() =>
-              navigate(`/admin/usage-logs?merchant=${encodeURIComponent(merchant.name)}`)
-            }
+            onSelect={() => navigate(adminMerchantResourceUrl(merchant.id, 'modelLogs'))}
           >
             <ScrollText aria-hidden="true" />
             {t(`${translationPath}.usageLogs`)}

@@ -45,11 +45,12 @@ pub use merchant_model::{
 };
 pub use merchant_profile::{
     MerchantProfile, MerchantProfileBundle, MerchantSettlementAccount, MerchantSettlementCurrency,
-    MerchantSettlementMethod, MerchantSettlementNetwork,
+    MerchantSettlementMethod, MerchantSettlementNetwork, MerchantWithdrawal,
+    MerchantWithdrawalBundle, MerchantWithdrawalStatus,
 };
 pub use merchant_request::{
-    MerchantRequest, MerchantRequestAction, MerchantRequestOrigin, MerchantRequestSortField,
-    MerchantRequestStatus, MerchantRequestType,
+    MerchantOperationAudit, MerchantOperationSource, MerchantRequest, MerchantRequestAction,
+    MerchantRequestOrigin, MerchantRequestSortField, MerchantRequestStatus, MerchantRequestType,
 };
 pub use model::{ManagedModel, ModelBillingMode, ModelStatus};
 pub use model_catalog::{ModelCatalogEntry, ModelCatalogOption};

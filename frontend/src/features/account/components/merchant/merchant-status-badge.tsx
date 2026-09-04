@@ -6,10 +6,8 @@ import type {
   MerchantModelReviewStatus,
   MerchantModelStatus,
 } from '@/features/account/api/merchant-models';
-import type {
-  MerchantUsageStatus,
-  MerchantWithdrawalStatus,
-} from '@/features/account/components/merchant/merchant-demo-data';
+import type { MerchantWithdrawalStatus } from '@/features/account/api/merchant-withdrawals';
+import type { MerchantUsageStatus } from '@/features/account/components/merchant/merchant-demo-data';
 
 type MerchantStatus =
   | MerchantChannelStatus

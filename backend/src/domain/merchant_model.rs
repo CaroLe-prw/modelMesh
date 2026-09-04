@@ -1,6 +1,6 @@
 use jiff::Timestamp;
 
-use super::{ModelBillingMode, ModelPricing, PriceCurrency, PriceSettings};
+use super::{MerchantChannelStatus, ModelBillingMode, ModelPricing, PriceCurrency, PriceSettings};
 
 pub type MerchantPriceCurrency = PriceCurrency;
 
@@ -75,6 +75,7 @@ pub struct MerchantModel {
     pub id: String,
     pub channel_id: String,
     pub channel_name: String,
+    pub channel_status: MerchantChannelStatus,
     pub provider_id: String,
     pub model_id: i64,
     pub model_identifier: String,

@@ -2,7 +2,10 @@ use uuid::Uuid;
 
 use crate::{
     clients::{UpstreamModelsClient, UpstreamModelsClientError},
-    domain::{AccountRole, MerchantChannel, MerchantChannelStatus, UserId},
+    domain::{
+        AccountRole, MerchantChannel, MerchantChannelStatus, MerchantOperationAudit,
+        MerchantOperationSource, UserId,
+    },
     repository::{
         BrandRepository, MerchantChannelRepository, NewMerchantChannelRecord, RepositoryConflict,
         RepositoryError, UpdateMerchantChannelRecord,
@@ -10,7 +13,10 @@ use crate::{
     security::CredentialCipher,
 };
 
-use super::authorization::require_merchant;
+use super::{
+    authorization::{require_admin, require_merchant},
+    merchant_resource_operation::admin_operation_audit,
+};
 
 #[derive(Clone)]
 pub struct MerchantChannelService {
@@ -87,6 +93,24 @@ impl MerchantChannelService {
             .await
             .map_err(|error| {
                 tracing::error!(error = %error, user_id, "merchant channel list failed");
+                MerchantChannelServiceError::Internal
+            })
+    }
+
+    pub async fn list_for_admin(
+        &self,
+        requester_role: AccountRole,
+        merchant_user_id: UserId,
+    ) -> Result<Vec<MerchantChannel>, MerchantChannelServiceError> {
+        require_admin(requester_role, MerchantChannelServiceError::Forbidden)?;
+        if merchant_user_id <= 0 {
+            return Err(MerchantChannelServiceError::InvalidInput);
+        }
+        self.repository
+            .list_by_user(merchant_user_id)
+            .await
+            .map_err(|error| {
+                tracing::error!(error = %error, merchant_user_id, "admin merchant channel list failed");
                 MerchantChannelServiceError::Internal
             })
     }
@@ -209,6 +233,22 @@ impl MerchantChannelService {
         requested_status: MerchantChannelStatus,
     ) -> Result<MerchantChannel, MerchantChannelServiceError> {
         require_merchant(requester_role, MerchantChannelServiceError::Forbidden)?;
+        let audit = MerchantOperationAudit {
+            operator_user_id: user_id,
+            source: MerchantOperationSource::Merchant,
+            reason: String::new(),
+        };
+        self.update_status_with_audit(user_id, channel_id, requested_status, &audit)
+            .await
+    }
+
+    async fn update_status_with_audit(
+        &self,
+        user_id: UserId,
+        channel_id: &str,
+        requested_status: MerchantChannelStatus,
+        audit: &MerchantOperationAudit,
+    ) -> Result<MerchantChannel, MerchantChannelServiceError> {
         validate_channel_id(channel_id)?;
         let current = self.find_channel(user_id, channel_id).await?;
         if !current.status.is_approved() {
@@ -216,13 +256,36 @@ impl MerchantChannelService {
         }
 
         self.repository
-            .update_status(user_id, channel_id, requested_status)
+            .update_status(user_id, channel_id, requested_status, audit)
             .await
             .map_err(|error| {
                 tracing::error!(error = %error, user_id, channel_id, "merchant channel status update failed");
                 MerchantChannelServiceError::Internal
             })?
             .ok_or(MerchantChannelServiceError::NotFound)
+    }
+
+    pub async fn update_status_for_admin(
+        &self,
+        requester_id: UserId,
+        requester_role: AccountRole,
+        merchant_user_id: UserId,
+        channel_id: &str,
+        requested_status: MerchantChannelStatus,
+        operation_reason: String,
+    ) -> Result<MerchantChannel, MerchantChannelServiceError> {
+        require_admin(requester_role, MerchantChannelServiceError::Forbidden)?;
+        if merchant_user_id <= 0 {
+            return Err(MerchantChannelServiceError::InvalidInput);
+        }
+        let audit = admin_operation_audit(
+            requester_id,
+            requested_status == MerchantChannelStatus::Offline,
+            operation_reason,
+        )
+        .map_err(|()| MerchantChannelServiceError::InvalidInput)?;
+        self.update_status_with_audit(merchant_user_id, channel_id, requested_status, &audit)
+            .await
     }
 
     pub async fn discover_models(

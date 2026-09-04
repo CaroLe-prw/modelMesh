@@ -26,18 +26,20 @@ const merchant: MarketplaceMerchant = {
   outputPrice: 0.06,
   pricing: {
     official: {
-      cacheRead: '0.001',
-      cacheWrite: '0.01',
-      input: '0.01',
-      output: '0.06',
-      request: null,
+      base: {
+        cache_read: 0.001,
+        cache_write: 0.01,
+        input: 0.01,
+        output: 0.06,
+      },
     },
     merchant: {
-      cacheRead: '0.0012',
-      cacheWrite: '0.012',
-      input: '0.01',
-      output: '0.06',
-      request: null,
+      base: {
+        cache_read: 0.0012,
+        cache_write: 0.012,
+        input: 0.01,
+        output: 0.06,
+      },
     },
   },
   priceMultiplier: 0.9,

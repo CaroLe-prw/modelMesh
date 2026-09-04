@@ -2,7 +2,8 @@ use jiff::Timestamp;
 
 use crate::domain::{
     MarketplaceBrand, MarketplaceCatalog, MarketplaceMerchant, MarketplaceRouteState,
-    MerchantBillingMode, ModelPricing, PriceCurrency, PriceExchangeRate, PriceSettings,
+    MerchantBillingMode, ModelPriceTier, ModelPricing, PriceCurrency, PriceExchangeRate,
+    PriceSettings,
 };
 
 use super::{
@@ -77,6 +78,13 @@ fn marketplace_merchant_prices_and_health_metrics_are_serialized_for_the_api() {
                 ("cache_read".to_owned(), 300_000),
             ]
             .into(),
+            tiers: vec![ModelPriceTier {
+                tier_type: "context".to_owned(),
+                size: 272_000,
+                rates: [("input".to_owned(), 2_400_000)].into(),
+            }],
+            experimental_modes: [("fast".to_owned(), [("output".to_owned(), 9_000_000)].into())]
+                .into(),
             ..ModelPricing::default()
         },
         merchant_pricing_nano_usd: ModelPricing {
@@ -86,6 +94,13 @@ fn marketplace_merchant_prices_and_health_metrics_are_serialized_for_the_api() {
                 ("cache_read".to_owned(), 400_000),
             ]
             .into(),
+            tiers: vec![ModelPriceTier {
+                tier_type: "context".to_owned(),
+                size: 272_000,
+                rates: [("input".to_owned(), 2_600_000)].into(),
+            }],
+            experimental_modes: [("fast".to_owned(), [("output".to_owned(), 9_500_000)].into())]
+                .into(),
             ..ModelPricing::default()
         },
         price_multiplier_basis_points: Some(10_833),
@@ -101,9 +116,18 @@ fn marketplace_merchant_prices_and_health_metrics_are_serialized_for_the_api() {
 
     assert_eq!(value["inputPrice"], 0.013);
     assert_eq!(value["outputPrice"], 0.0778);
-    assert_eq!(value["pricing"]["official"]["input"], "0.012");
-    assert_eq!(value["pricing"]["merchant"]["output"], "0.0778");
-    assert_eq!(value["pricing"]["merchant"]["cacheRead"], "0.004");
+    assert_eq!(value["pricing"]["official"]["base"]["input"], 0.012);
+    assert_eq!(value["pricing"]["merchant"]["base"]["output"], 0.0778);
+    assert_eq!(value["pricing"]["merchant"]["base"]["cache_read"], 0.004);
+    assert_eq!(value["pricing"]["official"]["tiers"][0]["size"], 272_000);
+    assert_eq!(
+        value["pricing"]["merchant"]["tiers"][0]["rates"]["input"],
+        0.026
+    );
+    assert_eq!(
+        value["pricing"]["official"]["experimentalModes"]["fast"]["output"],
+        0.09
+    );
     assert_eq!(value["priceMultiplier"], 1.0833);
     assert_eq!(value["successRate"], 99.96);
     assert_eq!(value["latencyMs"], 842);

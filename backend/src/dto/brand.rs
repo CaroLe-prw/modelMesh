@@ -1,11 +1,16 @@
 use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::{Brand, BrandStatus};
+use crate::{
+    domain::{Brand, BrandStatus},
+    dto::PaginationQuery,
+};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ListBrandsQuery {
+    #[serde(flatten)]
+    pub pagination: PaginationQuery,
     #[serde(default)]
     pub query: Option<String>,
     #[serde(default)]

@@ -6,7 +6,8 @@ use axum::{
 
 use crate::{
     dto::{
-        BrandResponse, BrandStatusRequest, CreateBrandRequest, ListBrandsQuery, UpdateBrandRequest,
+        BrandResponse, BrandStatusRequest, CreateBrandRequest, ListBrandsQuery, PaginatedResponse,
+        PaginationResponse, UpdateBrandRequest,
     },
     error::AppError,
     handlers::auth::authenticate_user,
@@ -18,15 +19,28 @@ pub async fn list(
     State(state): State<AppState>,
     headers: HeaderMap,
     query: Result<Query<ListBrandsQuery>, QueryRejection>,
-) -> Result<Json<Vec<BrandResponse>>, AppError> {
+) -> Result<Json<PaginatedResponse<BrandResponse>>, AppError> {
     let user = authenticate_user(&state, &headers).await?;
     let Query(query) = query.map_err(|_| AppError::InvalidRequest)?;
-    let brands = state
+    let pagination = query
+        .pagination
+        .try_into()
+        .map_err(|()| AppError::InvalidRequest)?;
+    let result = state
         .brand_service
-        .list(user.role, query.query, query.status.map(Into::into))
+        .list_page(
+            user.role,
+            pagination,
+            query.query,
+            query.status.map(Into::into),
+        )
         .await?;
+    let items = result.items.into_iter().map(BrandResponse::from).collect();
 
-    Ok(Json(brands.into_iter().map(BrandResponse::from).collect()))
+    Ok(Json(PaginatedResponse {
+        items,
+        pagination: PaginationResponse::new(result.pagination, result.total),
+    }))
 }
 
 pub async fn create(

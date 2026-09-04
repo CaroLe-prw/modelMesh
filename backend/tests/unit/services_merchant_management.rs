@@ -92,6 +92,25 @@ async fn merchant_list_requires_an_administrator() {
 }
 
 #[tokio::test]
+async fn merchant_detail_requires_an_administrator_and_a_valid_id() {
+    let state = AppState::for_test();
+    assert!(matches!(
+        state
+            .merchant_management_service
+            .get(AccountRole::Merchant, 47)
+            .await,
+        Err(MerchantManagementServiceError::Forbidden)
+    ));
+    assert!(matches!(
+        state
+            .merchant_management_service
+            .get(AccountRole::Admin, 0)
+            .await,
+        Err(MerchantManagementServiceError::InvalidInput)
+    ));
+}
+
+#[tokio::test]
 async fn merchant_list_rejects_an_invalid_search_before_querying() {
     let result = service()
         .list(

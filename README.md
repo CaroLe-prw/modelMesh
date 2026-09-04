@@ -146,6 +146,7 @@ Merchant channels are managed through:
 
 - `GET /api/merchant/channel-providers`
 - `GET /api/merchant/channels`
+- `GET /api/merchant/channel-operations/latest`
 - `POST /api/merchant/channels`
 - `PUT /api/merchant/channels/{id}`
 - `DELETE /api/merchant/channels/{id}`
@@ -182,7 +183,7 @@ Merchant model listings are managed through:
 
 Merchant business requests are managed through:
 
-- `GET /api/merchant/requests?page=1&pageSize=20&query=gpt-5&status=completed&sortBy=submittedAt&sortOrder=desc`
+- `GET /api/merchant/requests?page=1&pageSize=10&query=gpt-5&status=completed&sortBy=submittedAt&sortOrder=desc`
 - `POST /api/merchant/requests`
 
 Requests accept `channelAccess`, `modelReview`, or `quotaAdjustment` as their type and start in the
@@ -196,7 +197,7 @@ cascade. Logs therefore remain available after the channel or listing is gone.
 
 The list endpoint performs database pagination and stable sorting by occurrence or update time plus
 log ID. It defaults to newest occurrence first (`sortBy=submittedAt&sortOrder=desc`), supports
-switching either time column between ascending and descending order, defaults to 20 rows per page,
+switching either time column between ascending and descending order, defaults to 10 rows per page,
 accepts page sizes from 1 to 100, searches raw log subjects/details, and filters by
 `pending`, `changesRequested`, `approved`, `completed`, or `cancelled`. Management-list timestamps
 are rendered with second precision in both supported locales. Deleting an entire user intentionally
@@ -210,6 +211,8 @@ Merchant profiles and settlement accounts are managed through:
 - `POST /api/merchant/settlement-accounts`
 - `PUT /api/merchant/settlement-accounts/{id}/default`
 - `DELETE /api/merchant/settlement-accounts/{id}`
+- `GET /api/merchant/withdrawals`
+- `POST /api/merchant/withdrawals`
 
 Administrators manage registration, financial policy, settlement methods, and USDT networks through
 `GET /api/admin/system-settings` and `PUT /api/admin/system-settings`. These general settings share
@@ -230,6 +233,13 @@ account and wallet values are encrypted with the backend credential encryption k
 application logs, and the merchant interface receive only the stored masked representation.
 Alipay settlement accounts require both a recipient name and the phone number linked to that
 Alipay account; the normalized phone number is encrypted and only its masked form is returned.
+The withdrawal endpoint returns the merchant's available balance, processing and settled totals,
+current minimum and fee policy, owned settlement accounts, and the 50 latest requests. Creating a
+request parses the USD amount without floating-point arithmetic, verifies ownership of the selected
+settlement account, and atomically reserves the requested amount from the merchant balance. Each
+record keeps the fee, net amount, post-reservation balance, an encrypted payout destination, and a
+masked display snapshot so settlement remains possible and auditable even if the original account
+is later deleted. The encrypted destination is never returned by the API.
 
 Administrator pricing settings are managed through:
 
@@ -264,7 +274,7 @@ model also keeps the channel model count synchronized.
 
 Channel and model review queues are managed through:
 
-- `GET /api/admin/catalog-reviews?kind={channel|model}&page=1&pageSize=20`
+- `GET /api/admin/catalog-reviews?kind={channel|model}&page=1&pageSize=10`
 - `POST /api/admin/catalog-reviews/{review_id}/test-connection`
 - `POST /api/admin/catalog-reviews/{review_id}/test-model`
 - `POST /api/admin/catalog-reviews/{review_id}/review`
@@ -291,9 +301,31 @@ than the pricing currency card and channel/model review queues currently use res
 financial amounts are represented as integer micro-USD values so the later API contract does not
 depend on floating-point money.
 
+Merchant-management shortcuts remain inside the administrator section and read the selected
+merchant's persisted resources through administrator-only endpoints:
+
+- `GET /api/admin/merchants/{merchant_user_id}`
+- `GET /api/admin/merchants/{merchant_user_id}/channels`
+- `GET /api/admin/merchants/{merchant_user_id}/channels/{channel_id}/latest-operation`
+- `GET /api/admin/merchants/{merchant_user_id}/models`
+- `GET /api/admin/merchants/{merchant_user_id}/models/{listing_id}/latest-operation`
+- `GET /api/admin/merchants/{merchant_user_id}/model-logs?page=1&pageSize=10`
+- `PUT /api/admin/merchants/{merchant_user_id}/channels/{channel_id}/status`
+- `PUT /api/admin/merchants/{merchant_user_id}/models/{listing_id}/status`
+
+The model ledger endpoint returns real model review, price-change, publication, offline, and
+deletion business records from `merchant_business_logs`. It is distinct from inference usage
+records, which are not yet persisted by the runtime. Administrator status mutations verify both
+the administrator role and target-resource ownership. Taking a channel offline removes all of its
+listings from routing; stopping one model removes only that listing. Existing database triggers
+retain these lifecycle changes in the merchant business ledger. Administrator offline operations
+require a reason. Lifecycle records retain the operator user ID, the trusted `merchant`, `admin`,
+or `system` source, and the operation reason; the actor context is scoped to the same database
+transaction as the status mutation.
+
 Authenticated users can manage ModelMesh API keys through:
 
-- `GET /api/api-keys?page=1&pageSize=20&query=codex`
+- `GET /api/api-keys?page=1&pageSize=10&query=codex`
 - `POST /api/api-keys`
 - `PUT /api/api-keys/{api_key_id}`
 - `PUT /api/api-keys/{api_key_id}/status`
@@ -304,7 +336,7 @@ prefix. PostgreSQL stores only its SHA-256 hash, masked display fragments, acces
 spending limits, status, optional expiration, and the latest successful usage time and source IP.
 API key names are unique within an account, and every read or mutation is scoped to the
 authenticated user.
-The list endpoint defaults to page 1 with 20 items per page and accepts up to 100 items per page.
+The list endpoint defaults to page 1 with 10 items per page and accepts up to 100 items per page.
 All paginated endpoints use the same response envelope: `items` contains the current page and
 `pagination` contains `page`, `pageSize`, `total`, and `totalPages`.
 The optional `query` parameter searches API key names, masked key identifiers, prefixes, suffixes,

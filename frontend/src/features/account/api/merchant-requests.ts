@@ -11,12 +11,17 @@ export type MerchantRequestAction =
   'activate' | 'delete' | 'offline' | 'priceChange' | 'publish' | 'unpublish' | 'violation';
 export type MerchantRequestSortOrder = 'asc' | 'desc';
 export type MerchantRequestSortField = 'submittedAt' | 'updatedAt';
+export type MerchantOperationSource = 'admin' | 'merchant' | 'system';
 
 export interface MerchantRequest {
   action: MerchantRequestAction | null;
   description: string;
   id: string;
   origin: MerchantRequestOrigin;
+  operationReason: string;
+  operatorSource: MerchantOperationSource;
+  operatorUserId: number | null;
+  resourceId: string;
   requestType: MerchantRequestType;
   reviewNote: string;
   status: MerchantRequestStatus;
@@ -47,4 +52,10 @@ export function listMerchantRequests(
     },
     signal,
   });
+}
+
+export function listLatestMerchantChannelOperations(
+  signal?: AbortSignal,
+): Promise<MerchantRequest[]> {
+  return apiClient.get<MerchantRequest[]>('/merchant/channel-operations/latest', { signal });
 }

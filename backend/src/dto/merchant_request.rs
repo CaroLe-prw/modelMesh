@@ -110,6 +110,7 @@ pub struct CreateMerchantRequestRequest {
 #[serde(rename_all = "camelCase")]
 pub struct MerchantRequestResponse {
     pub id: String,
+    pub resource_id: String,
     pub origin: &'static str,
     pub action: Option<&'static str>,
     pub request_type: &'static str,
@@ -117,6 +118,9 @@ pub struct MerchantRequestResponse {
     pub description: String,
     pub status: &'static str,
     pub review_note: String,
+    pub operator_user_id: Option<i64>,
+    pub operator_source: &'static str,
+    pub operation_reason: String,
     pub submitted_at: Timestamp,
     pub updated_at: Timestamp,
 }
@@ -125,6 +129,7 @@ impl From<MerchantRequest> for MerchantRequestResponse {
     fn from(request: MerchantRequest) -> Self {
         Self {
             id: request.id,
+            resource_id: request.resource_id,
             origin: request.origin.as_api_str(),
             action: request.action.map(|action| action.as_api_str()),
             request_type: request.request_type.as_api_str(),
@@ -132,6 +137,9 @@ impl From<MerchantRequest> for MerchantRequestResponse {
             description: request.description,
             status: request.status.as_api_str(),
             review_note: request.review_note,
+            operator_user_id: request.operator_user_id,
+            operator_source: request.operator_source.as_api_str(),
+            operation_reason: request.operation_reason,
             submitted_at: request.submitted_at,
             updated_at: request.updated_at,
         }

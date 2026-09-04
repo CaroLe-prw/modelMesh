@@ -56,7 +56,8 @@ pub use merchant_model::{
     UpdateMerchantModelStatusRequest,
 };
 pub use merchant_profile::{
-    CreateMerchantSettlementAccountRequest, MerchantProfileResponse, UpdateMerchantProfileRequest,
+    CreateMerchantSettlementAccountRequest, CreateMerchantWithdrawalRequest,
+    MerchantProfileResponse, MerchantWithdrawalBundleResponse, UpdateMerchantProfileRequest,
 };
 pub use merchant_request::{
     CreateMerchantRequestRequest, ListMerchantRequestsQuery, MerchantRequestResponse,

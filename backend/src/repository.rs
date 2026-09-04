@@ -11,6 +11,7 @@ mod merchant_application;
 mod merchant_channel;
 mod merchant_management;
 mod merchant_model;
+mod merchant_operation;
 mod merchant_profile;
 mod merchant_request;
 mod model;
@@ -45,8 +46,9 @@ pub use merchant_model::{
     MerchantModelPriceMutation, MerchantModelRepository, NewMerchantModelRecord,
     UpdateMerchantModelRecord,
 };
+pub use merchant_operation::set_merchant_operation_context;
 pub use merchant_profile::{
-    MerchantProfileRepository, MerchantSettlementAccountWriteError,
+    MerchantProfileRepository, MerchantSettlementAccountWriteError, MerchantWithdrawalWriteError,
     NewMerchantSettlementAccountRecord, UpdateMerchantProfileRecord,
 };
 pub use merchant_request::{

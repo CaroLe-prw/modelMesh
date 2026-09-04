@@ -1,10 +1,7 @@
 import type { MerchantChannel } from '@/features/account/api/merchant-channels';
 
 export type MerchantModelStatus = 'draft' | 'published' | 'review';
-export type MerchantSettlementCurrency = 'USD' | 'USDT';
-export type MerchantSettlementMethod = 'bank' | 'usdt';
 export type MerchantUsageStatus = 'failed' | 'succeeded';
-export type MerchantWithdrawalStatus = 'paid' | 'processing' | 'rejected';
 
 export interface MerchantModel {
   channel: string;
@@ -26,23 +23,6 @@ export interface MerchantUsageLog {
   model: string;
   status: MerchantUsageStatus;
   tokens: number;
-}
-
-export interface MerchantWithdrawal {
-  amount: number;
-  createdAt: string;
-  id: string;
-  method: MerchantSettlementMethod;
-  status: MerchantWithdrawalStatus;
-}
-
-export interface MerchantSettlementAccount {
-  account: string;
-  currency: MerchantSettlementCurrency;
-  entity: string;
-  id: string;
-  isDefault: boolean;
-  method: MerchantSettlementMethod;
 }
 
 export const merchantChannels: MerchantChannel[] = [
@@ -207,49 +187,6 @@ export const merchantUsageLogs: MerchantUsageLog[] = [
     model: 'gpt-5-mini',
     status: 'succeeded',
     tokens: 5_106,
-  },
-];
-
-export const merchantWithdrawals: MerchantWithdrawal[] = [
-  {
-    amount: 1_280,
-    createdAt: '2026-08-08T08:20:00Z',
-    id: 'wd_01K22HC7PT',
-    method: 'bank',
-    status: 'processing',
-  },
-  {
-    amount: 860.5,
-    createdAt: '2026-07-28T03:45:00Z',
-    id: 'wd_01K18BZ42W',
-    method: 'usdt',
-    status: 'paid',
-  },
-  {
-    amount: 420,
-    createdAt: '2026-07-16T10:10:00Z',
-    id: 'wd_01K0A4Q9RM',
-    method: 'bank',
-    status: 'rejected',
-  },
-];
-
-export const merchantSettlementAccounts: MerchantSettlementAccount[] = [
-  {
-    account: '•••• 4821',
-    currency: 'USD',
-    entity: 'ModelMesh Labs Ltd.',
-    id: 'settlement-bank-usd',
-    isDefault: true,
-    method: 'bank',
-  },
-  {
-    account: 'TRC20 · TQ9f••••7K2p',
-    currency: 'USDT',
-    entity: 'ModelMesh Labs Ltd.',
-    id: 'settlement-usdt-trc20',
-    isDefault: false,
-    method: 'usdt',
   },
 ];
 

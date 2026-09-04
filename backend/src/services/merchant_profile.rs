@@ -3,11 +3,12 @@ use uuid::Uuid;
 use crate::{
     domain::{
         AccountRole, MerchantProfileBundle, MerchantSettlementCurrency, MerchantSettlementMethod,
-        MerchantSettlementNetwork, UserId,
+        MerchantSettlementNetwork, MerchantWithdrawalBundle, UserId,
     },
     repository::{
         MerchantProfileRepository, MerchantSettlementAccountWriteError,
-        NewMerchantSettlementAccountRecord, UpdateMerchantProfileRecord,
+        MerchantWithdrawalWriteError, NewMerchantSettlementAccountRecord,
+        UpdateMerchantProfileRecord,
     },
     security::CredentialCipher,
 };
@@ -20,6 +21,7 @@ const MAX_INDUSTRY_LENGTH: usize = 80;
 const MAX_PHONE_LENGTH: usize = 32;
 const MAX_SETTLEMENT_ENTITY_LENGTH: usize = 120;
 const MAX_WEBSITE_LENGTH: usize = 255;
+const MAX_WITHDRAWAL_MICROUSD: i64 = 9_007_199_254_740_991;
 
 #[derive(Clone)]
 pub struct MerchantProfileService {
@@ -44,6 +46,11 @@ pub struct CreateMerchantSettlementAccount {
     pub account: String,
 }
 
+pub struct CreateMerchantWithdrawal {
+    pub amount_usd: String,
+    pub settlement_account_id: String,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MerchantProfileServiceError {
     Forbidden,
@@ -51,6 +58,10 @@ pub enum MerchantProfileServiceError {
     SettlementAccountLimit,
     SettlementAccountNotFound,
     SettlementOptionDisabled,
+    InvalidWithdrawal,
+    WithdrawalBelowMinimum,
+    WithdrawalFeeConsumesAmount,
+    WithdrawalInsufficientBalance,
     Internal,
 }
 
@@ -175,6 +186,49 @@ impl MerchantProfileService {
         self.load_bundle(user_id, "settlement_delete").await
     }
 
+    pub async fn withdrawals(
+        &self,
+        user_id: UserId,
+        role: AccountRole,
+    ) -> Result<MerchantWithdrawalBundle, MerchantProfileServiceError> {
+        require_merchant(role, MerchantProfileServiceError::Forbidden)?;
+        self.load_withdrawals(user_id, "withdrawal_lookup").await
+    }
+
+    pub async fn create_withdrawal(
+        &self,
+        user_id: UserId,
+        role: AccountRole,
+        request: CreateMerchantWithdrawal,
+    ) -> Result<MerchantWithdrawalBundle, MerchantProfileServiceError> {
+        require_merchant(role, MerchantProfileServiceError::Forbidden)?;
+        Uuid::parse_str(&request.settlement_account_id)
+            .map_err(|_| MerchantProfileServiceError::InvalidWithdrawal)?;
+        let amount_microusd = parse_withdrawal_amount(&request.amount_usd)?;
+        self.repository
+            .create_withdrawal(user_id, &request.settlement_account_id, amount_microusd)
+            .await
+            .map_err(|error| match error {
+                MerchantWithdrawalWriteError::BelowMinimum => {
+                    MerchantProfileServiceError::WithdrawalBelowMinimum
+                }
+                MerchantWithdrawalWriteError::FeeConsumesAmount => {
+                    MerchantProfileServiceError::WithdrawalFeeConsumesAmount
+                }
+                MerchantWithdrawalWriteError::InsufficientBalance => {
+                    MerchantProfileServiceError::WithdrawalInsufficientBalance
+                }
+                MerchantWithdrawalWriteError::SettlementAccountNotFound => {
+                    MerchantProfileServiceError::SettlementAccountNotFound
+                }
+                MerchantWithdrawalWriteError::Repository => {
+                    tracing::error!(user_id, "merchant withdrawal creation failed");
+                    MerchantProfileServiceError::Internal
+                }
+            })?;
+        self.load_withdrawals(user_id, "withdrawal_create").await
+    }
+
     async fn load_bundle(
         &self,
         user_id: UserId,
@@ -185,6 +239,54 @@ impl MerchantProfileService {
             MerchantProfileServiceError::Internal
         })
     }
+
+    async fn load_withdrawals(
+        &self,
+        user_id: UserId,
+        operation: &'static str,
+    ) -> Result<MerchantWithdrawalBundle, MerchantProfileServiceError> {
+        self.repository
+            .get_withdrawal_bundle(user_id)
+            .await
+            .map_err(|error| {
+                tracing::error!(user_id, operation, %error, "merchant withdrawals load failed");
+                MerchantProfileServiceError::Internal
+            })
+    }
+}
+
+fn parse_withdrawal_amount(value: &str) -> Result<i64, MerchantProfileServiceError> {
+    let value = value.trim();
+    if value.is_empty() || value.starts_with('-') || value.starts_with('+') {
+        return Err(MerchantProfileServiceError::InvalidWithdrawal);
+    }
+    let mut parts = value.split('.');
+    let whole = parts.next().unwrap_or_default();
+    let fraction = parts.next().unwrap_or_default();
+    if parts.next().is_some()
+        || whole.is_empty()
+        || !whole.bytes().all(|byte| byte.is_ascii_digit())
+        || !fraction.bytes().all(|byte| byte.is_ascii_digit())
+        || fraction.len() > 6
+    {
+        return Err(MerchantProfileServiceError::InvalidWithdrawal);
+    }
+    let whole = whole
+        .parse::<i64>()
+        .ok()
+        .and_then(|amount| amount.checked_mul(1_000_000))
+        .ok_or(MerchantProfileServiceError::InvalidWithdrawal)?;
+    let fraction = if fraction.is_empty() {
+        0
+    } else {
+        format!("{fraction:0<6}")
+            .parse::<i64>()
+            .map_err(|_| MerchantProfileServiceError::InvalidWithdrawal)?
+    };
+    whole
+        .checked_add(fraction)
+        .filter(|amount| *amount > 0 && *amount <= MAX_WITHDRAWAL_MICROUSD)
+        .ok_or(MerchantProfileServiceError::InvalidWithdrawal)
 }
 
 fn validate_profile(

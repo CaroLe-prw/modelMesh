@@ -1,4 +1,7 @@
-use crate::domain::{MerchantRequestStatus, MerchantRequestType};
+use crate::{
+    domain::{AccountRole, MerchantRequestStatus, MerchantRequestType},
+    state::AppState,
+};
 
 use super::{CreateMerchantRequest, MerchantRequestServiceError, build_search, validate_request};
 
@@ -62,17 +65,74 @@ fn merchant_log_search_recognizes_public_log_ids_and_escapes_patterns() {
     .expect("search should be valid");
 
     assert_eq!(search.exact_id, None);
+    assert!(!search.model_only);
     assert_eq!(search.pattern.as_deref(), Some("%log\\_17\\%\\_%"));
     assert_eq!(search.status, Some(MerchantRequestStatus::Completed));
 
     let exact = build_search(Some("log_17".to_owned()), None).expect("log id should be valid");
     assert_eq!(exact.exact_id, Some(17));
+    assert!(!exact.model_only);
 }
 
 #[test]
 fn merchant_log_search_rejects_control_characters() {
     assert!(matches!(
         build_search(Some("bad\nquery".to_owned()), None),
+        Err(MerchantRequestServiceError::InvalidInput)
+    ));
+}
+
+#[tokio::test]
+async fn latest_channel_operation_requires_an_admin_and_valid_target() {
+    let service = AppState::for_test().merchant_request_service;
+    assert!(matches!(
+        service
+            .latest_channel_operation_for_admin(
+                AccountRole::Merchant,
+                47,
+                "00000000-0000-4000-8000-000000000003",
+            )
+            .await,
+        Err(MerchantRequestServiceError::Forbidden)
+    ));
+    assert!(matches!(
+        service
+            .latest_channel_operation_for_admin(AccountRole::Admin, 47, "not-a-channel-id")
+            .await,
+        Err(MerchantRequestServiceError::InvalidInput)
+    ));
+}
+
+#[tokio::test]
+async fn latest_channel_operation_list_requires_merchant_access() {
+    let result = AppState::for_test()
+        .merchant_request_service
+        .list_latest_channel_operations(47, AccountRole::Personal)
+        .await;
+
+    assert!(matches!(
+        result,
+        Err(MerchantRequestServiceError::Forbidden)
+    ));
+}
+
+#[tokio::test]
+async fn latest_model_operation_requires_an_admin_and_valid_target() {
+    let service = AppState::for_test().merchant_request_service;
+    assert!(matches!(
+        service
+            .latest_model_operation_for_admin(
+                AccountRole::Merchant,
+                47,
+                "00000000-0000-4000-8000-000000000004",
+            )
+            .await,
+        Err(MerchantRequestServiceError::Forbidden)
+    ));
+    assert!(matches!(
+        service
+            .latest_model_operation_for_admin(AccountRole::Admin, 47, "not-a-listing-id")
+            .await,
         Err(MerchantRequestServiceError::InvalidInput)
     ));
 }

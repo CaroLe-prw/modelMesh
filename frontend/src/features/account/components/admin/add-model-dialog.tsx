@@ -39,7 +39,9 @@ import {
   customTierThresholdId,
   modelPriceGroups,
   optionalPrice,
+  orderedRateNames,
   priceFieldId,
+  priceGroupTitle,
   priceInputKey,
 } from '@/features/account/components/admin/model-pricing';
 import { useAuth } from '@/features/auth/context/auth-context';
@@ -994,93 +996,10 @@ export function PriceGroupFields({
   );
 }
 
-const standardRateOrder = [
-  'request',
-  'input',
-  'cache_read',
-  'cache_write',
-  'output',
-  'reasoning',
-  'input_audio',
-  'output_audio',
-];
-
-function orderedRateNames(rates: Record<string, number | undefined>): string[] {
-  return Object.keys(rates).sort((left, right) => {
-    const leftIndex = standardRateOrder.indexOf(left);
-    const rightIndex = standardRateOrder.indexOf(right);
-    if (leftIndex === -1 && rightIndex === -1) return left.localeCompare(right);
-    if (leftIndex === -1) return 1;
-    if (rightIndex === -1) return -1;
-    return leftIndex - rightIndex;
-  });
-}
-
 function priceRateLabel(rate: string, t: TFunction, translationPath: string): string {
   return t(`${translationPath}.pricing.rates.${rate}`, {
     defaultValue: `${rate} / 1M`,
   });
-}
-
-function priceGroupTitle(groupView: PriceGroupView, t: TFunction, translationPath: string): string {
-  const { group, maximumInclusive } = groupView;
-  if ('request' in groupView.rates) {
-    return t(`${translationPath}.pricing.groups.request`);
-  }
-  switch (group.type) {
-    case 'base':
-      if (maximumInclusive !== undefined) {
-        return t(`${translationPath}.pricing.groups.baseUntil`, {
-          size: formatTokenThreshold(maximumInclusive),
-        });
-      }
-      return t(`${translationPath}.pricing.groups.base`);
-    case 'contextOver200k':
-      return t(`${translationPath}.pricing.groups.contextOver200k`);
-    case 'tier':
-      if (group.tierType === 'context') {
-        if (group.size <= 0) return t(`${translationPath}.pricing.groups.customTier`);
-        return maximumInclusive === undefined
-          ? t(`${translationPath}.pricing.groups.contextTier`, {
-              size: formatTokenThreshold(group.size),
-            })
-          : t(`${translationPath}.pricing.groups.contextRange`, {
-              maximum: formatTokenThreshold(maximumInclusive),
-              minimum: formatTokenThreshold(group.size),
-            });
-      }
-      return t(`${translationPath}.pricing.groups.tier`, {
-        size: formatTokenThreshold(group.size),
-        type: group.tierType,
-      });
-    case 'experimentalMode':
-      if (maximumInclusive !== undefined) {
-        return t(`${translationPath}.pricing.groups.experimentalModeUntil`, {
-          maximum: formatTokenThreshold(maximumInclusive),
-          mode: group.mode,
-        });
-      }
-      return t(`${translationPath}.pricing.groups.experimentalMode`, { mode: group.mode });
-    case 'experimentalModeTier':
-      return maximumInclusive === undefined
-        ? t(`${translationPath}.pricing.groups.experimentalModeTier`, {
-            minimum: formatTokenThreshold(group.size),
-            mode: group.mode,
-          })
-        : t(`${translationPath}.pricing.groups.experimentalModeRange`, {
-            maximum: formatTokenThreshold(maximumInclusive),
-            minimum: formatTokenThreshold(group.size),
-            mode: group.mode,
-          });
-    case 'serviceTier':
-      return t(`${translationPath}.pricing.groups.serviceTier`, { tier: group.tier });
-  }
-}
-
-function formatTokenThreshold(value: number): string {
-  if (value >= 1_000_000) return `${value / 1_000_000}M`;
-  if (value >= 1_000) return `${value / 1_000}K`;
-  return String(value);
 }
 
 function modelIdentifierFromName(name: string): string {

@@ -86,6 +86,23 @@ impl MerchantManagementService {
             })
     }
 
+    pub async fn get(
+        &self,
+        requester_role: AccountRole,
+        user_id: UserId,
+    ) -> Result<ManagedMerchant, MerchantManagementServiceError> {
+        require_admin(requester_role, MerchantManagementServiceError::Forbidden)?;
+        if user_id <= 0 {
+            return Err(MerchantManagementServiceError::InvalidInput);
+        }
+
+        self.repository
+            .find_by_id(user_id)
+            .await
+            .map_err(|error| map_mutation_error(error, user_id, "get"))?
+            .ok_or(MerchantManagementServiceError::NotFound)
+    }
+
     pub async fn update(
         &self,
         requester_role: AccountRole,

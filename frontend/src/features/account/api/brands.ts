@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api-client';
+import type { PaginatedResponse, PaginationQuery } from '@/lib/pagination';
 
 export type BrandStatus = 'active' | 'hidden';
 
@@ -28,14 +29,19 @@ export interface BrandUpdateDraft {
   sortOrder: number;
 }
 
-export interface ListBrandsQuery {
+export interface ListBrandsQuery extends PaginationQuery {
   query?: string;
   status?: BrandStatus;
 }
 
-export function listBrands(query: ListBrandsQuery, signal?: AbortSignal): Promise<BrandItem[]> {
-  return apiClient.get<BrandItem[]>('/admin/brands', {
+export function listBrands(
+  query: ListBrandsQuery,
+  signal?: AbortSignal,
+): Promise<PaginatedResponse<BrandItem>> {
+  return apiClient.get<PaginatedResponse<BrandItem>>('/admin/brands', {
     query: {
+      page: query.page,
+      pageSize: query.pageSize,
       query: query.query,
       status: query.status,
     },

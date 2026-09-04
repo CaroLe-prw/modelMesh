@@ -14,6 +14,7 @@ import {
 import { UsageRecordsTable } from '@/features/account/components/usage/usage-records-table';
 import { UsageSummaryCards } from '@/features/account/components/usage/usage-summary-cards';
 import { UsageTimeControls } from '@/features/account/components/usage/usage-time-controls';
+import { DEFAULT_PAGE_SIZE } from '@/lib/pagination';
 
 const initialFilters: UsageFilters = {
   apiKey: 'all',
@@ -31,7 +32,7 @@ export function UsageDashboard() {
   );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const refreshTimerRef = useRef<number | null>(null);
 
   useEffect(

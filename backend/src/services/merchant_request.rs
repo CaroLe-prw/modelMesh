@@ -8,7 +8,7 @@ use crate::{
     repository::{MerchantRequestRepository, MerchantRequestSearch, NewMerchantRequestRecord},
 };
 
-use super::authorization::require_merchant;
+use super::authorization::{require_admin, require_merchant};
 
 const MAX_DESCRIPTION_LENGTH: usize = 2_000;
 const MAX_SUBJECT_LENGTH: usize = 120;
@@ -25,6 +25,14 @@ pub struct CreateMerchantRequest {
     pub request_type: MerchantRequestType,
     pub subject: String,
     pub description: String,
+}
+
+pub struct AdminMerchantModelLogQuery {
+    pub pagination: Pagination,
+    pub query: Option<String>,
+    pub sort_by: MerchantRequestSortField,
+    pub sort_order: SortDirection,
+    pub status: Option<MerchantRequestStatus>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -84,6 +92,93 @@ impl MerchantRequestService {
                 MerchantRequestServiceError::Internal
             })
     }
+
+    pub async fn list_latest_channel_operations(
+        &self,
+        user_id: UserId,
+        role: AccountRole,
+    ) -> Result<Vec<MerchantRequest>, MerchantRequestServiceError> {
+        require_merchant(role, MerchantRequestServiceError::Forbidden)?;
+        if user_id <= 0 {
+            return Err(MerchantRequestServiceError::InvalidInput);
+        }
+        self.repository
+            .latest_channel_operations(user_id)
+            .await
+            .map_err(|error| {
+                tracing::error!(user_id, %error, "latest merchant channel operation list failed");
+                MerchantRequestServiceError::Internal
+            })
+    }
+
+    pub async fn list_model_logs_for_admin(
+        &self,
+        requester_role: AccountRole,
+        merchant_user_id: UserId,
+        request: AdminMerchantModelLogQuery,
+    ) -> Result<Page<MerchantRequest>, MerchantRequestServiceError> {
+        require_admin(requester_role, MerchantRequestServiceError::Forbidden)?;
+        if merchant_user_id <= 0 {
+            return Err(MerchantRequestServiceError::InvalidInput);
+        }
+        let mut search = build_search(request.query, request.status)?;
+        search.model_only = true;
+        self.repository
+            .list_by_user(
+                merchant_user_id,
+                &search,
+                request.pagination,
+                request.sort_by,
+                request.sort_order,
+            )
+            .await
+            .map_err(|error| {
+                tracing::error!(merchant_user_id, %error, "admin merchant model log list failed");
+                MerchantRequestServiceError::Internal
+            })
+    }
+
+    pub async fn latest_channel_operation_for_admin(
+        &self,
+        requester_role: AccountRole,
+        merchant_user_id: UserId,
+        channel_id: &str,
+    ) -> Result<Option<MerchantRequest>, MerchantRequestServiceError> {
+        require_admin(requester_role, MerchantRequestServiceError::Forbidden)?;
+        if merchant_user_id <= 0 {
+            return Err(MerchantRequestServiceError::InvalidInput);
+        }
+        let channel_id =
+            Uuid::parse_str(channel_id).map_err(|_| MerchantRequestServiceError::InvalidInput)?;
+        self.repository
+            .latest_channel_operation(merchant_user_id, channel_id)
+            .await
+            .map_err(|error| {
+                tracing::error!(merchant_user_id, %channel_id, %error, "admin latest merchant channel operation lookup failed");
+                MerchantRequestServiceError::Internal
+            })
+    }
+
+    pub async fn latest_model_operation_for_admin(
+        &self,
+        requester_role: AccountRole,
+        merchant_user_id: UserId,
+        listing_id: &str,
+    ) -> Result<Option<MerchantRequest>, MerchantRequestServiceError> {
+        require_admin(requester_role, MerchantRequestServiceError::Forbidden)?;
+        if merchant_user_id <= 0 {
+            return Err(MerchantRequestServiceError::InvalidInput);
+        }
+        let listing_id =
+            Uuid::parse_str(listing_id).map_err(|_| MerchantRequestServiceError::InvalidInput)?;
+        self.repository
+            .latest_model_operation(merchant_user_id, listing_id)
+            .await
+            .map_err(|error| {
+                tracing::error!(merchant_user_id, %listing_id, %error, "admin latest merchant model operation lookup failed");
+                MerchantRequestServiceError::Internal
+            })
+    }
 }
 
 fn build_search(
@@ -93,6 +188,7 @@ fn build_search(
     let Some(query) = query else {
         return Ok(MerchantRequestSearch {
             exact_id: None,
+            model_only: false,
             pattern: None,
             status,
         });
@@ -101,6 +197,7 @@ fn build_search(
     if query.is_empty() {
         return Ok(MerchantRequestSearch {
             exact_id: None,
+            model_only: false,
             pattern: None,
             status,
         });
@@ -118,6 +215,7 @@ fn build_search(
 
     Ok(MerchantRequestSearch {
         exact_id,
+        model_only: false,
         pattern: Some(format!("%{}%", escape_like_pattern(query))),
         status,
     })

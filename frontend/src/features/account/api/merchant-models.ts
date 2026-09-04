@@ -12,6 +12,7 @@ export interface MerchantModel {
   billingMode: MerchantBillingMode;
   channelId: string;
   channelName: string;
+  channelStatus: 'active' | 'offline' | 'pending' | 'rejected';
   contextWindow: number;
   createdAt: string;
   hasApprovedPrice: boolean;
